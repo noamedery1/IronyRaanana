@@ -1,0 +1,283 @@
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Section */
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+  animation: fadeInDown 0.8s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: -2px;
+  line-height: 1.1;
+  /* Reduced text shadow for cleaner look on light bg */
+}
+
+.subtitle {
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+
+.hoop-icon {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.5));
+  margin-bottom: 0.5rem;
+}
+
+/* Filter Section */
+.filter-section {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 3rem;
+  animation: fadeIn 1s ease-out 0.3s backwards;
+  width: 100%;
+}
+
+.team-select {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-light);
+  border: 1px solid var(--glass-border);
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  border-radius: 50px;
+  /* More modern, pill shape */
+  outline: none;
+  width: 100%;
+  max-width: 400px;
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Outfit', sans-serif;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ea580c%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.5rem top 50%;
+  background-size: 0.8rem auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.team-select:hover,
+.team-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(234, 88, 12, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Schedule Grid */
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  animation: slideUp 0.8s ease-out 0.5s backwards;
+  padding-bottom: 2rem;
+}
+
+.day-card {
+  background: #ffffff;
+  /* More transparent */
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 1.75rem;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.day-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.05) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+.day-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: rgba(234, 88, 12, 0.3);
+}
+
+.day-card:hover::before {
+  opacity: 1;
+}
+
+.day-header {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding-bottom: 0.75rem;
+}
+
+.day-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.day-date {
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+}
+
+.day-content {
+  font-size: 1.15rem;
+  color: var(--text-light);
+  line-height: 1.6;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+.empty-day {
+  color: var(--text-dim);
+  font-style: italic;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* Loading & Empty States */
+.empty-state {
+  text-align: center;
+  padding: 4rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+}
+
+.bouncing-ball {
+  width: 40px;
+  height: 40px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: bounce 0.6s infinite alternate;
+  box-shadow: 0 0 15px var(--primary);
+}
+
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-30px) scale(1.1);
+  }
+}
+
+/* Animations */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive Optimizations */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 2.2rem;
+  }
+
+  .hoop-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .team-select {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .schedule-grid {
+    grid-template-columns: 1fr;
+    /* Single column for mobile */
+    gap: 1rem;
+  }
+
+  .day-card {
+    padding: 1.25rem;
+  }
+
+  .day-name {
+    font-size: 1.2rem;
+  }
+}

@@ -1,0 +1,38 @@
+/* Add these to your existing CSS */
+
+.match-day {
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    background: linear-gradient(to bottom right, #fff7ed, #ffffff);
+    /* light orange tint */
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15);
+}
+
+.match-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.match-icon {
+    font-size: 1.4rem;
+    animation: bounce-icon 2s infinite;
+    display: inline-block;
+}
+
+@keyframes bounce-icon {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.empty-day {
+    font-family: 'Outfit', sans-serif;
+    /* English font is fine, but ensure Hebrew fallback works */
+    direction: center;
+}

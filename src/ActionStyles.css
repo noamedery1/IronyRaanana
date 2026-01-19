@@ -1,0 +1,66 @@
+/* Actions Section for Buttons */
+.actions-section {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    /* Add gap between buttons */
+    margin-bottom: 2rem;
+    animation: fadeIn 0.5s ease-out;
+    flex-wrap: wrap;
+    /* responsive wrap */
+}
+
+.action-btn {
+    border: none;
+    padding: 0.8rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 50px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    transition: all 0.3s ease;
+    font-family: 'Outfit', sans-serif;
+    min-width: 180px;
+    justify-content: center;
+}
+
+.whatsapp-btn {
+    background: #25D366;
+    /* WhatsApp Green */
+    color: white;
+    box-shadow: 0 4px 10px rgba(37, 211, 102, 0.3);
+}
+
+.whatsapp-btn:hover {
+    background: #128C7E;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(37, 211, 102, 0.4);
+}
+
+.copy-btn {
+    background: #3b82f6;
+    /* Blue */
+    color: white;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+.copy-btn:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+}
+
+.title-sub {
+    font-size: 1.8rem;
+    color: var(--primary);
+    font-weight: 600;
+    margin: -0.5rem 0 0.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
