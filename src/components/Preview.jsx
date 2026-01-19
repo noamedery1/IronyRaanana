@@ -34,13 +34,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
             // 1. Create a map of team rows for direct access
             const newSchedule = JSON.parse(JSON.stringify(rawRows)); // Deep copy
 
-            // 2. Clear existing weekly data in the grid (cols 1-7) for all teams
-            newSchedule.forEach(row => {
-                for (let i = 1; i <= 7; i++) {
-                    row[i] = ""; // Reset to empty
-                }
-            });
-
             // Resource Tracker: Set<"day_location_startTime">
             const usedResources = new Set();
 
@@ -52,7 +45,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
                 return true;
             };
 
-            // 3. Process each team based on configuration
+            // 2. Process each team based on configuration
             teamConfig.forEach(team => {
                 const teamRow = newSchedule.find(r => r[0] === team.name);
                 if (!teamRow) return;
@@ -62,7 +55,19 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
                 const constraints = team.constraints || [];
                 const occupiedDays = new Set(); // Days where team already has an event
 
-                // phase 1: Apply Hard Constraints
+                // Phase 0: Scan existing data strictly for "occupied days" and session count
+                // We do NOT book specific resources from raw text yet as parsing is complex,
+                // but we count it as a session to avoid over-scheduling.
+                for (let d = 0; d < 7; d++) {
+                    const colIndex = d + 1;
+                    const cellContent = teamRow[colIndex];
+                    if (cellContent && cellContent.trim() !== '' && cellContent !== 'xxxxxxxx') {
+                        occupiedDays.add(d);
+                        sessionsScheduled++;
+                    }
+                }
+
+                // Phase 1: Apply Hard Constraints (Overwriting existing if needed)
                 constraints.forEach(c => {
                     const colIndex = c.day + 1;
                     const startRaw = formatTimeForSheet(c.startTime);
@@ -74,36 +79,43 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
                     } else if (c.type === 'MATCH') {
                         teamRow[colIndex] = `משחק ב${c.location} ${startRaw}`;
                         occupiedDays.add(c.day);
-                        // Book resource for match if location/time is known (assuming matches block the court)
                         if (c.location && startRaw) {
                             tryBookResource(c.day, c.location, startRaw);
                         }
-                        sessionsScheduled++;
+                        // Matches count as session? Usually yes.
+                        // If we overwrote an existing session, count is stable. If new day, increment.
+                        // For simplicity, re-calculate session count after all ops? 
+                        // Let's just assume constraints are authoritative.
                     } else if (c.type === 'FIXED') {
                         teamRow[colIndex] = `${c.location} ${startRaw}-${endRaw}`;
                         occupiedDays.add(c.day);
                         if (c.location && startRaw) {
                             tryBookResource(c.day, c.location, startRaw);
                         }
-                        sessionsScheduled++;
                     }
                 });
+
+                // Recalculate sessions scheduled based on the updated row state (Constraints + Originals)
+                sessionsScheduled = 0;
+                for (let d = 0; d < 7; d++) {
+                    const colIndex = d + 1;
+                    const cellContent = teamRow[colIndex];
+                    if (cellContent && cellContent.trim() !== '' && cellContent !== 'xxxxxxxx') {
+                        sessionsScheduled++;
+                    }
+                }
 
                 // Phase 2: Fill Remaining Sessions (Auto-Scheduler)
                 let sessionsToFill = sessionsNeeded - sessionsScheduled;
 
-                // Try to find slots on empty days
-                // Iterate through days 0 (Sun) to 6 (Sat)
                 for (let d = 0; d < 7 && sessionsToFill > 0; d++) {
                     if (occupiedDays.has(d)) continue; // Skip if team busy today
 
                     // Try to find a valid slot (Location + Time)
                     let foundSlotForDay = false;
 
-                    // Simple logic: Try random location/time to distribute load, or iterate linearly?
-                    // Linear iteration ensures we fill up resources systematically.
                     for (const loc of LOCATIONS) {
-                        if (foundSlotForDay) break; // Found a slot for this day, move to next day
+                        if (foundSlotForDay) break;
                         for (const slot of TIME_SLOTS) {
                             if (tryBookResource(d, loc, slot.start)) {
                                 // Success! Book it.
@@ -112,7 +124,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
                                 occupiedDays.add(d);
                                 sessionsToFill--;
                                 foundSlotForDay = true;
-                                break; // Move to next location
+                                break;
                             }
                         }
                     }
@@ -122,6 +134,13 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
             setGeneratedSchedule(newSchedule);
             setIsGenerating(false);
         }, 1000);
+    };
+
+    const handleCellChange = (rowIndex, colIndex, value) => {
+        if (!generatedSchedule) return;
+        const newSchedule = [...generatedSchedule];
+        newSchedule[rowIndex][colIndex] = value;
+        setGeneratedSchedule(newSchedule);
     };
 
     const dataToShow = generatedSchedule || rawRows;
@@ -166,25 +185,43 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
                 </thead>
                 <tbody>
                     {teams.map((teamName, i) => {
-                        const rowData = dataToShow.find(r => r[0] === teamName);
+                        // We need to find the specific row index in dataToShow to update it correctly
+                        const rowIndex = dataToShow.findIndex(r => r[0] === teamName);
+                        const rowData = dataToShow[rowIndex];
 
                         return (
                             <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fcfcfc' }}>
                                 <td style={{ padding: '0.8rem', border: '1px solid #eee', fontWeight: '500' }}>{teamName}</td>
-                                {dayHeaders.map((_, colIndex) => {
-                                    const cellData = rowData ? rowData[colIndex + 1] : '';
-                                    const isGenerated = cellData === "אימון שובץ (דמו)";
+                                {dayHeaders.map((_, colMapIndex) => {
+                                    const colIndex = colMapIndex + 1;
+                                    const cellData = rowData ? rowData[colIndex] : '';
+                                    const isGenerated = cellData && cellData.includes && cellData.includes('(אוטומטי)');
 
                                     return (
-                                        <td key={colIndex} style={{
-                                            padding: '0.5rem',
+                                        <td key={colMapIndex} style={{
+                                            padding: 0,
                                             border: '1px solid #eee',
                                             textAlign: 'center',
-                                            color: isGenerated ? '#047857' : 'inherit',
-                                            fontWeight: isGenerated ? 'bold' : 'normal',
                                             backgroundColor: isGenerated ? '#ECFDF5' : 'transparent'
                                         }}>
-                                            {cellData}
+                                            <input
+                                                type="text"
+                                                value={cellData || ''}
+                                                onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    border: 'none',
+                                                    padding: '0.8rem 0.5rem',
+                                                    textAlign: 'center',
+                                                    background: 'transparent',
+                                                    fontFamily: 'inherit',
+                                                    fontSize: 'inherit',
+                                                    fontWeight: isGenerated ? '600' : 'normal',
+                                                    color: isGenerated ? '#047857' : 'inherit',
+                                                    outline: 'none'
+                                                }}
+                                            />
                                         </td>
                                     );
                                 })}
