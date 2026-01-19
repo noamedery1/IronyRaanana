@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import PublicSchedule from './pages/PublicSchedule';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import WomenDashboard from './pages/WomenDashboard';
 import './App.css';
 
 // Protected Route Component
@@ -24,6 +25,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/dashboard-women"
+          element={
+            <ProtectedRoute>
+              <WomenDashboard />
             </ProtectedRoute>
           }
         />
