@@ -84,10 +84,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl }) => {
                         if (c.location && startRaw) {
                             tryBookResource(c.day, c.location, startRaw);
                         }
-                        // Matches count as session? Usually yes.
-                        // If we overwrote an existing session, count is stable. If new day, increment.
-                        // For simplicity, re-calculate session count after all ops? 
-                        // Let's just assume constraints are authoritative.
                     } else if (c.type === 'FIXED') {
                         teamRow[colIndex] = `${c.location} ${startRaw}-${endRaw}`;
                         occupiedDays.add(c.day);
@@ -153,29 +149,30 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl }) => {
             setIsSaving(true);
             try {
                 // Prepare data: headers + dataRows
+                const safeData = dataToShow.map(row =>
+                    row.map(cell => (cell === null || cell === undefined) ? '' : String(cell))
+                );
+
                 const payload = {
-                    rows: [headers, ...dataToShow]
+                    rows: [headers, ...safeData]
                 };
 
-                // We use 'text/plain' to avoid CORS preflight issues with Google Apps Script
-                const response = await fetch(saveUrl, {
+                // Use 'no-cors' mode to bypass browser blocks on the response.
+                await fetch(saveUrl, {
                     method: 'POST',
+                    mode: 'no-cors',
                     body: JSON.stringify(payload),
                     headers: {
                         'Content-Type': 'text/plain'
                     }
                 });
 
-                const result = await response.json();
-                if (result.status === 'success') {
-                    alert('הנתונים נשמרו בהצלחה לגיליון!');
-                } else {
-                    alert('שגיאה בשמירה: ' + JSON.stringify(result));
-                }
+                // Assume success if fetch didn't throw network error
+                alert('הבקשה נשלחה לגיליון! (נא לבדוק אם הוא התעדכן תוך מספר שניות)');
 
             } catch (err) {
-                console.error(err);
-                alert('שגיאה בשמירה לענן. מנסה להוריד קובץ גיבוי...');
+                console.error("Save Error:", err);
+                alert('שגיאה בשליחה לגיליון. מנסה להוריד קובץ גיבוי...');
                 downloadCsv();
             } finally {
                 setIsSaving(false);
@@ -256,7 +253,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl }) => {
                 </thead>
                 <tbody>
                     {teams.map((teamName, i) => {
-                        // We need to find the specific row index in dataToShow to update it correctly
                         const rowIndex = dataToShow.findIndex(r => r[0] === teamName);
                         const rowData = dataToShow[rowIndex];
 
