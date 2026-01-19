@@ -135,10 +135,27 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
     };
 
     const handleCellChange = (rowIndex, colIndex, value) => {
-        if (!generatedSchedule) return;
-        const newSchedule = [...generatedSchedule];
-        newSchedule[rowIndex][colIndex] = value;
-        setGeneratedSchedule(newSchedule);
+        // If we don't have a generated schedule yet, we initialize it from the raw rows
+        // so the user can start editing immediately.
+        let currentData = generatedSchedule;
+
+        if (!currentData) {
+            // Deep copy rawRows to start editing
+            try {
+                currentData = JSON.parse(JSON.stringify(rawRows));
+            } catch (e) {
+                console.error("Error cloning rawRows", e);
+                return;
+            }
+        } else {
+            // Deep copy existing generated schedule
+            currentData = JSON.parse(JSON.stringify(currentData));
+        }
+
+        if (rowIndex >= 0 && rowIndex < currentData.length) {
+            currentData[rowIndex][colIndex] = value;
+            setGeneratedSchedule(currentData);
+        }
     };
 
     const dataToShow = generatedSchedule || rawRows;

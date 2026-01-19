@@ -10,42 +10,50 @@ Writing data back to a Google Sheet requires a small script because Google doesn
 ```javascript
 function doPost(e) {
   var data;
-  
-  // Try to parse the data
   try {
     data = JSON.parse(e.postData.contents);
   } catch (err) {
-    // If simple parse fails (sometimes happens with different content-types), try to just grab the raw string
-    return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": "Invalid JSON" }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": "Invalid JSON" }));
   }
   
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet;
 
-  // 1. Try to find sheet by name (if provided)
+  // 1. Try to find sheet by name
   if (data.sheetName) {
     sheet = ss.getSheetByName(data.sheetName);
   }
 
-  // 2. If no name provided or not found, default to the FIRST visible sheet
+  // 2. Fallback: Use the FIRST visible sheet
   if (!sheet) {
     sheet = ss.getSheets()[0];
   }
   
   if (!sheet) {
-     return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": "No sheet found" }))
-      .setMimeType(ContentService.MimeType.JSON);
+     return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": "No sheet found" }));
   }
+  
+  // Write data WITHOUT clearing standard formatting
+  // We assume the first row (headers) is already there and stylized.
+  // We also assume the first column (Team Names) is stylized.
   
   const rows = data.rows;
   
   if (rows && rows.length > 0) {
-    // Clear the existing data to avoid leftovers
-    // sheet.clearContents(); 
+    // Check if we should update headers or just data
+    // Usually it's safer to skip the header row to preserve its formatting
+    // But since the app might change team order, we need to be careful.
     
-    // Write new data
-    // We assume row 1 is headers, so we write from A1
+    // Strategy: Update values ONLY. Do not use clear() which wipes formatting.
+    // We will update the whole range matching the data size.
+    
+    // If you want to skip the first row (headers) to be absolutely safe about header colors:
+    // const dataBody = rows.slice(1);
+    // sheet.getRange(2, 1, dataBody.length, dataBody[0].length).setValues(dataBody);
+    
+    // However, if teams changed, we need to update everything.
+    // setValues() updates text but KEEPS cell formatting (background color, borders, font).
+    
     sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
   }
   
@@ -57,7 +65,7 @@ function doPost(e) {
 ## Step 2: Deploy as a Web App
 1. Click the blue **Deploy** button (top right) > **New deployment**.
 2. Click the gear icon (Select type) > **Web app**.
-3. Description: "Scheduler API v2".
+3. Description: "Scheduler API v3".
 4. **Execute as**: Me (your email).
 5. **Who has access**: **Anyone** (This is crucial!).
 6. Click **Deploy**.
