@@ -10,6 +10,7 @@ const AdminDashboard = () => {
 
     // Setup state
     const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1BZDTFKpu152LV71ZdrQjEtlNwa5mHeU2tHhreKdYjUE/edit?gid=0#gid=0');
+    const [saveUrl, setSaveUrl] = useState('');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -204,7 +205,21 @@ const AdminDashboard = () => {
                             )}
 
                             <div style={{ marginTop: '2rem' }}>
-                                <h4>הגדרות מתקדמות</h4>
+                                <h4>הגדרות שמירה (מתקדם)</h4>
+                                <p style={{ fontSize: '0.9rem', color: '#666' }}>כדי לשמור ישירות לגיליון, יש ליצור <a href="/GOOGLE_SHEETS_SETUP.md" target="_blank">Google Apps Script Webhook</a>.</p>
+
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>כתובת ה-API לשמירה (Web App URL)</label>
+                                <input
+                                    type="text"
+                                    value={saveUrl}
+                                    onChange={(e) => setSaveUrl(e.target.value)}
+                                    placeholder="https://script.google.com/macros/s/..."
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', direction: 'ltr' }}
+                                />
+                            </div>
+
+                            <div style={{ marginTop: '2rem' }}>
+                                <h4>הגדרות נוספות</h4>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>שם הגיליון (Tab)</label>
@@ -236,6 +251,7 @@ const AdminDashboard = () => {
                             headers={sheetData.headers}
                             rawRows={sheetData.rawRows}
                             teamConfig={teamConfig}
+                            saveUrl={saveUrl}
                         />
                     )}
                 </main>

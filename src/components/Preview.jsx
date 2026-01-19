@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 
-const Preview = ({ teams, headers, rawRows, teamConfig }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl }) => {
     const [generatedSchedule, setGeneratedSchedule] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Available resources
     const LOCATIONS = ['מטרו', 'השרון', 'רימון', 'אביב', 'תיכון חדש'];
@@ -191,9 +192,19 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
                     </button>
                     <button
                         onClick={handleSave}
-                        style={{ background: '#14213D', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+                        disabled={isSaving}
+                        style={{
+                            background: saveUrl ? '#10B981' : '#14213D',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.6rem 1.2rem',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            opacity: isSaving ? 0.7 : 1
+                        }}
                     >
-                        ייצא ל-CSV / שמור
+                        {isSaving ? 'שומר...' : (saveUrl ? 'שמור לגיליון (ענן)' : 'ייצא ל-CSV / שמור')}
                     </button>
                 </div>
             </div>
