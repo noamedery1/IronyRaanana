@@ -10,7 +10,7 @@ const AdminDashboard = () => {
 
     // Setup state
     const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1BZDTFKpu152LV71ZdrQjEtlNwa5mHeU2tHhreKdYjUE/edit?gid=0#gid=0');
-    const [saveUrl, setSaveUrl] = useState('');
+    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycby6x_tSDIBR0zQQS-htVFuJ06VaJ9tgRqGLnIew8yq_T_tEyF49MmgSQJ2ZOR8OyXhD/exec');
     const [sheetName, setSheetName] = useState('Sheet1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -75,10 +75,12 @@ const AdminDashboard = () => {
                         const headerRow = rows[headerRowIndex];
                         const dataRows = rows.slice(headerRowIndex + 1);
 
-                        const teamList = dataRows
+                        const teamListRaw = dataRows
                             .map(row => row[0])
-                            .filter(team => team && team.trim() !== '')
-                            .sort();
+                            .filter(team => team && team.trim() !== '');
+
+                        // Remove duplicates and sort
+                        const teamList = [...new Set(teamListRaw)].sort();
 
                         setSheetData({
                             headers: headerRow,
