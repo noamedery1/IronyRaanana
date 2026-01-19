@@ -9,7 +9,7 @@ const WomenDashboard = () => {
     const [activeTab, setActiveTab] = useState('setup');
 
     // Setup state
-    const [sheetUrl, setSheetUrl] = useState(''); // User will provide this
+    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1wqo1MVDAbEWRHUA7XlwS_TpD-St2KpwEPVwLyq6SO2E/edit?gid=0#gid=0');
     const [saveUrl, setSaveUrl] = useState('');   // User needs to set this up
     const [sheetName, setSheetName] = useState('Sheet1');
     const [isConnected, setIsConnected] = useState(false);

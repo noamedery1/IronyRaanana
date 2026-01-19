@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import '../App.css';
 
 // TODO: Replace this with the Women's Google Sheet URL provided by the user
-const DATA_URL = "";
+const DATA_URL = "https://docs.google.com/spreadsheets/d/1wqo1MVDAbEWRHUA7XlwS_TpD-St2KpwEPVwLyq6SO2E/export?format=csv&gid=0";
 
 function PublicScheduleWomen() {
     const [data, setData] = useState([]);
