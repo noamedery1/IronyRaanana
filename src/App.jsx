@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import PublicSchedule from './pages/PublicSchedule';
+import PublicScheduleWomen from './pages/PublicScheduleWomen';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import WomenDashboard from './pages/WomenDashboard';
@@ -19,6 +20,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<PublicSchedule />} />
+        <Route path="/women" element={<PublicScheduleWomen />} />
         <Route path="/admin" element={<AdminLogin />} />
         <Route
           path="/admin/dashboard"
