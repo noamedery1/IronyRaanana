@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Papa from 'papaparse';
 
 const Preview = ({ teams, headers, rawRows, teamConfig }) => {
     const [generatedSchedule, setGeneratedSchedule] = useState(null);
@@ -145,6 +146,28 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
 
     const dataToShow = generatedSchedule || rawRows;
 
+    const handleSave = () => {
+        // Prepare data for CSV
+        // We need to merge headers and data
+        const csv = Papa.unparse({
+            fields: headers,
+            data: dataToShow
+        });
+
+        // Create a download link
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        // Add BOM for Excel Hebrew support
+        const blobWithBOM = new Blob(["\ufeff", blob], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blobWithBOM);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'raanana_schedule_export.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -166,8 +189,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig }) => {
                     >
                         {isGenerating ? 'מחשב...' : 'צור לו"ז אוטומטי'}
                     </button>
-                    <button style={{ background: '#14213D', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>
-                        שמור לגיליון
+                    <button
+                        onClick={handleSave}
+                        style={{ background: '#14213D', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                        ייצא ל-CSV / שמור
                     </button>
                 </div>
             </div>
