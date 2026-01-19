@@ -147,17 +147,51 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl }) => {
 
     const dataToShow = generatedSchedule || rawRows;
 
-    const handleSave = () => {
-        // Prepare data for CSV
-        // We need to merge headers and data
+    const handleSave = async () => {
+        // If Save URL is provided, try to save to cloud
+        if (saveUrl) {
+            setIsSaving(true);
+            try {
+                // Prepare data: headers + dataRows
+                const payload = {
+                    rows: [headers, ...dataToShow]
+                };
+
+                // We use 'text/plain' to avoid CORS preflight issues with Google Apps Script
+                const response = await fetch(saveUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: {
+                        'Content-Type': 'text/plain'
+                    }
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    alert('הנתונים נשמרו בהצלחה לגיליון!');
+                } else {
+                    alert('שגיאה בשמירה: ' + JSON.stringify(result));
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('שגיאה בשמירה לענן. מנסה להוריד קובץ גיבוי...');
+                downloadCsv();
+            } finally {
+                setIsSaving(false);
+            }
+        } else {
+            // No URL - Download CSV
+            downloadCsv();
+        }
+    };
+
+    const downloadCsv = () => {
         const csv = Papa.unparse({
             fields: headers,
             data: dataToShow
         });
-
-        // Create a download link
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        // Add BOM for Excel Hebrew support
         const blobWithBOM = new Blob(["\ufeff", blob], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blobWithBOM);
