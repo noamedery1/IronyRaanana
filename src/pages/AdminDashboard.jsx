@@ -216,6 +216,18 @@ const AdminDashboard = () => {
                                     placeholder="https://script.google.com/macros/s/..."
                                     style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', direction: 'ltr' }}
                                 />
+                                {saveUrl && saveUrl.includes('/library/') && (
+                                    <div style={{ color: '#E11D48', fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: 500 }}>
+                                        🛑 שגיאה: זו כתובת של ספריה (Library). <br />
+                                        אנא חזור ל-Apps Script, לחץ על <strong>Deploy</strong> (כפתור כחול) -{'>'} <strong>New deployment</strong>, ובחר "Web App". <br />
+                                        העתק את הכתובת שמסתיימת ב-<code>/exec</code>.
+                                    </div>
+                                )}
+                                {saveUrl && !saveUrl.includes('/library/') && !saveUrl.includes('macros/s/') && !saveUrl.includes('script.google.com') && (
+                                    <div style={{ color: '#F59E0B', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                        ⚠️ שים לב: הכתובת לא נראית כמו כתובת Google Apps Script תקינה.
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ marginTop: '2rem' }}>
