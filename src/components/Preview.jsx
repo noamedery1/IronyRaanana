@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) => {
     const [generatedSchedule, setGeneratedSchedule] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -154,7 +154,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl }) => {
                 );
 
                 const payload = {
-                    rows: [headers, ...safeData]
+                    rows: [headers, ...safeData],
+                    sheetName: sheetName || 'Sheet1'
                 };
 
                 // Use 'no-cors' mode to bypass browser blocks on the response.

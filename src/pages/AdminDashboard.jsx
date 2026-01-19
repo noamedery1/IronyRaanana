@@ -11,6 +11,7 @@ const AdminDashboard = () => {
     // Setup state
     const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1BZDTFKpu152LV71ZdrQjEtlNwa5mHeU2tHhreKdYjUE/edit?gid=0#gid=0');
     const [saveUrl, setSaveUrl] = useState('');
+    const [sheetName, setSheetName] = useState('Sheet1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -235,7 +236,12 @@ const AdminDashboard = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>שם הגיליון (Tab)</label>
-                                        <input type="text" defaultValue="Sheet1" style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }} />
+                                        <input
+                                            type="text"
+                                            value={sheetName}
+                                            onChange={(e) => setSheetName(e.target.value)}
+                                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                                        />
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>מיפוי עמודות</label>
@@ -264,6 +270,7 @@ const AdminDashboard = () => {
                             rawRows={sheetData.rawRows}
                             teamConfig={teamConfig}
                             saveUrl={saveUrl}
+                            sheetName={sheetName}
                         />
                     )}
                 </main>
