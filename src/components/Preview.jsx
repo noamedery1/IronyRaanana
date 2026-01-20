@@ -118,7 +118,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                             if (tryBookResource(d, loc, slot.start)) {
                                 // Success! Book it.
                                 const colIndex = d + 1;
-                                teamRow[colIndex] = `${loc} ${slot.start}-${slot.end} (אוטומטי)`;
+                                teamRow[colIndex] = `${loc} ${slot.start}-${slot.end}`;
                                 occupiedDays.add(d);
                                 sessionsToFill--;
                                 foundSlotForDay = true;
@@ -280,7 +280,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                                 {dayHeaders.map((_, colMapIndex) => {
                                     const colIndex = colMapIndex + 1;
                                     const cellData = rowData ? rowData[colIndex] : '';
-                                    const isGenerated = cellData && cellData.includes && cellData.includes('(אוטומטי)');
+                                    const isGenerated = false; // Styling disabled as we removed the tag
 
                                     return (
                                         <td key={colMapIndex} style={{
