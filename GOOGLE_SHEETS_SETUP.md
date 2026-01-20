@@ -5,7 +5,8 @@ Writing data back to a Google Sheet requires a small script because Google doesn
 ## Step 1: Add the Script to your Google Sheet
 1. Open your Google Sheet.
 2. Go to **Extensions** > **Apps Script**.
-3. Delete any code there and paste the **UPDATED** code below (this version is smarter!):
+3. **Delete everything** currently in the script editor.
+4. Copy and paste the code below **exactly as is**:
 
 ```javascript
 function doPost(e) {
@@ -33,28 +34,35 @@ function doPost(e) {
      return ContentService.createTextOutput(JSON.stringify({ "status": "error", "message": "No sheet found" }));
   }
   
-  // Write data WITHOUT clearing standard formatting
-  // We assume the first row (headers) is already there and stylized.
-  // We also assume the first column (Team Names) is stylized.
-  
-  const rows = data.rows;
+  // Write data
+  var rows = data.rows;
   
   if (rows && rows.length > 0) {
-    // Check if we should update headers or just data
-    // Usually it's safer to skip the header row to preserve its formatting
-    // But since the app might change team order, we need to be careful.
+    // Define the range dimensions
+    var numRows = rows.length;
+    var numCols = rows[0].length;
     
-    // Strategy: Update values ONLY. Do not use clear() which wipes formatting.
-    // We will update the whole range matching the data size.
+    // Get the range
+    var range = sheet.getRange(1, 1, numRows, numCols);
     
-    // If you want to skip the first row (headers) to be absolutely safe about header colors:
-    // const dataBody = rows.slice(1);
-    // sheet.getRange(2, 1, dataBody.length, dataBody[0].length).setValues(dataBody);
+    // 1. Update Values
+    range.setValues(rows);
     
-    // However, if teams changed, we need to update everything.
-    // setValues() updates text but KEEPS cell formatting (background color, borders, font).
+    // 2. Enforce Formatting (Fix for large/messy fonts)
+    range.setFontSize(11);               // Standard readable size
+    range.setVerticalAlignment("middle");
+    range.setHorizontalAlignment("center");
+    range.setWrap(true);                 // Wrap text if too long
     
-    sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+    // Optional: Make the first row (Headers) bold and slightly larger
+    var headerRange = sheet.getRange(1, 1, 1, numCols);
+    headerRange.setFontWeight("bold");
+    headerRange.setFontSize(12);
+    
+    // Optional: Make the first column (Team Names) bold and align right (Hebrew)
+    var teamColRange = sheet.getRange(1, 1, numRows, 1);
+    teamColRange.setFontWeight("bold");
+    teamColRange.setHorizontalAlignment("right"); 
   }
   
   return ContentService.createTextOutput(JSON.stringify({ "status": "success", "sheetUsed": sheet.getName() }))
@@ -62,10 +70,10 @@ function doPost(e) {
 }
 ```
 
-## Step 2: Deploy as a Web App
+## Step 2: Deploy as a Web App (Crucial!)
 1. Click the blue **Deploy** button (top right) > **New deployment**.
 2. Click the gear icon (Select type) > **Web app**.
-3. Description: "Scheduler API v3".
+3. Description: "Scheduler API v4".
 4. **Execute as**: Me (your email).
 5. **Who has access**: **Anyone** (This is crucial!).
 6. Click **Deploy**.

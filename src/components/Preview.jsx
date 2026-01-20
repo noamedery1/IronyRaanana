@@ -6,6 +6,15 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Manage headers locally to allow date updates
+    const [currentHeaders, setCurrentHeaders] = useState(headers || []);
+    const [selectedDate, setSelectedDate] = useState('');
+
+    // Update local headers when props change (initial load)
+    if (currentHeaders.length === 0 && headers && headers.length > 0) {
+        setCurrentHeaders(headers);
+    }
+
     // Available resources
     const LOCATIONS = ['מטרו', 'השרון', 'רימון', 'אביב', 'תיכון חדש'];
     const TIME_SLOTS = [
@@ -23,7 +32,35 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
         );
     }
 
-    const dayHeaders = headers ? headers.slice(1, 8) : [];
+    const dayHeaders = currentHeaders.length > 0 ? currentHeaders.slice(1, 8) : [];
+
+    const handleDateChange = (e) => {
+        const dateVal = e.target.value;
+        setSelectedDate(dateVal);
+
+        if (!dateVal) return;
+
+        const start = new Date(dateVal);
+        const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+        const newHeaders = [...currentHeaders];
+
+        // Ensure we have enough columns
+        if (newHeaders.length < 8) return;
+
+        // Update columns 1 to 7 (Sunday to Saturday)
+        for (let i = 0; i < 7; i++) {
+            const currentDay = new Date(start);
+            currentDay.setDate(start.getDate() + i);
+
+            const dayName = days[i];
+            const formattedDate = `${currentDay.getDate()}/${currentDay.getMonth() + 1}`;
+
+            newHeaders[i + 1] = `${dayName} ${formattedDate}`;
+        }
+
+        setCurrentHeaders(newHeaders);
+    };
 
     // Helper to format time for sheet (17:00 -> 1700)
     const formatTimeForSheet = (timeStr) => {
@@ -115,6 +152,22 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                     for (const loc of LOCATIONS) {
                         if (foundSlotForDay) break;
                         for (const slot of TIME_SLOTS) {
+
+                            // Check max end time constraint
+                            if (team.maxEndTime) {
+                                // Convert both to numbers for comparison (e.g. 2000 vs 2200)
+                                const slotEndNum = parseInt(slot.end);
+                                const configuredMaxNum = parseInt(team.maxEndTime.replace(':', ''));
+
+                                // Logic: If this slot ends AFTER the max allowed time, skip it.
+                                // Note: slot.end is "HHMM" format (1730). maxEndTime is "HH:MM" (17:30).
+                                // We parsed maxEndTime by removing colon.
+
+                                if (!isNaN(configuredMaxNum) && slotEndNum > configuredMaxNum) {
+                                    continue; // Skip this slot, it's too late for this team
+                                }
+                            }
+
                             if (tryBookResource(d, loc, slot.start)) {
                                 // Success! Book it.
                                 const colIndex = d + 1;
@@ -171,7 +224,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                 );
 
                 const payload = {
-                    rows: [headers, ...safeData],
+                    rows: [currentHeaders, ...safeData],
                     sheetName: sheetName || 'Sheet1'
                 };
 
@@ -203,7 +256,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
 
     const downloadCsv = () => {
         const csv = Papa.unparse({
-            fields: headers,
+            fields: currentHeaders,
             data: dataToShow
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -256,6 +309,20 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                         {isSaving ? 'שומר...' : (saveUrl ? 'שמור לגיליון (ענן)' : 'ייצא ל-CSV / שמור')}
                     </button>
                 </div>
+            </div>
+
+            <div style={{ padding: '1rem', background: '#f0f9ff', borderRadius: '4px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ fontWeight: '600', color: '#0369a1' }}>📅 עדכון תאריכים מהיר:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.9rem' }}>בחר יום ראשון:</label>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={handleDateChange}
+                        style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                    />
+                </div>
+                <span style={{ fontSize: '0.8rem', color: '#666' }}>(הכותרות בטבלה למטה יתעדכנו אוטומטית)</span>
             </div>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>

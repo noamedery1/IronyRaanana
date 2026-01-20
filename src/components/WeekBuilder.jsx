@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
     // teamConfig and setTeamConfig are now passed from props for persistence
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTeamIndex, setSelectedTeamIndex] = useState(null);
     const [newConstraint, setNewConstraint] = useState({
@@ -10,6 +11,11 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
         startTime: '17:00',
         endTime: '18:30',
         location: 'מטרו'
+    });
+
+    // Default time limit settings
+    const [tempSettings, setTempSettings] = useState({
+        maxEndTime: '22:00' // Default max end time
     });
 
     // Hebrew days mapping
@@ -22,6 +28,23 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
             newConfig[index].sessionsPerWeek = newVal;
             setTeamConfig(newConfig);
         }
+    };
+
+    const openSettingsModal = (index) => {
+        setSelectedTeamIndex(index);
+        const team = teamConfig[index];
+        setTempSettings({
+            maxEndTime: team.maxEndTime || '22:00'
+        });
+        setIsSettingsModalOpen(true);
+    };
+
+    const saveSettings = () => {
+        if (selectedTeamIndex === null) return;
+        const newConfig = [...teamConfig];
+        newConfig[selectedTeamIndex].maxEndTime = tempSettings.maxEndTime;
+        setTeamConfig(newConfig);
+        setIsSettingsModalOpen(false);
     };
 
     const openConstraintModal = (index) => {
@@ -143,6 +166,19 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
                                 onClick={() => handleSessionCountChange(index, 1)}
                                 style={circleBtnStyle}
                             >+</button>
+
+                            <button
+                                onClick={() => openSettingsModal(index)}
+                                title="הגדרות שעות (מגבלת שעת סיום)"
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    fontSize: '1.2rem',
+                                    marginLeft: '0.5rem',
+                                    opacity: 0.6
+                                }}
+                            >⚙️</button>
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
                             {team.constraints.map((c, cIdx) => (
@@ -258,6 +294,34 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
                                 <button onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '0.8rem', border: '1px solid #ddd', background: 'white', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
                                 <button onClick={addConstraint} style={{ flex: 1, padding: '0.8rem', border: 'none', background: '#3b82f6', color: 'white', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>שמור</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Settings Modal */}
+            {isSettingsModalOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                }}>
+                    <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '350px', maxWidth: '90%' }}>
+                        <h4 style={{ marginTop: 0 }}>הגדרות קבוצה - {teamConfig[selectedTeamIndex]?.name}</h4>
+
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label style={labelStyle}>שעת סיום מקסימלית לאימון</label>
+                            <p style={{ fontSize: '0.8rem', color: '#888', margin: '0 0 0.5rem 0' }}>המערכת האוטומטית לא תשבץ אימונים שמסתיימים אחרי שעה זו.</p>
+                            <input
+                                type="time"
+                                value={tempSettings.maxEndTime}
+                                onChange={(e) => setTempSettings({ ...tempSettings, maxEndTime: e.target.value })}
+                                style={inputStyle}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                            <button onClick={() => setIsSettingsModalOpen(false)} style={{ flex: 1, padding: '0.8rem', border: '1px solid #ddd', background: 'white', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
+                            <button onClick={saveSettings} style={{ flex: 1, padding: '0.8rem', border: 'none', background: '#3b82f6', color: 'white', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>שמור הגדרות</button>
                         </div>
                     </div>
                 </div>
