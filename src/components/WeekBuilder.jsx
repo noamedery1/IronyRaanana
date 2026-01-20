@@ -40,6 +40,45 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
         if (selectedTeamIndex === null) return;
 
         const constraint = { ...newConstraint };
+
+        // Conflict Check
+        if (constraint.type === 'FIXED') {
+            const getMinutes = (timeStr) => {
+                const [h, m] = timeStr.split(':').map(Number);
+                return h * 60 + m;
+            };
+
+            const newStart = getMinutes(constraint.startTime);
+            const newEnd = getMinutes(constraint.endTime);
+
+            // Iterate all teams to find conflicts
+            for (let i = 0; i < teamConfig.length; i++) {
+                if (i === selectedTeamIndex) continue; // Skip current team ("another team")
+
+                const otherTeam = teamConfig[i];
+                if (!otherTeam.constraints) continue;
+
+                for (const c of otherTeam.constraints) {
+                    // Check only FIXED events for now as they have clear start/end times
+                    // Also check if location matches
+                    if (c.type === 'FIXED' && c.day === constraint.day && c.location === constraint.location) {
+                        const otherStart = getMinutes(c.startTime);
+                        const otherEnd = getMinutes(c.endTime);
+
+                        // Check overlap: max(start1, start2) < min(end1, end2)
+                        if (Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd)) {
+                            alert(`שים לב! התנגשות בשיבוץ:\nקבוצת ${otherTeam.name} כבר משובצת ב-${c.location} בשעות ${c.startTime}-${c.endTime}`);
+                            // We alert but do not block, or should we block?
+                            // User said "make sure and alert". Usually implies stopping or just warning. 
+                            // I'll alert. If I want to block, I'd return here. 
+                            // "make sure" sounds like I should prevent it? I'll prevent it for safety.
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+
         // Create a human readable label
         let label = '';
         const dayName = days[constraint.day];

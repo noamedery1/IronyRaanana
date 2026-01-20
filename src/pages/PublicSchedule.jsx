@@ -108,7 +108,10 @@ function PublicSchedule() {
             let dayContent = isOffDay ? 'מנוחה' : formatTime(content);
             if (isMatch) dayContent = `${sparkles} ${dayContent} ${sparkles}`;
 
-            message += `*${dayName} ${date}*: ${dayContent}\n`;
+            // Request: Remove empty days from message
+            if (!isOffDay) {
+                message += `*${dayName} ${date}*: ${dayContent}\n`;
+            }
         });
 
         message += `\nבהצלחה! ${muscle}`;
@@ -204,7 +207,31 @@ function PublicSchedule() {
                                     content.toLowerCase().includes('xxx');
 
                                 const isMatch = content && content.includes('משחק');
-                                const displayContent = isOffDay ? 'מנוחה' : formatTime(content);
+                                // Parse content into location and time
+                                const parseContent = (text) => {
+                                    if (!text) return { location: '', time: '' };
+                                    const formatted = formatTime(text);
+                                    // Match time pattern (e.g. 17:00 or 17:00-18:30)
+                                    const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
+                                    const matches = formatted.match(timeRegex);
+
+                                    if (matches && matches.length > 0) {
+                                        // Take the last match as the time (usually at the end)
+                                        const timePart = matches[matches.length - 1];
+                                        // Remove ALL time matches from location to be clean
+                                        let locationPart = formatted;
+                                        matches.forEach(m => {
+                                            locationPart = locationPart.replace(m, '');
+                                        });
+                                        return { location: locationPart.trim(), time: timePart };
+                                    }
+                                    return { location: formatted, time: '' };
+                                };
+
+                                const { location, time } = parseContent(content);
+
+                                // Request: Remove empty days from view
+                                if (isOffDay) return null;
 
                                 return (
                                     <div key={index} className={`day-card ${isMatch ? 'match-day' : ''}`} style={{ opacity: isOffDay ? 0.6 : 1 }}>
@@ -214,12 +241,17 @@ function PublicSchedule() {
                                         </div>
                                         <div className={`day-content ${isOffDay ? 'empty-day' : ''}`}>
                                             {isOffDay ? 'מנוחה' : (
-                                                isMatch ? (
-                                                    <div className="match-content">
-                                                        <span className="match-icon">🏀</span>
-                                                        <span>{displayContent}</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: '100%' }}>
+                                                    {isMatch && <div className="match-badge">🏀 משחק</div>}
+                                                    <div className="location-text" style={{ fontSize: '1.2rem', fontWeight: '700', color: isMatch ? '#ea580c' : '#1e293b' }}>
+                                                        {location}
                                                     </div>
-                                                ) : displayContent
+                                                    {time && (
+                                                        <div className="time-text" style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: '500', direction: 'ltr' }}>
+                                                            {time}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
