@@ -167,16 +167,34 @@ function PublicScheduleWomen() {
 
     return (
         <div className="app-container" style={{ background: '#FFF0F5' }}> {/* Pinkish background override */}
-            <Link to="/admin" className="admin-link-overlay" style={{
+            <div className="nav-overlay" style={{
                 position: 'absolute',
                 top: '10px',
                 left: '10px',
-                opacity: 0.1,
-                fontSize: '0.8rem',
-                textDecoration: 'none',
-                color: 'black',
-                pointerEvents: 'all'
-            }}>Admin</Link>
+                display: 'flex',
+                gap: '10px',
+                zIndex: 1000
+            }}>
+                <Link to="/" style={{
+                    fontSize: '0.9rem',
+                    textDecoration: 'none',
+                    color: '#EA580C',
+                    padding: '5px 10px',
+                    background: 'rgba(255,255,255,0.8)',
+                    borderRadius: '15px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                    לגברים 👨
+                </Link>
+                <Link to="/admin" style={{
+                    fontSize: '0.8rem',
+                    textDecoration: 'none',
+                    color: 'black',
+                    opacity: 0.1,
+                    padding: '5px'
+                }}>Admin</Link>
+            </div>
 
             <header className="header" style={{
                 borderBottom: '4px solid #BE185D',

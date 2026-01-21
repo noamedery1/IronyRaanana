@@ -153,6 +153,7 @@ const WomenDashboard = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <a href="/women" target="_blank" style={{ textDecoration: 'none', color: '#BE185D', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>
                     <span style={{ fontSize: '0.9rem', color: '#666' }}>שלום, Admin</span>
                     <button
                         onClick={handleLogout}
