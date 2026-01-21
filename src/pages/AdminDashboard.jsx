@@ -120,6 +120,7 @@ const AdminDashboard = () => {
             <header style={{ background: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <img src="/men_logo.png" alt="Men Logo" style={{ height: '60px', width: 'auto' }} />
                         <h2 style={{ margin: 0, color: '#14213D' }}>מערכת ניהול</h2>
                         <span style={{ background: '#E5E7EB', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', color: '#666' }}>MVP v0.1</span>
                     </div>

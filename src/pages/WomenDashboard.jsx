@@ -9,7 +9,7 @@ const WomenDashboard = () => {
     const [activeTab, setActiveTab] = useState('setup');
 
     // Setup state
-    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1wqo1MVDAbEWRHUA7XlwS_TpD-St2KpwEPVwLyq6SO2E/edit?gid=0#gid=0');
+    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1SwK7e8IqSh-Wp58Lv16EtRVTezIi9bseDEAELmOdnng/edit?usp=sharing');
     const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbySWYT00uCR5pboiv9QvlvArPYi8LgPAbsUHsljoOoTYADtpLkfnIcVOiXWx8y-n-1wbw/exec');   // User needs to set this up
     const [sheetName, setSheetName] = useState('Sheet1');
     const [isConnected, setIsConnected] = useState(false);
@@ -118,6 +118,7 @@ const WomenDashboard = () => {
             <header style={{ background: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <img src="/women_logo.png" alt="Women Logo" style={{ height: '60px', width: 'auto' }} />
                         <h2 style={{ margin: 0, color: '#BE185D' }}>מערכת ניהול - נשים</h2>
                         <span style={{ background: '#FCE7F3', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', color: '#BE185D' }}>MVP v0.1</span>
                     </div>

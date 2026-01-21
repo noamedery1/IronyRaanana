@@ -178,13 +178,31 @@ function PublicScheduleWomen() {
                 pointerEvents: 'all'
             }}>Admin</Link>
 
-            <header className="header" style={{ borderBottom: '4px solid #BE185D' }}>
-                <img src="/hoop_v2.png" alt="Basket Hoop" className="hoop-icon" />
-                <div className="header-text">
-                    <h1 className="title" style={{ color: '#BE185D' }}>מכבי רעננה - נשים</h1>
-                    <h2 className="title-sub" style={{ color: '#831843' }}>כדורסל - מחלקת הנערות</h2>
-                    <p className="subtitle" style={{ color: '#9D174D' }}>לו"ז אימונים שבועי</p>
+            <header className="header" style={{
+                borderBottom: '4px solid #BE185D',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: '2rem',
+                flexWrap: 'wrap-reverse' // Ensure typical responsive behavior
+            }}>
+                <div className="header-text" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <h1 className="title" style={{ color: '#BE185D', fontSize: '3rem', marginBottom: '0.5rem' }}>מכבי רעננה - נשים</h1>
+                    <h2 className="title-sub" style={{ color: '#831843', fontSize: '1.5rem', margin: 0 }}>כדורסל - מחלקת הנערות</h2>
+                    <p className="subtitle" style={{ color: '#9D174D', marginTop: '0.5rem' }}>לו"ז אימונים שבועי</p>
                 </div>
+                <img
+                    src="/women_logo.png"
+                    alt="Maccabi Raanana Women"
+                    className="women-logo-main"
+                    style={{
+                        borderRadius: '50%',
+                        width: '140px',
+                        height: '140px',
+                        objectFit: 'contain',
+                        border: '4px solid white',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                />
             </header>
 
             {loading ? (

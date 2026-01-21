@@ -151,13 +151,31 @@ function PublicSchedule() {
                 pointerEvents: 'all'
             }}>Admin</Link>
 
-            <header className="header">
-                <img src="/hoop_v2.png" alt="Basket Hoop" className="hoop-icon" />
-                <div className="header-text">
-                    <h1 className="title">עירוני רעננה</h1>
-                    <h2 className="title-sub">כדורסל - מחלקת הנוער</h2>
-                    <p className="subtitle">לו"ז אימונים שבועי</p>
+            <header className="header" style={{
+                borderBottom: '4px solid #EA580C',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: '2rem',
+                flexWrap: 'wrap-reverse' // Ensure typical responsive behavior
+            }}>
+                <div className="header-text" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <h1 className="title" style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>עירוני רעננה</h1>
+                    <h2 className="title-sub" style={{ fontSize: '1.5rem', margin: 0 }}>כדורסל - מחלקת הנוער</h2>
+                    <p className="subtitle" style={{ marginTop: '0.5rem' }}>לו"ז אימונים שבועי</p>
                 </div>
+                <img
+                    src="/men_logo.png"
+                    alt="Ironi Raanana Men"
+                    className="men-logo-main"
+                    style={{
+                        borderRadius: '50%',
+                        width: '140px',
+                        height: '140px',
+                        objectFit: 'contain',
+                        border: '4px solid white',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                />
             </header>
 
             {loading ? (
