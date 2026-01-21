@@ -10,7 +10,7 @@ const WomenDashboard = () => {
 
     // Setup state
     const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1wqo1MVDAbEWRHUA7XlwS_TpD-St2KpwEPVwLyq6SO2E/edit?gid=0#gid=0');
-    const [saveUrl, setSaveUrl] = useState('');   // User needs to set this up
+    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbySWYT00uCR5pboiv9QvlvArPYi8LgPAbsUHsljoOoTYADtpLkfnIcVOiXWx8y-n-1wbw/exec');   // User needs to set this up
     const [sheetName, setSheetName] = useState('Sheet1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -116,16 +116,50 @@ const WomenDashboard = () => {
         <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f7fa', fontFamily: 'Rubik, sans-serif' }}>
             {/* Header */}
             <header style={{ background: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <h2 style={{ margin: 0, color: '#BE185D' }}>מערכת ניהול - נשים</h2>
-                    <span style={{ background: '#FCE7F3', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', color: '#BE185D' }}>MVP v0.1</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <h2 style={{ margin: 0, color: '#BE185D' }}>מערכת ניהול - נשים</h2>
+                        <span style={{ background: '#FCE7F3', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', color: '#BE185D' }}>MVP v0.1</span>
+                    </div>
+
+                    {/* Department Switcher */}
+                    <div style={{ display: 'flex', background: '#fdf2f8', padding: '0.25rem', borderRadius: '8px', gap: '0.25rem' }}>
+                        <button
+                            onClick={() => navigate('/admin/dashboard')}
+                            style={{
+                                padding: '0.4rem 1.2rem',
+                                borderRadius: '6px',
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#9d174d',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = '#fce7f3'}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >גברים</button>
+                        <button style={{
+                            padding: '0.4rem 1.2rem',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: 'white',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                            color: '#BE185D',
+                            fontWeight: 600,
+                            cursor: 'default'
+                        }}>נשים</button>
+                    </div>
                 </div>
-                <button
-                    onClick={handleLogout}
-                    style={{ background: 'none', border: '1px solid #ccc', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
-                >
-                    התנתק
-                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#666' }}>שלום, Admin</span>
+                    <button
+                        onClick={handleLogout}
+                        style={{ background: 'none', border: '1px solid #ccc', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                        התנתק
+                    </button>
+                </div>
             </header>
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

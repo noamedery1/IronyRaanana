@@ -181,7 +181,7 @@ function PublicScheduleWomen() {
             <header className="header" style={{ borderBottom: '4px solid #BE185D' }}>
                 <img src="/hoop_v2.png" alt="Basket Hoop" className="hoop-icon" />
                 <div className="header-text">
-                    <h1 className="title" style={{ color: '#BE185D' }}>עירוני רעננה - נשים</h1>
+                    <h1 className="title" style={{ color: '#BE185D' }}>מכבי רעננה - נשים</h1>
                     <h2 className="title-sub" style={{ color: '#831843' }}>כדורסל - מחלקת הנערות</h2>
                     <p className="subtitle" style={{ color: '#9D174D' }}>לו"ז אימונים שבועי</p>
                 </div>

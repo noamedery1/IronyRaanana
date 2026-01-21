@@ -118,16 +118,50 @@ const AdminDashboard = () => {
         <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f7fa', fontFamily: 'Rubik, sans-serif' }}>
             {/* Header */}
             <header style={{ background: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <h2 style={{ margin: 0, color: '#14213D' }}>מערכת ניהול</h2>
-                    <span style={{ background: '#E5E7EB', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', color: '#666' }}>MVP v0.1</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <h2 style={{ margin: 0, color: '#14213D' }}>מערכת ניהול</h2>
+                        <span style={{ background: '#E5E7EB', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', color: '#666' }}>MVP v0.1</span>
+                    </div>
+
+                    {/* Department Switcher */}
+                    <div style={{ display: 'flex', background: '#f3f4f6', padding: '0.25rem', borderRadius: '8px', gap: '0.25rem' }}>
+                        <button style={{
+                            padding: '0.4rem 1.2rem',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: 'white',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                            color: '#14213D',
+                            fontWeight: 600,
+                            cursor: 'default'
+                        }}>גברים</button>
+                        <button
+                            onClick={() => navigate('/admin/dashboard-women')}
+                            style={{
+                                padding: '0.4rem 1.2rem',
+                                borderRadius: '6px',
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#6b7280',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >נשים</button>
+                    </div>
                 </div>
-                <button
-                    onClick={handleLogout}
-                    style={{ background: 'none', border: '1px solid #ccc', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
-                >
-                    התנתק
-                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ fontSize: '0.9rem', color: '#666' }}>שלום, Admin</span>
+                    <button
+                        onClick={handleLogout}
+                        style={{ background: 'none', border: '1px solid #ccc', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                        התנתק
+                    </button>
+                </div>
             </header>
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
