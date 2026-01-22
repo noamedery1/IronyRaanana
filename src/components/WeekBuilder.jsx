@@ -78,23 +78,27 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
             for (let i = 0; i < teamConfig.length; i++) {
                 if (i === selectedTeamIndex) continue; // Skip current team ("another team")
 
+                const currentTeam = teamConfig[selectedTeamIndex];
                 const otherTeam = teamConfig[i];
                 if (!otherTeam.constraints) continue;
 
                 for (const c of otherTeam.constraints) {
-                    // Check only FIXED events for now as they have clear start/end times
-                    // Also check if location matches
-                    if (c.type === 'FIXED' && c.day === constraint.day && c.location === constraint.location) {
-                        const otherStart = getMinutes(c.startTime);
-                        const otherEnd = getMinutes(c.endTime);
+                    if (c.type !== 'FIXED' || c.day !== constraint.day) continue;
 
-                        // Check overlap: max(start1, start2) < min(end1, end2)
-                        if (Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd)) {
+                    const otherStart = getMinutes(c.startTime);
+                    const otherEnd = getMinutes(c.endTime);
+                    const isTimeOverlap = Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd);
+
+                    if (isTimeOverlap) {
+                        // 1. Same Coach Conflict (Regardless of location)
+                        if (currentTeam.coach && otherTeam.coach && currentTeam.coach === otherTeam.coach) {
+                            alert(`שגיאת אילוץ: המאמן/ת ${currentTeam.coach} כבר משובץ/ת עם קבוצת ${otherTeam.name} בשעות אלו!`);
+                            return;
+                        }
+
+                        // 2. Same Location Conflict
+                        if (c.location === constraint.location) {
                             alert(`שים לב! התנגשות בשיבוץ:\nקבוצת ${otherTeam.name} כבר משובצת ב-${c.location} בשעות ${c.startTime}-${c.endTime}`);
-                            // We alert but do not block, or should we block?
-                            // User said "make sure and alert". Usually implies stopping or just warning. 
-                            // I'll alert. If I want to block, I'd return here. 
-                            // "make sure" sounds like I should prevent it? I'll prevent it for safety.
                             return;
                         }
                     }
@@ -155,7 +159,10 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
                         alignItems: 'center',
                         backgroundColor: index % 2 === 0 ? 'white' : '#fafafa'
                     }}>
-                        <div style={{ fontWeight: '500', paddingRight: '0.5rem' }}>{team.name}</div>
+                        <div style={{ paddingRight: '0.5rem' }}>
+                            <div style={{ fontWeight: '500' }}>{team.name}</div>
+                            {team.coach && <div style={{ fontSize: '0.85rem', color: '#666' }}>{team.coach}</div>}
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                             <button
                                 onClick={() => handleSessionCountChange(index, -1)}

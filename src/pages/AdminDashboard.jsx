@@ -75,25 +75,66 @@ const AdminDashboard = () => {
                         const headerRow = rows[headerRowIndex];
                         const dataRows = rows.slice(headerRowIndex + 1);
 
-                        const teamListRaw = dataRows
-                            .map(row => row[0])
-                            .filter(team => team && team.trim() !== '');
+                        // Dynamic Column Detection
+                        const teamIndex = 0; // Always A
+                        let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
+                        let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
 
-                        // Remove duplicates and sort
-                        const teamList = [...new Set(teamListRaw)].sort();
+                        // Fallbacks if detection fails
+                        if (dayStartIndex === -1) {
+                            // If coach found at 1, days probably start at 2. If no coach, maybe 1.
+                            dayStartIndex = (coachIndex !== -1) ? coachIndex + 1 : 1;
+                        }
+
+                        // Extract unique teams (handling same name different coach)
+                        // We create an object for each team row
+                        const uniqueTeams = [];
+                        const seenKeys = new Set();
+
+                        dataRows.forEach((row, rowIndex) => {
+                            const name = row[teamIndex];
+                            if (!name || name.trim() === '') return;
+
+                            const coach = (coachIndex !== -1) ? row[coachIndex] : '';
+                            const key = `${name.trim()}_${coach ? coach.trim() : ''}`; // Unique key
+
+                            if (!seenKeys.has(key)) {
+                                seenKeys.add(key);
+                                uniqueTeams.push({
+                                    name: name.trim(),
+                                    coach: coach ? coach.trim() : '',
+                                    key: key,
+                                    rowIndex: rowIndex // useful for updates
+                                });
+                            }
+                        });
+
 
                         setSheetData({
                             headers: headerRow,
-                            teams: teamList,
-                            rawRows: dataRows
+                            teams: uniqueTeams,
+                            rawRows: dataRows,
+                            indices: {
+                                team: teamIndex,
+                                coach: coachIndex,
+                                dayStart: dayStartIndex
+                            }
                         });
 
                         // Initialize team config
-                        setTeamConfig(teamList.map(team => ({
-                            name: team,
-                            sessionsPerWeek: 3, // Default value
-                            constraints: []
-                        })));
+                        // We need to support migration if existing config exists, but for now reset or map
+                        setTeamConfig(prevConfig => {
+                            return uniqueTeams.map(teamObj => {
+                                // Try to find match
+                                const existing = prevConfig.find(tc => tc.name === teamObj.name && tc.coach === teamObj.coach);
+                                return existing || {
+                                    name: teamObj.name,
+                                    coach: teamObj.coach,
+                                    sessionsPerWeek: 3,
+                                    constraints: []
+                                };
+                            });
+                        });
 
                         setIsConnected(true);
                         // Optional: Switch to Week Builder automatically
@@ -298,6 +339,7 @@ const AdminDashboard = () => {
                             headers={sheetData.headers}
                             teamConfig={teamConfig}
                             setTeamConfig={setTeamConfig}
+                            indices={sheetData.indices}
                         />
                     )}
 
@@ -309,6 +351,7 @@ const AdminDashboard = () => {
                             teamConfig={teamConfig}
                             saveUrl={saveUrl}
                             sheetName={sheetName}
+                            indices={sheetData.indices}
                         />
                     )}
                 </main>

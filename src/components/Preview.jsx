@@ -1,21 +1,91 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indices }) => {
     const [generatedSchedule, setGeneratedSchedule] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Manage headers locally to allow date updates
+    // Manage headers locally
     const [currentHeaders, setCurrentHeaders] = useState(headers || []);
     const [selectedDate, setSelectedDate] = useState('');
 
-    // Update local headers when props change (initial load)
+    // Update local headers when props change
     if (currentHeaders.length === 0 && headers && headers.length > 0) {
         setCurrentHeaders(headers);
     }
 
-    // Available resources
+    const dayStart = indices?.dayStart || 1;
+    const coachIndex = indices?.coach;
+
+    // Calculate conflicts
+    // Returns a Set of "rowIndex_colIndex" strings that have conflicts
+    const conflicts = (() => {
+        const conflictSet = new Set();
+        const data = generatedSchedule || rawRows;
+        if (!data) return conflictSet;
+
+        const coachMap = {}; // coachName -> day -> [{start, end, row, col}]
+
+        data.forEach((row, rIdx) => {
+            // Find coach for this row (either from row data or matching config)
+            // The row might be raw array.
+            // If we passed indices, we can look up coach column.
+            let coachName = '';
+            if (coachIndex !== undefined && coachIndex !== -1) {
+                coachName = row[coachIndex];
+            } else {
+                // Fallback: try to find in teamConfig by name (row[0])
+                const cfg = teamConfig.find(tc => tc.name === row[0]);
+                if (cfg) coachName = cfg.coach;
+            }
+
+            if (!coachName || !coachName.trim()) return;
+            coachName = coachName.trim();
+
+            if (!coachMap[coachName]) coachMap[coachName] = {};
+
+            // Check each day column
+            for (let d = 0; d < 7; d++) {
+                const cIdx = dayStart + d;
+                const cellContent = row[cIdx];
+                if (!cellContent || typeof cellContent !== 'string') continue;
+
+                // Parse time from cell (e.g. "Maccabi 17:00-18:30")
+                const timeMatch = cellContent.match(/(\d{1,2}:\d{2}).*?(\d{1,2}:\d{2})/); // simple regex search
+                // Or searching for just one time if "1700" format?
+                // Let's use a robust parser helper or just look for 4 digits ranges
+                // Existing format appears to be "Location 1700-1830" or "Location 17:00-18:30"
+                // Let's normalize
+                const nums = cellContent.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
+
+                if (nums) {
+                    const start = parseInt(nums[1]);
+                    const end = parseInt(nums[2]);
+
+                    if (!coachMap[coachName][d]) coachMap[coachName][d] = [];
+
+                    // Check overlap with existing events for this coach on this day
+                    const events = coachMap[coachName][d];
+                    let hasConflict = false;
+
+                    events.forEach(ev => {
+                        if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
+                            // Overlap found!
+                            conflictSet.add(`${rIdx}_${cIdx}`);
+                            conflictSet.add(`${ev.row}_${ev.col}`);
+                            hasConflict = true;
+                        }
+                    });
+
+                    events.push({ start, end, row: rIdx, col: cIdx });
+                }
+            }
+        });
+        return conflictSet;
+    })();
+
+
     const LOCATIONS = ['מטרו', 'השרון', 'רימון', 'אביב', 'תיכון חדש'];
     const TIME_SLOTS = [
         { start: '1600', end: '1730' },
@@ -32,7 +102,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
         );
     }
 
-    const dayHeaders = currentHeaders.length > 0 ? currentHeaders.slice(1, 8) : [];
+    const dayHeaders = currentHeaders.length > 0 ? currentHeaders.slice(dayStart, dayStart + 7) : [];
 
     const handleDateChange = (e) => {
         const dateVal = e.target.value;
@@ -45,10 +115,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
 
         const newHeaders = [...currentHeaders];
 
-        // Ensure we have enough columns
-        if (newHeaders.length < 8) return;
+        // Ensure we have enough columns (up to start + 7)
+        // If array is short, we might crash, but generally headers array is long enough from CSV
 
-        // Update columns 1 to 7 (Sunday to Saturday)
         for (let i = 0; i < 7; i++) {
             const currentDay = new Date(start);
             currentDay.setDate(start.getDate() + i);
@@ -56,7 +125,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
             const dayName = days[i];
             const formattedDate = `${currentDay.getDate()}/${currentDay.getMonth() + 1}`;
 
-            newHeaders[i + 1] = `${dayName} ${formattedDate}`;
+            // We update the specific column index
+            if (newHeaders[dayStart + i]) {
+                newHeaders[dayStart + i] = `${dayName} ${formattedDate}`;
+            }
         }
 
         setCurrentHeaders(newHeaders);
@@ -86,7 +158,21 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
 
             // 2. Process each team based on configuration
             teamConfig.forEach(team => {
-                const teamRow = newSchedule.find(r => r[0] === team.name);
+                // Find row by team name AND coach if needed, but rawRows doesn't have metadata nicely attached
+                // We assume rawRows order is preserved or we search by name (col 0). 
+                // Since we de-duped by name+coach in WomenDashboard, we need to be careful.
+                // But rawRows is just the data. 
+                // We should find the row where column 0 == team.name AND column[coachIndex] == team.coach
+
+                const teamRow = newSchedule.find(r => {
+                    const nameMatch = r[0] === team.name;
+                    if (!nameMatch) return false;
+                    if (coachIndex !== undefined && coachIndex !== -1) {
+                        return (r[coachIndex] || '').trim() === (team.coach || '').trim();
+                    }
+                    return true;
+                });
+
                 if (!teamRow) return;
 
                 let sessionsScheduled = 0;
@@ -94,11 +180,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                 const constraints = team.constraints || [];
                 const occupiedDays = new Set(); // Days where team already has an event
 
-                // Phase 0: Scan existing data strictly for "occupied days" and session count
-                // We do NOT book specific resources from raw text yet as parsing is complex,
-                // but we count it as a session to avoid over-scheduling.
+                // Phase 0: Scan existing data
                 for (let d = 0; d < 7; d++) {
-                    const colIndex = d + 1;
+                    const colIndex = dayStart + d;
                     const cellContent = teamRow[colIndex];
                     if (cellContent && cellContent.trim() !== '' && cellContent !== 'xxxxxxxx') {
                         occupiedDays.add(d);
@@ -106,9 +190,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                     }
                 }
 
-                // Phase 1: Apply Hard Constraints (Overwriting existing if needed)
+                // Phase 1: Apply Hard Constraints
                 constraints.forEach(c => {
-                    const colIndex = c.day + 1;
+                    const colIndex = dayStart + c.day; // Use dynamic start
                     const startRaw = formatTimeForSheet(c.startTime);
                     const endRaw = formatTimeForSheet(c.endTime);
 
@@ -130,47 +214,38 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                     }
                 });
 
-                // Recalculate sessions scheduled based on the updated row state (Constraints + Originals)
+                // Recalculate sessions
                 sessionsScheduled = 0;
                 for (let d = 0; d < 7; d++) {
-                    const colIndex = d + 1;
+                    const colIndex = dayStart + d;
                     const cellContent = teamRow[colIndex];
                     if (cellContent && cellContent.trim() !== '' && cellContent !== 'xxxxxxxx') {
                         sessionsScheduled++;
                     }
                 }
 
-                // Phase 2: Fill Remaining Sessions (Auto-Scheduler)
+                // Phase 2: Fill Remaining Sessions
                 let sessionsToFill = sessionsNeeded - sessionsScheduled;
 
                 for (let d = 0; d < 7 && sessionsToFill > 0; d++) {
-                    if (occupiedDays.has(d)) continue; // Skip if team busy today
+                    if (occupiedDays.has(d)) continue;
 
-                    // Try to find a valid slot (Location + Time)
                     let foundSlotForDay = false;
 
                     for (const loc of LOCATIONS) {
                         if (foundSlotForDay) break;
                         for (const slot of TIME_SLOTS) {
 
-                            // Check max end time constraint
                             if (team.maxEndTime) {
-                                // Convert both to numbers for comparison (e.g. 2000 vs 2200)
                                 const slotEndNum = parseInt(slot.end);
                                 const configuredMaxNum = parseInt(team.maxEndTime.replace(':', ''));
-
-                                // Logic: If this slot ends AFTER the max allowed time, skip it.
-                                // Note: slot.end is "HHMM" format (1730). maxEndTime is "HH:MM" (17:30).
-                                // We parsed maxEndTime by removing colon.
-
                                 if (!isNaN(configuredMaxNum) && slotEndNum > configuredMaxNum) {
-                                    continue; // Skip this slot, it's too late for this team
+                                    continue;
                                 }
                             }
 
                             if (tryBookResource(d, loc, slot.start)) {
-                                // Success! Book it.
-                                const colIndex = d + 1;
+                                const colIndex = dayStart + d;
                                 teamRow[colIndex] = `${loc} ${slot.start}-${slot.end}`;
                                 occupiedDays.add(d);
                                 sessionsToFill--;
@@ -188,12 +263,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
     };
 
     const handleCellChange = (rowIndex, colIndex, value) => {
-        // If we don't have a generated schedule yet, we initialize it from the raw rows
-        // so the user can start editing immediately.
         let currentData = generatedSchedule;
-
         if (!currentData) {
-            // Deep copy rawRows to start editing
             try {
                 currentData = JSON.parse(JSON.stringify(rawRows));
             } catch (e) {
@@ -201,7 +272,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                 return;
             }
         } else {
-            // Deep copy existing generated schedule
             currentData = JSON.parse(JSON.stringify(currentData));
         }
 
@@ -214,11 +284,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
     const dataToShow = generatedSchedule || rawRows;
 
     const handleSave = async () => {
-        // If Save URL is provided, try to save to cloud
         if (saveUrl) {
             setIsSaving(true);
             try {
-                // Prepare data: headers + dataRows
                 const safeData = dataToShow.map(row =>
                     row.map(cell => (cell === null || cell === undefined) ? '' : String(cell))
                 );
@@ -228,17 +296,13 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                     sheetName: sheetName || 'Sheet1'
                 };
 
-                // Use 'no-cors' mode to bypass browser blocks on the response.
                 await fetch(saveUrl, {
                     method: 'POST',
                     mode: 'no-cors',
                     body: JSON.stringify(payload),
-                    headers: {
-                        'Content-Type': 'text/plain'
-                    }
+                    headers: { 'Content-Type': 'text/plain' }
                 });
 
-                // Assume success if fetch didn't throw network error
                 alert('הבקשה נשלחה לגיליון! (נא לבדוק אם הוא התעדכן תוך מספר שניות)');
 
             } catch (err) {
@@ -249,7 +313,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                 setIsSaving(false);
             }
         } else {
-            // No URL - Download CSV
             downloadCsv();
         }
     };
@@ -276,36 +339,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ margin: 0 }}>תצוגה מקדימה {generatedSchedule && '(תוצאת חישוב)'}</h3>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        style={{
-                            background: '#FCA311',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            opacity: isGenerating ? 0.7 : 1
-                        }}
-                    >
+                    <button onClick={handleGenerate} disabled={isGenerating} style={{ background: '#FCA311', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, opacity: isGenerating ? 0.7 : 1 }}>
                         {isGenerating ? 'מחשב...' : 'צור לו"ז אוטומטי'}
                     </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        style={{
-                            background: saveUrl ? '#10B981' : '#14213D',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.6rem 1.2rem',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            opacity: isSaving ? 0.7 : 1
-                        }}
-                    >
+                    <button onClick={handleSave} disabled={isSaving} style={{ background: saveUrl ? '#10B981' : '#14213D', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, opacity: isSaving ? 0.7 : 1 }}>
                         {isSaving ? 'שומר...' : (saveUrl ? 'שמור לגיליון (ענן)' : 'ייצא ל-CSV / שמור')}
                     </button>
                 </div>
@@ -315,12 +352,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                 <span style={{ fontWeight: '600', color: '#0369a1' }}>📅 עדכון תאריכים מהיר:</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <label style={{ fontSize: '0.9rem' }}>בחר יום ראשון:</label>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={handleDateChange}
-                        style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }}
-                    />
+                    <input type="date" value={selectedDate} onChange={handleDateChange} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }} />
                 </div>
                 <span style={{ fontSize: '0.8rem', color: '#666' }}>(הכותרות בטבלה למטה יתעדכנו אוטומטית)</span>
             </div>
@@ -329,6 +361,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                 <thead>
                     <tr style={{ background: '#f8f9fa' }}>
                         <th style={{ padding: '1rem', border: '1px solid #eee', textAlign: 'right', minWidth: '150px' }}>קבוצה</th>
+                        {coachIndex !== undefined && coachIndex !== -1 && (
+                            <th style={{ padding: '1rem', border: '1px solid #eee', textAlign: 'right', minWidth: '100px' }}>מאמן</th>
+                        )}
                         {dayHeaders.map((header, i) => (
                             <th key={i} style={{ padding: '1rem', border: '1px solid #eee', textAlign: 'center', minWidth: '120px' }}>
                                 {header}
@@ -337,24 +372,39 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                     </tr>
                 </thead>
                 <tbody>
-                    {teams.map((teamName, i) => {
-                        const rowIndex = dataToShow.findIndex(r => r[0] === teamName);
+                    {teams.map((teamObj, i) => {
+                        // teamObj is {name, coach, key, rowIndex} 
+                        // If teams hasn't been updated to objects yet (compatibility), handle string
+                        const teamName = teamObj.name || teamObj;
+
+                        // Find row index. Preferably use rowIndex from object, otherwise search
+                        let rowIndex = teamObj.rowIndex;
+                        if (rowIndex === undefined) {
+                            rowIndex = dataToShow.findIndex(r => r[0] === teamName);
+                        }
+
                         const rowData = dataToShow[rowIndex];
 
                         return (
                             <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fcfcfc' }}>
                                 <td style={{ padding: '0.8rem', border: '1px solid #eee', fontWeight: '500' }}>{teamName}</td>
+                                {coachIndex !== undefined && coachIndex !== -1 && (
+                                    <td style={{ padding: '0.8rem', border: '1px solid #eee', color: '#666' }}>
+                                        {rowData ? rowData[coachIndex] : ''}
+                                    </td>
+                                )}
                                 {dayHeaders.map((_, colMapIndex) => {
-                                    const colIndex = colMapIndex + 1;
+                                    const colIndex = dayStart + colMapIndex;
                                     const cellData = rowData ? rowData[colIndex] : '';
-                                    const isGenerated = false; // Styling disabled as we removed the tag
+
+                                    const isConflict = conflicts.has(`${rowIndex}_${colIndex}`);
 
                                     return (
                                         <td key={colMapIndex} style={{
                                             padding: 0,
-                                            border: '1px solid #eee',
+                                            border: isConflict ? '2px solid #ef4444' : '1px solid #eee',
                                             textAlign: 'center',
-                                            backgroundColor: isGenerated ? '#ECFDF5' : 'transparent'
+                                            backgroundColor: isConflict ? '#fee2e2' : 'transparent'
                                         }}>
                                             <input
                                                 type="text"
@@ -369,10 +419,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName }) =>
                                                     background: 'transparent',
                                                     fontFamily: 'inherit',
                                                     fontSize: 'inherit',
-                                                    fontWeight: isGenerated ? '600' : 'normal',
-                                                    color: isGenerated ? '#047857' : 'inherit',
-                                                    outline: 'none'
+                                                    fontWeight: 'normal',
+                                                    outline: 'none',
+                                                    color: isConflict ? '#b91c1c' : 'inherit'
                                                 }}
+                                                title={isConflict ? 'התנגשות מאמן או משאב!' : ''}
                                             />
                                         </td>
                                     );

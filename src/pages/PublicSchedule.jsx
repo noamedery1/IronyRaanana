@@ -7,9 +7,10 @@ const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpof
 
 function PublicSchedule() {
     const [data, setData] = useState([]);
-    const [teams, setTeams] = useState([]);
+    const [teams, setTeams] = useState([]); // Array of objects
     const [headers, setHeaders] = useState([]);
-    const [selectedTeam, setSelectedTeam] = useState('');
+    const [dayStart, setDayStart] = useState(1);
+    const [selectedTeamId, setSelectedTeamId] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -38,20 +39,46 @@ function PublicSchedule() {
                             const headerRow = rows[headerRowIndex];
                             const dataRows = rows.slice(headerRowIndex + 1);
 
-                            // Extract unique teams (Column A)
-                            const teamList = dataRows
-                                .map(row => row[0])
-                                .filter(team => team && team.trim() !== '')
-                                .sort();
+                            // Dynamic Column Detection
+                            const teamIndex = 0;
+                            let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
+                            let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
+
+                            // Fallbacks
+                            if (dayStartIndex === -1) {
+                                dayStartIndex = (coachIndex !== -1) ? coachIndex + 1 : 1;
+                            }
+                            setDayStart(dayStartIndex);
+
+                            const teamObjects = [];
+
+                            dataRows.forEach((row, rowIndex) => {
+                                const name = row[teamIndex];
+                                if (!name || name.trim() === '') return;
+
+                                const coach = (coachIndex !== -1) ? row[coachIndex] : '';
+                                // Form unique label
+                                const label = coach ? `${name} - ${coach}` : name;
+
+                                teamObjects.push({
+                                    label: label,
+                                    value: rowIndex.toString(), // Use rowIndex as unique ID
+                                    name: name.trim(),
+                                    coach: coach ? coach.trim() : '',
+                                    row: row
+                                });
+                            });
+
+                            // DO NOT Sort - keep sheet order as requested
+                            // teamObjects.sort((a, b) => a.name.localeCompare(b.name));
 
                             setHeaders(headerRow);
-                            setTeams(teamList);
+                            setTeams(teamObjects);
                             setData(dataRows);
 
                             // Set default team if available
-                            if (teamList.length > 0) {
-                                // Default to first team
-                                setSelectedTeam(teamList[0]);
+                            if (teamObjects.length > 0) {
+                                setSelectedTeamId(teamObjects[0].value);
                             }
                         }
                         setLoading(false);
@@ -73,8 +100,15 @@ function PublicSchedule() {
     const [copySuccess, setCopySuccess] = useState('');
 
     const getTeamSchedule = () => {
-        if (!selectedTeam) return null;
-        return data.find(row => row[0] === selectedTeam);
+        if (!selectedTeamId) return null;
+        const teamObj = teams.find(t => t.value === selectedTeamId);
+        return teamObj ? teamObj.row : null;
+    };
+
+    const getSelectedTeamName = () => {
+        if (!selectedTeamId) return '';
+        const teamObj = teams.find(t => t.value === selectedTeamId);
+        return teamObj ? teamObj.label : '';
     };
 
     const schedule = getTeamSchedule();
@@ -88,19 +122,20 @@ function PublicSchedule() {
     };
 
     const generateMessage = () => {
-        if (!selectedTeam || !schedule) return '';
+        if (!selectedTeamId || !schedule) return '';
 
+        const teamLabel = getSelectedTeamName();
         const basketball = '\uD83C\uDFC0'; // 🏀
         const sparkles = '\u2728'; // ✨
         const muscle = '\uD83D\uDCAA'; // 💪
 
-        let message = `${basketball} *לו"ז שבועי - ${selectedTeam}* ${basketball}\n\n`;
+        let message = `${basketball} *לו"ז שבועי - ${teamLabel}* ${basketball}\n\n`;
 
-        headers.slice(1, 8).forEach((dayHeader, index) => {
+        headers.slice(dayStart, dayStart + 7).forEach((dayHeader, index) => {
             const parts = dayHeader.split(' ');
             const dayName = parts[0];
             const date = parts[1] || '';
-            const content = schedule[index + 1];
+            const content = schedule[dayStart + index];
 
             const isOffDay = !content || content.trim() === '' || content.toLowerCase().includes('xxx');
             const isMatch = content && content.includes('משחק');
@@ -205,19 +240,19 @@ function PublicSchedule() {
                     <div className="filter-section">
                         <select
                             className="team-select"
-                            value={selectedTeam}
-                            onChange={(e) => setSelectedTeam(e.target.value)}
+                            value={selectedTeamId}
+                            onChange={(e) => setSelectedTeamId(e.target.value)}
                         >
                             <option value="" disabled>בחר קבוצה / Select a Team</option>
                             {teams.map((team, index) => (
-                                <option key={index} value={team}>
-                                    {team}
+                                <option key={team.value} value={team.value}>
+                                    {team.label}
                                 </option>
                             ))}
                         </select>
                     </div>
 
-                    {selectedTeam && (
+                    {selectedTeamId && (
                         <div className="actions-section">
                             <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn">
                                 <span>שתף בוואטסאפ</span>
@@ -232,11 +267,11 @@ function PublicSchedule() {
 
                     <div className="schedule-grid">
                         {schedule ? (
-                            headers.slice(1, 8).map((dayHeader, index) => {
+                            headers.slice(dayStart, dayStart + 7).map((dayHeader, index) => {
                                 const parts = dayHeader.split(' ');
                                 const dayName = parts[0];
                                 const date = parts[1] || '';
-                                const content = schedule[index + 1];
+                                const content = schedule[dayStart + index];
 
                                 const isOffDay = !content ||
                                     content.trim() === '' ||
