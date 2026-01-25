@@ -25,21 +25,7 @@ function PublicScheduleWomen() {
 
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
 
-    // Helper to parse content inside the component if needed, or import
-    const parseScheduleContent = (text) => {
-        if (!text) return { location: '', time: '', isMatch: false };
-        const isMatch = text.includes('משחק');
-        let formatted = text.replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, '$1:$2');
-        const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
-        const matches = formatted.match(timeRegex);
-        let time = '';
-        let location = formatted;
-        if (matches && matches.length > 0) {
-            time = matches[matches.length - 1];
-            matches.forEach(m => { location = location.replace(m, ''); });
-        }
-        return { location: location.replace('משחק', '').trim(), time: time.trim(), isMatch };
-    };
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -446,25 +432,7 @@ function PublicScheduleWomen() {
 
                                         const isMatch = content && content.includes('משחק');
                                         // Parse content into location and time
-                                        const parseContent = (text) => {
-                                            if (!text) return { location: '', time: '' };
-                                            const formatted = formatTime(text);
-                                            // Match time pattern (e.g. 17:00 or 17:00-18:30)
-                                            const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
-                                            const matches = formatted.match(timeRegex);
 
-                                            if (matches && matches.length > 0) {
-                                                // Take the last match as the time (usually at the end)
-                                                const timePart = matches[matches.length - 1];
-                                                // Remove ALL time matches from location to be clean
-                                                let locationPart = formatted;
-                                                matches.forEach(m => {
-                                                    locationPart = locationPart.replace(m, '');
-                                                });
-                                                return { location: locationPart.trim(), time: timePart };
-                                            }
-                                            return { location: formatted, time: '' };
-                                        };
 
                                         const { location, time, status } = parseScheduleContent(content);
 
