@@ -30,12 +30,12 @@ const DailyView = ({ data, headers, teams, dayStart }) => {
             }
         });
 
-        // Sort items in each day by time then hall
+        // Sort items in each day by Location then Time
         Object.values(byDay).forEach(day => {
             day.sessions.sort((a, b) => {
-                const timeDiff = a.time.localeCompare(b.time);
-                if (timeDiff !== 0) return timeDiff;
-                return a.location.localeCompare(b.location);
+                const locDiff = a.location.localeCompare(b.location);
+                if (locDiff !== 0) return locDiff;
+                return a.time.localeCompare(b.time);
             });
         });
 

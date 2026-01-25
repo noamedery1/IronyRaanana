@@ -475,7 +475,7 @@ function PublicScheduleWomen() {
                                                             <div className="event-location" style={{ fontSize: '1rem' }}>
                                                                 {location}
                                                             </div>
-                                                            {isMatch && <div className="match-badge" style={{ background: '#be185d' }}>🏀 משחק</div>}
+                                                            {isMatch && <div className="match-badge" style={{ color: '#be185d', fontWeight: 'bold' }}>🏀 משחק</div>}
                                                         </>
                                                     ) : (
                                                         <div className="no-event">מנוחה</div>
