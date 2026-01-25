@@ -102,6 +102,9 @@ function PublicScheduleWomen() {
                                 const name = row[teamIndex];
                                 if (!name || name.trim() === '') return;
 
+                                // Exclude Banner row from teams list
+                                if (name.trim() === 'באנר' || name.trim().toLowerCase() === 'banner') return;
+
                                 const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                                 // Form unique label
                                 const label = coach ? `${name} - ${coach}` : name;
