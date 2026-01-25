@@ -35,6 +35,7 @@ export const flattenScheduleData = (teams, headers, dayStart, indices) => {
                 time: time,
                 location: location,
                 isMatch: isMatch,
+                status: status,
                 fullDate: header // e.g. "Sunday 25.1"
             });
         }
@@ -45,12 +46,27 @@ export const flattenScheduleData = (teams, headers, dayStart, indices) => {
 
 // Parse individual cell
 export const parseCellContent = (text) => {
-    if (!text) return { time: '', location: '', isMatch: false };
+    if (!text) return { time: '', location: '', isMatch: false, status: 'normal', originalText: '' };
 
-    const isMatch = text.includes('משחק');
+    let status = 'normal';
+    let cleanText = text;
+
+    // Check for Cancellation
+    if (text.match(/^(x|X|בוטל|CANCELED)\b/) || text.includes('X ') || text.includes('בוטל')) {
+        status = 'cancelled';
+        // Aggressively remove X and labels
+        cleanText = text.replace(/^(x|X|בוטל|X |CANCELED)/i, '').replace(/בוטל|CANCELED/g, '').replace(/\bX\b/g, '').trim();
+    }
+    // Check for Change (prefixes or symbols: !, ⚠️, שינוי)
+    else if (text.includes('!') || text.includes('⚠️') || text.includes('שינוי') || text.includes('CHANGE')) {
+        status = 'changed';
+        cleanText = text.replace(/[!⚠️]/g, '').replace(/(שינוי|CHANGE)/g, '').trim();
+    }
+
+    const isMatch = cleanText.includes('משחק');
 
     // Normalize time format to HH:MM
-    let formatted = text.replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, '$1:$2');
+    let formatted = cleanText.replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, '$1:$2');
 
     // Extract time range or single time
     const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
@@ -70,7 +86,9 @@ export const parseCellContent = (text) => {
     return {
         time: time.trim(),
         location: location.replace('משחק', '').trim(), // Clean up
-        isMatch
+        isMatch,
+        status, // 'normal', 'cancelled', 'changed'
+        originalText: text
     };
 };
 
@@ -198,18 +216,32 @@ export const exportToExcel = async (flatData, fileName = 'schedule.xlsx') => {
             time: item.time,
             team: item.team,
             coach: item.coach,
-            type: item.isMatch ? '🏀 משחק' : 'אימון'
+            type: item.isMatch ? '🏀 משחק' : (item.status === 'cancelled' ? '❌ בוטל' : (item.status === 'changed' ? '⚠️ שינוי' : 'אימון'))
         });
 
         // Row Styling
         row.alignment = { vertical: 'middle', horizontal: 'center' };
-        row.getCell('hall').font = { bold: true }; // Bold Hall
-        row.getCell('hall').alignment = { vertical: 'middle', horizontal: 'right' }; // Align text right for Hebrew
+        row.getCell('hall').font = { bold: true };
+        row.getCell('hall').alignment = { vertical: 'middle', horizontal: 'right' };
         row.getCell('team').alignment = { vertical: 'middle', horizontal: 'right' };
-        row.getCell('time').font = { name: 'Courier New' }; // Monospace for time alignment
+        row.getCell('time').font = { name: 'Courier New' };
 
-        // Highlight Matches
-        if (item.isMatch) {
+        // Conditional Styling based on status
+        if (item.status === 'cancelled') {
+            row.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFE6E6' } // Red background
+            };
+            row.font = { strike: true, color: { argb: 'FF990000' } }; // Strike text
+        } else if (item.status === 'changed') {
+            row.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFFFF9C4' } // Yellow background
+            };
+            row.getCell('time').font = { bold: true, color: { argb: 'FFE65100' } }; // Bold Orange Time
+        } else if (item.isMatch) {
             row.fill = {
                 type: 'pattern',
                 pattern: 'solid',

@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { Link } from 'react-router-dom';
 import '../App.css';
-import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile } from '../utils/scheduleUtils';
+import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile, parseCellContent } from '../utils/scheduleUtils';
 import LeagueGamesBanner from '../components/LeagueGamesBanner';
 import HallView from '../components/HallView';
 import DailyView from '../components/DailyView';
+
+// Alias for compatibility if needed, or just use parseCellContent directly
+const parseScheduleContent = parseCellContent;
 
 
 const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
@@ -21,7 +24,11 @@ function PublicSchedule() {
 
     // Helper to parse content inside the component if needed, or import
     const parseScheduleContent = (text) => {
-        if (!text) return { location: '', time: '', isMatch: false };
+        if (!text) return { location: '', time: '', isMatch: false, status: '' };
+        let status = '';
+        if (text.includes('בוטל')) status = 'cancelled';
+        else if (text.includes('שינוי')) status = 'changed';
+
         const isMatch = text.includes('משחק');
         let formatted = text.replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, '$1:$2');
         const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
@@ -32,7 +39,7 @@ function PublicSchedule() {
             time = matches[matches.length - 1];
             matches.forEach(m => { location = location.replace(m, ''); });
         }
-        return { location: location.replace('משחק', '').trim(), time: time.trim(), isMatch };
+        return { location: location.replace('משחק', '').replace('בוטל', '').replace('שינוי', '').trim(), time: time.trim(), isMatch, status };
     };
 
 
@@ -78,9 +85,6 @@ function PublicSchedule() {
                             dataRows.forEach((row, rowIndex) => {
                                 const name = row[teamIndex];
                                 if (!name || name.trim() === '') return;
-
-                                // Exclude Banner row from teams list
-                                if (name.trim() === 'באנר' || name.trim().toLowerCase() === 'banner') return;
 
                                 const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                                 // Form unique label
@@ -430,30 +434,51 @@ function PublicSchedule() {
                                             return { location: formatted, time: '' };
                                         };
 
-                                        const { location, time } = parseContent(content);
+                                        const { location, time, status } = parseScheduleContent(content);
+
+                                        let bg = isMatch ? '#fee2e2' : '#f3f4f6'; // Default backgrounds
+                                        let border = isMatch ? '#ef4444' : 'transparent';
+                                        let textDecoration = 'none';
+                                        let opacity = 1;
+
+                                        if (status === 'cancelled') {
+                                            bg = '#fee2e2'; // Reddish
+                                            textDecoration = 'line-through';
+                                            opacity = 0.6;
+                                        } else if (status === 'changed') {
+                                            bg = '#fef3c7'; // Yellow/Amber
+                                            border = '#f59e0b';
+                                        }
 
                                         // Request: Remove empty days from view
                                         if (isOffDay) return null;
 
                                         return (
-                                            <div key={index} className={`day-card ${isMatch ? 'match-day' : ''}`} style={{ opacity: isOffDay ? 0.6 : 1 }}>
-                                                <div className="day-header">
+                                            <div key={index} className="schedule-card" style={{
+                                                background: bg,
+                                                borderRight: `5px solid ${border}`,
+                                                opacity: opacity
+                                            }}>
+                                                <div className="day-header" style={{ color: isMatch ? '#b91c1c' : '#1f2937' }}>
                                                     <span className="day-name">{dayName}</span>
                                                     <span className="day-date">{date}</span>
                                                 </div>
-                                                <div className={`day-content ${isOffDay ? 'empty-day' : ''}`}>
-                                                    {isOffDay ? 'מנוחה' : (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: '100%' }}>
-                                                            {isMatch && <div className="match-badge">🏀 משחק</div>}
-                                                            <div className="location-text" style={{ fontSize: '1.2rem', fontWeight: '700', color: isMatch ? '#ea580c' : '#1e293b' }}>
+                                                <div className="event-details" style={{ textDecoration }}>
+                                                    {status === 'cancelled' && <div style={{ color: 'red', fontWeight: 'bold' }}>❌ בוטל</div>}
+                                                    {status === 'changed' && <div style={{ color: '#d97706', fontWeight: 'bold' }}>⚠️ שינוי</div>}
+
+                                                    {!isOffDay ? (
+                                                        <>
+                                                            <div className="event-time" style={{ fontSize: '1.2rem', fontWeight: '800' }}>
+                                                                {time}
+                                                            </div>
+                                                            <div className="event-location" style={{ fontSize: '1rem' }}>
                                                                 {location}
                                                             </div>
-                                                            {time && (
-                                                                <div className="time-text" style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: '500', direction: 'ltr' }}>
-                                                                    {time}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                            {isMatch && <div className="match-badge">🏀 משחק</div>}
+                                                        </>
+                                                    ) : (
+                                                        <div className="no-event">מנוחה</div>
                                                     )}
                                                 </div>
                                             </div>

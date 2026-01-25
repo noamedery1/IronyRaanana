@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { Link } from 'react-router-dom';
 import '../App.css';
-import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile } from '../utils/scheduleUtils';
+import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile, parseCellContent } from '../utils/scheduleUtils';
 import LeagueGamesBanner from '../components/LeagueGamesBanner';
 import HallView from '../components/HallView';
 import DailyView from '../components/DailyView';
+
+// Alias for compatibility if needed, or just use parseCellContent directly
+const parseScheduleContent = parseCellContent;
 
 
 // TODO: Replace this with the Women's Google Sheet URL provided by the user
@@ -191,12 +194,15 @@ function PublicScheduleWomen() {
             const content = schedule[dayStart + index];
 
             const isOffDay = !content || content.trim() === '' || content.toLowerCase().includes('xxx');
-            const isMatch = content && content.includes('משחק');
 
-            let dayContent = isOffDay ? 'מנוחה' : formatTime(content);
-            if (isMatch) dayContent = `${sparkles} ${dayContent} ${sparkles}`;
+            const { time, location, status, isMatch } = parseScheduleContent(content);
 
-            // Request: Remove empty days from message
+            let dayContent = isOffDay ? 'מנוחה' : `${time} ${location}`;
+
+            if (status === 'cancelled') dayContent = `❌ [בוטל] ${dayContent}`;
+            if (status === 'changed') dayContent = `⚠️ [שינוי] ${dayContent}`;
+            if (isMatch) dayContent = `✨ ${dayContent} ✨`;
+
             if (!isOffDay) {
                 message += `*${dayName} ${date}*: ${dayContent}\n`;
             }
@@ -460,30 +466,51 @@ function PublicScheduleWomen() {
                                             return { location: formatted, time: '' };
                                         };
 
-                                        const { location, time } = parseContent(content);
+                                        const { location, time, status } = parseScheduleContent(content);
+
+                                        let bg = isMatch ? '#fee2e2' : '#f3f4f6'; // Default backgrounds
+                                        let border = isMatch ? '#db2777' : 'transparent';
+                                        let textDecoration = 'none';
+                                        let opacity = 1;
+
+                                        if (status === 'cancelled') {
+                                            bg = '#fee2e2'; // Reddish
+                                            textDecoration = 'line-through';
+                                            opacity = 0.6;
+                                        } else if (status === 'changed') {
+                                            bg = '#fef3c7'; // Yellow/Amber
+                                            border = '#f59e0b';
+                                        }
 
                                         // Request: Remove empty days from view
                                         if (isOffDay) return null;
 
                                         return (
-                                            <div key={index} className={`day-card ${isMatch ? 'match-day' : ''}`} style={{ opacity: isOffDay ? 0.6 : 1, borderColor: isMatch ? '#BE185D' : '#eee' }}>
-                                                <div className="day-header" style={{ color: '#831843' }}>
+                                            <div key={index} className="schedule-card" style={{
+                                                background: bg,
+                                                borderRight: `5px solid ${border}`,
+                                                opacity: opacity
+                                            }}>
+                                                <div className="day-header" style={{ color: isMatch ? '#be185d' : '#1f2937' }}>
                                                     <span className="day-name">{dayName}</span>
                                                     <span className="day-date">{date}</span>
                                                 </div>
-                                                <div className={`day-content ${isOffDay ? 'empty-day' : ''}`}>
-                                                    {isOffDay ? 'מנוחה' : (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: '100%' }}>
-                                                            {isMatch && <div className="match-badge" style={{ color: '#BE185D' }}>🏀 משחק</div>}
-                                                            <div className="location-text" style={{ fontSize: '1.2rem', fontWeight: '700', color: isMatch ? '#BE185D' : '#1e293b' }}>
+                                                <div className="event-details" style={{ textDecoration }}>
+                                                    {status === 'cancelled' && <div style={{ color: 'red', fontWeight: 'bold' }}>❌ בוטל</div>}
+                                                    {status === 'changed' && <div style={{ color: '#d97706', fontWeight: 'bold' }}>⚠️ שינוי</div>}
+
+                                                    {!isOffDay ? (
+                                                        <>
+                                                            <div className="event-time" style={{ fontSize: '1.2rem', fontWeight: '800' }}>
+                                                                {time}
+                                                            </div>
+                                                            <div className="event-location" style={{ fontSize: '1rem' }}>
                                                                 {location}
                                                             </div>
-                                                            {time && (
-                                                                <div className="time-text" style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: '500', direction: 'ltr' }}>
-                                                                    {time}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                            {isMatch && <div className="match-badge" style={{ background: '#be185d' }}>🏀 משחק</div>}
+                                                        </>
+                                                    ) : (
+                                                        <div className="no-event">מנוחה</div>
                                                     )}
                                                 </div>
                                             </div>
