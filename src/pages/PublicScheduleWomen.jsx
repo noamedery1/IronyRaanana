@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { Link } from 'react-router-dom';
 import '../App.css';
+import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile } from '../utils/scheduleUtils';
+import LeagueGamesBanner from '../components/LeagueGamesBanner';
+import HallView from '../components/HallView';
+import DailyView from '../components/DailyView';
+
 
 // TODO: Replace this with the Women's Google Sheet URL provided by the user
 const DATA_URL = "https://docs.google.com/spreadsheets/d/1wqo1MVDAbEWRHUA7XlwS_TpD-St2KpwEPVwLyq6SO2E/edit?gid=0#gid=0";
@@ -14,6 +19,24 @@ function PublicScheduleWomen() {
     const [selectedTeamId, setSelectedTeamId] = useState(''); // Stores the unique value (rowIndex or composite)
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
+
+    // Helper to parse content inside the component if needed, or import
+    const parseScheduleContent = (text) => {
+        if (!text) return { location: '', time: '', isMatch: false };
+        const isMatch = text.includes('משחק');
+        let formatted = text.replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, '$1:$2');
+        const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
+        const matches = formatted.match(timeRegex);
+        let time = '';
+        let location = formatted;
+        if (matches && matches.length > 0) {
+            time = matches[matches.length - 1];
+            matches.forEach(m => { location = location.replace(m, ''); });
+        }
+        return { location: location.replace('משחק', '').trim(), time: time.trim(), isMatch };
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -231,6 +254,10 @@ function PublicScheduleWomen() {
                 }}>Admin</Link>
             </div>
 
+            <div style={{ marginTop: '50px' }}>
+                <LeagueGamesBanner />
+            </div>
+
             <header className="header" style={{
                 borderBottom: '4px solid #BE185D',
                 flexDirection: 'row',
@@ -266,104 +293,207 @@ function PublicScheduleWomen() {
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#BE185D' }}>{error}</div>
             ) : (
                 <>
-                    <div className="filter-section">
-                        <select
-                            className="team-select"
-                            value={selectedTeamId}
-                            onChange={(e) => setSelectedTeamId(e.target.value)}
-                            style={{ borderColor: '#FCE7F3' }}
-                        >
-                            <option value="" disabled>בחר קבוצה / Select a Team</option>
-                            {teams.map((team, index) => (
-                                <option key={team.value} value={team.value}>
-                                    {team.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <>
+                        <div className="filter-section" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                            <select
+                                className="team-select"
+                                value={selectedTeamId}
+                                onChange={(e) => {
+                                    setSelectedTeamId(e.target.value);
+                                    setViewMode('team');
+                                }}
+                                style={{ borderColor: '#FCE7F3', flex: 1, minWidth: '200px' }}
+                            >
+                                <option value="" disabled>בחר קבוצה / Select a Team</option>
+                                {teams.map((team, index) => (
+                                    <option key={team.value} value={team.value}>
+                                        {team.label}
+                                    </option>
+                                ))}
+                            </select>
 
-                    {selectedTeamId && (
-                        <div className="actions-section">
-                            <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
-                                <span>שתף בוואטסאפ</span>
-                                <span className="btn-icon">💬</span>
-                            </button>
-                            <button onClick={copyToClipboard} className="copy-btn action-btn" style={{ background: '#BE185D' }}>
-                                <span>{copySuccess || 'העתק הודעה'}</span>
-                                <span className="btn-icon">📋</span>
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <button
+                                    onClick={() => setViewMode(viewMode === 'halls' ? 'team' : 'halls')}
+                                    style={{
+                                        background: viewMode === 'halls' ? '#831843' : 'white',
+                                        color: viewMode === 'halls' ? 'white' : '#831843',
+                                        border: '2px solid #831843',
+                                        padding: '0.6rem 1rem',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    {viewMode === 'halls' ? 'חזור' : '📍 לו"ז אולמות'}
+                                </button>
+                                <button
+                                    onClick={() => setViewMode(viewMode === 'daily' ? 'team' : 'daily')}
+                                    style={{
+                                        background: viewMode === 'daily' ? '#831843' : 'white',
+                                        color: viewMode === 'daily' ? 'white' : '#831843',
+                                        border: '2px solid #831843',
+                                        padding: '0.6rem 1rem',
+                                        borderRadius: '8px',
+                                        fontWeight: 'bold',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    {viewMode === 'daily' ? 'חזור' : '📅 לו"ז יומי מרוכז'}
+                                </button>
+                            </div>
                         </div>
-                    )}
 
-                    <div className="schedule-grid">
-                        {schedule ? (
-                            headers.slice(dayStart, dayStart + 7).map((dayHeader, index) => {
-                                const parts = dayHeader.split(' ');
-                                const dayName = parts[0];
-                                const date = parts[1] || '';
-                                const content = schedule[dayStart + index];
+                        {viewMode === 'team' && selectedTeamId && (
+                            <div className="actions-section">
+                                <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
+                                    <span>שתף בוואטסאפ</span>
+                                    <span className="btn-icon">💬</span>
+                                </button>
+                                {/* Copy button removed as requested */}
+                                <button
+                                    onClick={() => {
+                                        const schedule = getTeamSchedule();
+                                        if (!schedule) return;
+                                        const teamName = getSelectedTeamName();
 
-                                const isOffDay = !content ||
-                                    content.trim() === '' ||
-                                    content.toLowerCase().includes('xxx');
+                                        const events = headers.slice(dayStart, dayStart + 7).map((dayHeader, idx) => {
+                                            const content = schedule[dayStart + idx];
+                                            if (!content || !content.trim() || content.includes('xxx')) return null;
 
-                                const isMatch = content && content.includes('משחק');
-                                // Parse content into location and time
-                                const parseContent = (text) => {
-                                    if (!text) return { location: '', time: '' };
-                                    const formatted = formatTime(text);
-                                    // Match time pattern (e.g. 17:00 or 17:00-18:30)
-                                    const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
-                                    const matches = formatted.match(timeRegex);
+                                            const { location, time, isMatch } = parseScheduleContent(content);
 
-                                    if (matches && matches.length > 0) {
-                                        // Take the last match as the time (usually at the end)
-                                        const timePart = matches[matches.length - 1];
-                                        // Remove ALL time matches from location to be clean
-                                        let locationPart = formatted;
-                                        matches.forEach(m => {
-                                            locationPart = locationPart.replace(m, '');
-                                        });
-                                        return { location: locationPart.trim(), time: timePart };
-                                    }
-                                    return { location: formatted, time: '' };
-                                };
+                                            // Parse Date and Time
+                                            const date = parseHeaderDate(dayHeader);
+                                            if (!date) return null;
 
-                                const { location, time } = parseContent(content);
+                                            // Time parsing (assuming HH:MM-HH:MM or just HH:MM)
+                                            // If range, use end time. If single, assume 1.5h? Or just 1h?
+                                            // formatTime normalized it to HH:MM-HH:MM usually
+                                            const timeParts = time.split('-');
+                                            const startT = parseTime(timeParts[0]);
+                                            const endT = timeParts[1] ? parseTime(timeParts[1]) : { h: startT.h + 1, m: startT.m + 30 }; // Default 1.5h
 
-                                // Request: Remove empty days from view
-                                if (isOffDay) return null;
+                                            const startDate = new Date(date);
+                                            startDate.setHours(startT.h, startT.m);
 
-                                return (
-                                    <div key={index} className={`day-card ${isMatch ? 'match-day' : ''}`} style={{ opacity: isOffDay ? 0.6 : 1, borderColor: isMatch ? '#BE185D' : '#eee' }}>
-                                        <div className="day-header" style={{ color: '#831843' }}>
-                                            <span className="day-name">{dayName}</span>
-                                            <span className="day-date">{date}</span>
-                                        </div>
-                                        <div className={`day-content ${isOffDay ? 'empty-day' : ''}`}>
-                                            {isOffDay ? 'מנוחה' : (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: '100%' }}>
-                                                    {isMatch && <div className="match-badge" style={{ color: '#BE185D' }}>🏀 משחק</div>}
-                                                    <div className="location-text" style={{ fontSize: '1.2rem', fontWeight: '700', color: isMatch ? '#BE185D' : '#1e293b' }}>
-                                                        {location}
-                                                    </div>
-                                                    {time && (
-                                                        <div className="time-text" style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: '500', direction: 'ltr' }}>
-                                                            {time}
+                                            const endDate = new Date(date);
+                                            endDate.setHours(endT.h, endT.m);
+
+                                            return {
+                                                title: `${isMatch ? '🏀 משחק' : 'אימון'} - ${teamName}`,
+                                                location: location,
+                                                details: `אימון קבוצת ${teamName}`,
+                                                start: startDate,
+                                                end: endDate
+                                            };
+                                        }).filter(Boolean);
+
+                                        if (events.length > 0) {
+                                            createICSFile(events, `Luaz_${teamName.replace(/\s+/g, '_')}`);
+                                        } else {
+                                            alert('לא נמצאו אימון לייצוא השבוע.');
+                                        }
+                                    }}
+                                    className="action-btn"
+                                    style={{ background: '#3B82F6', color: 'white' }}
+                                >
+                                    <span>שמור ליומן</span>
+                                    <span className="btn-icon">📅</span>
+                                </button>
+                            </div>
+                        )}
+
+                        {viewMode === 'halls' ? (
+                            <HallView
+                                data={data}
+                                headers={headers}
+                                teams={teams}
+                                dayStart={dayStart}
+                            />
+                        ) : viewMode === 'daily' ? (
+                            <DailyView
+                                data={data}
+                                headers={headers}
+                                teams={teams}
+                                dayStart={dayStart}
+                            />
+                        ) : (
+                            <div className="schedule-grid">
+                                {schedule ? (
+                                    headers.slice(dayStart, dayStart + 7).map((dayHeader, index) => {
+                                        const parts = dayHeader.split(' ');
+                                        const dayName = parts[0];
+                                        const date = parts[1] || '';
+                                        const content = schedule[dayStart + index];
+
+                                        const isOffDay = !content ||
+                                            content.trim() === '' ||
+                                            content.toLowerCase().includes('xxx');
+
+                                        const isMatch = content && content.includes('משחק');
+                                        // Parse content into location and time
+                                        const parseContent = (text) => {
+                                            if (!text) return { location: '', time: '' };
+                                            const formatted = formatTime(text);
+                                            // Match time pattern (e.g. 17:00 or 17:00-18:30)
+                                            const timeRegex = /\b\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?\b/g;
+                                            const matches = formatted.match(timeRegex);
+
+                                            if (matches && matches.length > 0) {
+                                                // Take the last match as the time (usually at the end)
+                                                const timePart = matches[matches.length - 1];
+                                                // Remove ALL time matches from location to be clean
+                                                let locationPart = formatted;
+                                                matches.forEach(m => {
+                                                    locationPart = locationPart.replace(m, '');
+                                                });
+                                                return { location: locationPart.trim(), time: timePart };
+                                            }
+                                            return { location: formatted, time: '' };
+                                        };
+
+                                        const { location, time } = parseContent(content);
+
+                                        // Request: Remove empty days from view
+                                        if (isOffDay) return null;
+
+                                        return (
+                                            <div key={index} className={`day-card ${isMatch ? 'match-day' : ''}`} style={{ opacity: isOffDay ? 0.6 : 1, borderColor: isMatch ? '#BE185D' : '#eee' }}>
+                                                <div className="day-header" style={{ color: '#831843' }}>
+                                                    <span className="day-name">{dayName}</span>
+                                                    <span className="day-date">{date}</span>
+                                                </div>
+                                                <div className={`day-content ${isOffDay ? 'empty-day' : ''}`}>
+                                                    {isOffDay ? 'מנוחה' : (
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: '100%' }}>
+                                                            {isMatch && <div className="match-badge" style={{ color: '#BE185D' }}>🏀 משחק</div>}
+                                                            <div className="location-text" style={{ fontSize: '1.2rem', fontWeight: '700', color: isMatch ? '#BE185D' : '#1e293b' }}>
+                                                                {location}
+                                                            </div>
+                                                            {time && (
+                                                                <div className="time-text" style={{ fontSize: '1.1rem', color: '#64748b', fontWeight: '500', direction: 'ltr' }}>
+                                                                    {time}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="empty-state">
+                                        <h3 style={{ color: '#BE185D' }}>נא לבחור קבוצה לצפייה בלו"ז</h3>
                                     </div>
-                                );
-                            })
-                        ) : (
-                            <div className="empty-state">
-                                <h3 style={{ color: '#BE185D' }}>נא לבחור קבוצה לצפייה בלו"ז</h3>
+                                )}
                             </div>
                         )}
-                    </div>
+                    </>
                 </>
             )}
         </div>
