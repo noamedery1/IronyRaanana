@@ -92,7 +92,7 @@ function PublicScheduleWomen() {
                                 if (!name || name.trim() === '') return;
 
                                 // Exclude Banner row from teams list
-                                if (name.trim() === 'באנר' || name.trim().toLowerCase() === 'banner') return;
+                                if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
 
                                 const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                                 // Form unique label
@@ -261,8 +261,7 @@ function PublicScheduleWomen() {
                 flexWrap: 'wrap-reverse' // Ensure typical responsive behavior
             }}>
                 <div className="header-text" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <h1 className="title" style={{ color: '#BE185D', fontSize: '3rem', marginBottom: '0.5rem' }}>מכבי רעננה - נשים</h1>
-                    <h2 className="title-sub" style={{ color: '#831843', fontSize: '1.5rem', margin: 0 }}>כדורסל - מחלקת הנערות</h2>
+
                     <p className="subtitle" style={{ color: '#9D174D', marginTop: '0.5rem' }}>לו"ז אימונים שבועי</p>
                 </div>
                 <img

@@ -95,6 +95,9 @@ const AdminDashboard = () => {
                             const name = row[teamIndex];
                             if (!name || name.trim() === '') return;
 
+                            // Filter out Banner rows
+                            if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
+
                             const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                             const key = `${name.trim()}_${coach ? coach.trim() : ''}`; // Unique key
 

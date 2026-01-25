@@ -68,6 +68,9 @@ function PublicSchedule() {
                                 const name = row[teamIndex];
                                 if (!name || name.trim() === '') return;
 
+                                // Filter out Banner rows
+                                if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
+
                                 const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                                 // Form unique label
                                 const label = coach ? `${name} - ${coach}` : name;
@@ -228,8 +231,7 @@ function PublicSchedule() {
                 flexWrap: 'wrap-reverse' // Ensure typical responsive behavior
             }}>
                 <div className="header-text" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <h1 className="title" style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>עירוני רעננה</h1>
-                    <h2 className="title-sub" style={{ fontSize: '1.5rem', margin: 0 }}>כדורסל - מחלקת הנוער</h2>
+
                     <p className="subtitle" style={{ marginTop: '0.5rem' }}>לו"ז אימונים שבועי</p>
                 </div>
                 <img
