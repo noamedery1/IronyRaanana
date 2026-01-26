@@ -161,9 +161,10 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
         <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '1.5rem' }}>הגדרות שבועיות לאימון</h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 100px 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
                 <div>קבוצה</div>
                 <div style={{ textAlign: 'center' }}>מגדר</div>
+                <div style={{ textAlign: 'center' }}>משך (דק')</div>
                 <div style={{ textAlign: 'center' }}>אימונים בשבוע</div>
                 <div>אילוצים ושריון מגרשים</div>
             </div>
@@ -172,7 +173,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
                 {teamConfig.map((team, index) => (
                     <div key={index} style={{
                         display: 'grid',
-                        gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 150px 3fr',
+                        gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 100px 150px 3fr',
                         gap: '1rem',
                         padding: '0.8rem 0',
                         borderBottom: '1px solid #f0f0f0',
@@ -202,6 +203,23 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
                             >
                                 {team.type === 'W' ? 'W' : 'M'}
                             </button>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <select
+                                value={team.duration || 90}
+                                onChange={(e) => {
+                                    const newConfig = [...teamConfig];
+                                    newConfig[index].duration = parseInt(e.target.value);
+                                    setTeamConfig(newConfig);
+                                }}
+                                style={{ padding: '0.3rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                            >
+                                <option value={45}>45 דק'</option>
+                                <option value={60}>60 דק'</option>
+                                <option value={90}>90 דק'</option>
+                                <option value={120}>120 דק'</option>
+                            </select>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>

@@ -173,113 +173,148 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
             // 1. Create a map of team rows for direct access
             const newSchedule = JSON.parse(JSON.stringify(rawRows)); // Deep copy
 
-            // Resource Tracker: Set<"day_location_startTime">
-            const usedResources = new Set();
+            // Resource Tracker: Map<Location|Coach, Map<Day, Array<{start, end}>>>
+            const bookedResources = {};
 
-            // Helper to check and book resource
-            const tryBookResource = (day, location, start) => {
-                const key = `${day}_${location}_${start}`;
-                if (usedResources.has(key)) return false;
-                usedResources.add(key);
+            // Helper to parse time string "HHMM" to minutes
+            const toMin = (t) => {
+                const s = String(t).padStart(4, '0');
+                const h = parseInt(s.substring(0, 2));
+                const m = parseInt(s.substring(2, 4));
+                return h * 60 + m;
+            };
+
+            // Helper to check and book
+            const tryBook = (resourceType, resourceName, day, startMin, endMin) => {
+                if (!resourceName) return true; // No resource to check (e.g. no coach)
+                const key = `${resourceType}_${resourceName}`;
+                if (!bookedResources[key]) bookedResources[key] = {};
+                if (!bookedResources[key][day]) bookedResources[key][day] = [];
+
+                // Check overlap
+                const intervals = bookedResources[key][day];
+                for (const iv of intervals) {
+                    if (Math.max(startMin, iv.start) < Math.min(endMin, iv.end)) {
+                        return false; // Overlap
+                    }
+                }
                 return true;
             };
 
-            // 2. Process each team based on configuration
+            const confirmBook = (resourceType, resourceName, day, startMin, endMin) => {
+                if (!resourceName) return;
+                const key = `${resourceType}_${resourceName}`;
+                if (!bookedResources[key]) bookedResources[key] = {};
+                if (!bookedResources[key][day]) bookedResources[key][day] = [];
+                bookedResources[key][day].push({ start: startMin, end: endMin });
+            };
+
+            // Pre-fill existing manual bookings or constraints from the sheet if needed?
+            // For now we assume we overwrite or fill empty.
+            // Better to SCAN existing cells first to populate `bookedResources`.
+
+            // Scan existing schedule to block resources
             teamConfig.forEach(team => {
-                // Find row by team name AND coach if needed, but rawRows doesn't have metadata nicely attached
-                // We assume rawRows order is preserved or we search by name (col 0). 
-                // Since we de-duped by name+coach in WomenDashboard, we need to be careful.
-                // But rawRows is just the data. 
-                // We should find the row where column 0 == team.name AND column[coachIndex] == team.coach
+                const teamRow = newSchedule.find(r => r[0] === team.name && (!team.coach || (r[coachIndex] || '').trim() === team.coach));
+                if (!teamRow) return;
 
-                const teamRow = newSchedule.find(r => {
-                    const nameMatch = r[0] === team.name;
-                    if (!nameMatch) return false;
-                    if (coachIndex !== undefined && coachIndex !== -1) {
-                        return (r[coachIndex] || '').trim() === (team.coach || '').trim();
+                for (let d = 0; d < 7; d++) {
+                    const colIndex = dayStart + d;
+                    const cell = teamRow[colIndex];
+                    if (cell && cell.trim()) {
+                        // Parse rough time
+                        const nums = cell.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
+                        if (nums) {
+                            const s = toMin(nums[1]);
+                            const e = toMin(nums[2]);
+                            // Extract location roughly
+                            let loc = cell.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
+                            loc = loc.replace(/משחק|ב-/g, '').trim();
+
+                            if (loc) confirmBook('HALL', loc, d, s, e);
+                            if (team.coach) confirmBook('COACH', team.coach, d, s, e);
+                        } else if (cell.includes('xxxxxxxx')) {
+                            // Block full day? Or just mark occupied?
+                            // OFF day doesn't block resources necessarily, but stops us from booking this team
+                        }
                     }
-                    return true;
-                });
+                }
+            });
 
+
+            // Generate Candidates
+            // Possible start times every 30 or 45 mins from 16:00 to 22:00
+            const CANDIDATE_STARTS = [];
+            let curr = 16 * 60; // 16:00
+            const END_LIMIT = 22 * 60; // 22:00
+            while (curr < END_LIMIT) {
+                CANDIDATE_STARTS.push(curr);
+                curr += 15; // 15 min granularity for finding slots? 30 is safer for speed
+            }
+
+            // 2. Process each team
+            // Sort teams by priority? maybe difficult teams first (more sessions, constraints)
+            // For now simple order.
+
+            // Shuffle teams to avoid bias?
+            const shuffledConfig = [...teamConfig].sort(() => 0.5 - Math.random());
+
+            shuffledConfig.forEach(team => {
+                const teamRow = newSchedule.find(r => r[0] === team.name && (!team.coach || (r[coachIndex] || '').trim() === team.coach));
                 if (!teamRow) return;
 
                 let sessionsScheduled = 0;
-                const sessionsNeeded = team.sessionsPerWeek;
-                const constraints = team.constraints || [];
-                const occupiedDays = new Set(); // Days where team already has an event
+                const sessionsNeeded = team.sessionsPerWeek || 3;
+                const duration = team.duration || 90; // Default 90 min
 
-                // Phase 0: Scan existing data
+                // Count existing
                 for (let d = 0; d < 7; d++) {
-                    const colIndex = dayStart + d;
-                    const cellContent = teamRow[colIndex];
-                    if (cellContent && cellContent.trim() !== '' && cellContent !== 'xxxxxxxx') {
-                        occupiedDays.add(d);
-                        sessionsScheduled++;
-                    }
+                    if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) sessionsScheduled++;
                 }
 
-                // Phase 1: Apply Hard Constraints
-                constraints.forEach(c => {
-                    const colIndex = dayStart + c.day; // Use dynamic start
-                    const startRaw = formatTimeForSheet(c.startTime);
-                    const endRaw = formatTimeForSheet(c.endTime);
-
-                    if (c.type === 'OFF') {
-                        teamRow[colIndex] = 'xxxxxxxx';
-                        occupiedDays.add(c.day);
-                    } else if (c.type === 'MATCH') {
-                        teamRow[colIndex] = `משחק ב${c.location} ${startRaw}`;
-                        occupiedDays.add(c.day);
-                        if (c.location && startRaw) {
-                            tryBookResource(c.day, c.location, startRaw);
-                        }
-                    } else if (c.type === 'FIXED') {
-                        teamRow[colIndex] = `${c.location} ${startRaw}-${endRaw}`;
-                        occupiedDays.add(c.day);
-                        if (c.location && startRaw) {
-                            tryBookResource(c.day, c.location, startRaw);
-                        }
-                    }
-                });
-
-                // Recalculate sessions
-                sessionsScheduled = 0;
-                for (let d = 0; d < 7; d++) {
-                    const colIndex = dayStart + d;
-                    const cellContent = teamRow[colIndex];
-                    if (cellContent && cellContent.trim() !== '' && cellContent !== 'xxxxxxxx') {
-                        sessionsScheduled++;
-                    }
-                }
-
-                // Phase 2: Fill Remaining Sessions
                 let sessionsToFill = sessionsNeeded - sessionsScheduled;
+                const preferredLocations = LOCATIONS; // Could specific this per team later
 
                 for (let d = 0; d < 7 && sessionsToFill > 0; d++) {
-                    if (occupiedDays.has(d)) continue;
+                    // Check if team is free this day (simple check: if cell is empty)
+                    if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) continue;
 
-                    let foundSlotForDay = false;
+                    let foundSlot = false;
 
-                    for (const loc of LOCATIONS) {
-                        if (foundSlotForDay) break;
-                        for (const slot of TIME_SLOTS) {
+                    // Try locations
+                    for (const loc of preferredLocations) {
+                        if (foundSlot) break;
 
+                        // Try start times
+                        for (const startMin of CANDIDATE_STARTS) {
+                            const endMin = startMin + duration;
+
+                            // Check Max End Time
                             if (team.maxEndTime) {
-                                const slotEndNum = parseInt(slot.end);
-                                const configuredMaxNum = parseInt(team.maxEndTime.replace(':', ''));
-                                if (!isNaN(configuredMaxNum) && slotEndNum > configuredMaxNum) {
-                                    continue;
-                                }
+                                const limit = toMin(team.maxEndTime.replace(':', ''));
+                                if (endMin > limit) continue;
                             }
+                            if (endMin > END_LIMIT + 60) continue; // Abs limit
 
-                            if (tryBookResource(d, loc, slot.start)) {
-                                const colIndex = dayStart + d;
-                                teamRow[colIndex] = `${loc} ${slot.start}-${slot.end}`;
-                                occupiedDays.add(d);
-                                sessionsToFill--;
-                                foundSlotForDay = true;
-                                break;
-                            }
+                            // Check Resources: Hall & Coach
+                            if (!tryBook('HALL', loc, d, startMin, endMin)) continue;
+                            if (team.coach && !tryBook('COACH', team.coach, d, startMin, endMin)) continue;
+
+                            // Success - Book it
+                            confirmBook('HALL', loc, d, startMin, endMin);
+                            if (team.coach) confirmBook('COACH', team.coach, d, startMin, endMin);
+
+                            // Format text
+                            const formatM = (min) => {
+                                const h = Math.floor(min / 60);
+                                const m = min % 60;
+                                return `${String(h).padStart(2, '0')}${String(m).padStart(2, '0')}`;
+                            };
+
+                            teamRow[dayStart + d] = `${loc} ${formatM(startMin)}-${formatM(endMin)}`;
+                            sessionsToFill--;
+                            foundSlot = true;
+                            break;
                         }
                     }
                 }
