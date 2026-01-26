@@ -11,7 +11,7 @@ import DailyView from '../components/DailyView';
 const parseScheduleContent = parseCellContent;
 
 
-const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
+const DATA_URL = "https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/export?format=csv&gid=0";
 
 function PublicSchedule() {
     const [data, setData] = useState([]);

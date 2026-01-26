@@ -9,7 +9,7 @@ const WomenDashboard = () => {
     const [activeTab, setActiveTab] = useState('setup');
 
     // Setup state
-    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1SwK7e8IqSh-Wp58Lv16EtRVTezIi9bseDEAELmOdnng/edit?usp=sharing');
+    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/edit?usp=sharing');
     const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbySWYT00uCR5pboiv9QvlvArPYi8LgPAbsUHsljoOoTYADtpLkfnIcVOiXWx8y-n-1wbw/exec');   // User needs to set this up
     const [sheetName, setSheetName] = useState('Sheet1');
     const [isConnected, setIsConnected] = useState(false);

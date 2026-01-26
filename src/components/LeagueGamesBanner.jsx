@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 // URLs for the two sheets
-const MEN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
-const WOMEN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1wqo1MVDAbEWRHUA7XlwS_TpD-St2KpwEPVwLyq6SO2E/export?format=csv&gid=0";
+const MEN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/export?format=csv&gid=0";
+const WOMEN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/export?format=csv&gid=0";
 
 const LeagueGamesBanner = () => {
     const [games, setGames] = useState([]);

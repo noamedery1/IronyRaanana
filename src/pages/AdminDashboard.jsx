@@ -9,8 +9,8 @@ const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('setup');
 
     // Setup state
-    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1BZDTFKpu152LV71ZdrQjEtlNwa5mHeU2tHhreKdYjUE/edit?gid=0#gid=0');
-    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbxWeJbKveRzSGGloWRPUUH08gbIHCkKHyOOqY8E9H2WsEDMOvsMWqoJ_7GIi8zchr9M/exec');
+    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/edit?usp=sharing');
+    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbwRiC4VoUOBOWblD1WXDBNgamjronOF_-l7eHhLXfi-mUXqkEMkUkZSPyj2sfcj-Ops/exec');
     const [sheetName, setSheetName] = useState('Sheet1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -78,7 +78,7 @@ const AdminDashboard = () => {
                         // Dynamic Column Detection
                         const teamIndex = 0; // Always A
                         let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
-                        let typeIndex = headerRow.findIndex(h => h && (h.toLowerCase() === 'type' || h.includes('סוג')));
+                        let typeIndex = headerRow.findIndex(h => h && (h.toLowerCase() === 'type' || h.toLowerCase() === 'gender' || h.includes('סוג') || h.includes('מגדר')));
                         let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
 
                         // Fallbacks if detection fails
@@ -99,10 +99,15 @@ const AdminDashboard = () => {
                             // Filter out Banner rows
                             if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
 
-                            // Filter by Type (Men's Admin)
-                            if (typeIndex !== -1) {
-                                const typeVal = row[typeIndex] ? row[typeIndex].trim().toUpperCase() : '';
-                                if (typeVal === 'W') return; // Hide Women
+                            // We now include ALL teams (Men + Women) to manage conflicts together.
+                            // The "Type" column tells us which is which. 
+                            // Normalize diverse inputs (English/Hebrew) to 'M' or 'W'
+                            let rawType = (typeIndex !== -1 && row[typeIndex]) ? row[typeIndex].trim() : '';
+                            let typeVal = 'M'; // Default
+                            const womenKeywords = ['w', 'woman', 'women', 'female', 'ladies', 'girl', 'girls', 'נשים', 'ילדות', 'נערות', 'נקבה'];
+
+                            if (womenKeywords.some(kw => rawType.toLowerCase().includes(kw))) {
+                                typeVal = 'W';
                             }
 
                             const coach = (coachIndex !== -1) ? row[coachIndex] : '';
@@ -113,6 +118,7 @@ const AdminDashboard = () => {
                                 uniqueTeams.push({
                                     name: name.trim(),
                                     coach: coach ? coach.trim() : '',
+                                    type: typeVal,
                                     key: key,
                                     rowIndex: rowIndex // useful for updates
                                 });
@@ -122,11 +128,12 @@ const AdminDashboard = () => {
 
                         setSheetData({
                             headers: headerRow,
-                            teams: uniqueTeams,
+                            teams: uniqueTeams, // Now an array of objects
                             rawRows: dataRows,
                             indices: {
                                 team: teamIndex,
                                 coach: coachIndex,
+                                type: typeIndex,
                                 dayStart: dayStartIndex
                             }
                         });
@@ -137,9 +144,13 @@ const AdminDashboard = () => {
                             return uniqueTeams.map(teamObj => {
                                 // Try to find match
                                 const existing = prevConfig.find(tc => tc.name === teamObj.name && tc.coach === teamObj.coach);
-                                return existing || {
+                                if (existing) {
+                                    return { ...existing, type: teamObj.type }; // Sync type from sheet
+                                }
+                                return {
                                     name: teamObj.name,
                                     coach: teamObj.coach,
+                                    type: teamObj.type,
                                     sessionsPerWeek: 3,
                                     constraints: []
                                 };
@@ -165,45 +176,113 @@ const AdminDashboard = () => {
         }
     };
 
+    // Callback to update sheet data from WeekBuilder (e.g. Type Change)
+    const handleTeamUpdate = (teamIndex, changes) => {
+        if (!sheetData) return;
+
+        const updatedTeams = [...sheetData.teams];
+        if (!updatedTeams[teamIndex]) return;
+
+        // Update local object
+        updatedTeams[teamIndex] = { ...updatedTeams[teamIndex], ...changes };
+
+        // Update rawRows if linked
+        const rowIndex = updatedTeams[teamIndex].rowIndex;
+        const newRawRows = [...sheetData.rawRows];
+
+        if (rowIndex !== undefined && newRawRows[rowIndex]) {
+            if (changes.type && sheetData.indices.type !== undefined) {
+                const tIdx = sheetData.indices.type;
+                if (tIdx !== -1) {
+                    newRawRows[rowIndex][tIdx] = changes.type;
+                }
+            }
+        }
+
+        setSheetData({
+            ...sheetData,
+            teams: updatedTeams,
+            rawRows: newRawRows
+        });
+
+        // Also update teamConfig state to keep in sync
+        const newConfig = [...teamConfig];
+        // assuming teamConfig order matches teams order (it should)
+        if (newConfig[teamIndex]) {
+            newConfig[teamIndex] = { ...newConfig[teamIndex], ...changes };
+            setTeamConfig(newConfig);
+        }
+    };
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'setup':
+                return (
+                    <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                        <h3 style={{ marginTop: 0 }}>הגדרות חיבור לגיליון</h3>
+                        <p style={{ color: '#666' }}>הדבק את כתובת ה-Google Sheet שפורסמה כ-CSV (קובץ - שתף - פרסם באינטרנט - CSV).</p>
+
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                            <input
+                                type="text"
+                                value={sheetUrl}
+                                onChange={(e) => setSheetUrl(e.target.value)}
+                                placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv..."
+                                style={{ flex: 1, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                            />
+                            <button
+                                onClick={handleConnect}
+                                disabled={loading}
+                                style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                            >
+                                {loading ? 'טוען...' : 'תחבר וטען נתונים'}
+                            </button>
+                        </div>
+
+                        {error && <div style={{ color: '#ef4444', marginTop: '1rem', background: '#fee2e2', padding: '1rem', borderRadius: '4px' }}>{error}</div>}
+                    </div>
+                );
+            case 'weekBuilder':
+                return (
+                    <WeekBuilder
+                        teams={sheetData?.teams || []}
+                        headers={sheetData?.headers || []}
+                        teamConfig={teamConfig}
+                        setTeamConfig={setTeamConfig}
+                        onTeamUpdate={handleTeamUpdate}
+                    />
+                );
+            case 'preview':
+                return (
+                    <Preview
+                        teams={sheetData?.teams || []}
+                        headers={sheetData?.headers || []}
+                        rawRows={sheetData?.rawRows || []}
+                        teamConfig={teamConfig}
+                        saveUrl={saveUrl}
+                        sheetName={sheetName}
+                        indices={sheetData?.indices}
+                    />
+                );
+            default:
+                return null;
+        }
+    };
+
     return (
         <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f7fa', fontFamily: 'Rubik, sans-serif' }}>
             {/* Header */}
             <header style={{ background: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <img src="/men_logo.png" alt="Men Logo" style={{ height: '60px', width: 'auto' }} />
-                        <h2 style={{ margin: 0, color: '#14213D' }}>מערכת ניהול</h2>
-                        <span style={{ background: '#E5E7EB', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.8rem', color: '#666' }}>MVP v0.1</span>
-                    </div>
-
-                    {/* Department Switcher */}
-                    <div style={{ display: 'flex', background: '#f3f4f6', padding: '0.25rem', borderRadius: '8px', gap: '0.25rem' }}>
-                        <button style={{
-                            padding: '0.4rem 1.2rem',
-                            borderRadius: '6px',
-                            border: 'none',
-                            background: 'white',
-                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                            color: '#14213D',
-                            fontWeight: 600,
-                            cursor: 'default'
-                        }}>גברים</button>
-                        <button
-                            onClick={() => navigate('/admin/dashboard-women')}
-                            style={{
-                                padding: '0.4rem 1.2rem',
-                                borderRadius: '6px',
-                                border: 'none',
-                                background: 'transparent',
-                                color: '#6b7280',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                        >נשים</button>
+                        <img src="/men_logo.png" alt="Logo" style={{ height: '60px', width: 'auto' }} />
+                        <div>
+                            <h2 style={{ margin: 0, color: '#14213D' }}>מערכת ניהול - פורטל ראשי</h2>
+                            <span style={{ fontSize: '0.9rem', color: '#666' }}>ניהול גברים ונשים (משותף)</span>
+                        </div>
                     </div>
                 </div>
+
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <a href="/" target="_blank" style={{ textDecoration: 'none', color: '#3b82f6', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>
@@ -215,7 +294,7 @@ const AdminDashboard = () => {
                         התנתק
                     </button>
                 </div>
-            </header>
+            </header >
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 {/* Sidebar */}
@@ -247,126 +326,10 @@ const AdminDashboard = () => {
 
                 {/* Content Area */}
                 <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-                    {activeTab === 'setup' && (
-                        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                            <h3 style={{ marginTop: 0 }}>חיבור לגיליון גוגל</h3>
-                            <p style={{ color: '#666' }}>הכנס את כתובת ה-URL של הגיליון (חובה הרשאות צפייה לפחות)</p>
-
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                                <input
-                                    type="text"
-                                    value={sheetUrl}
-                                    onChange={(e) => setSheetUrl(e.target.value)}
-                                    style={{ flex: 1, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', direction: 'ltr' }}
-                                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                                />
-                                <button
-                                    onClick={handleConnect}
-                                    disabled={loading}
-                                    style={{
-                                        background: isConnected ? '#10B981' : '#3b82f6',
-                                        color: 'white',
-                                        border: 'none',
-                                        padding: '0 1.5rem',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        fontWeight: 600,
-                                        opacity: loading ? 0.7 : 1
-                                    }}
-                                >
-                                    {loading ? 'מתחבר...' : (isConnected ? 'מחובר' : 'התחבר')}
-                                </button>
-                            </div>
-
-                            {error && (
-                                <div style={{ marginTop: '1rem', padding: '1rem', background: '#FEF2F2', color: '#DC2626', borderRadius: '4px', border: '1px solid #FECACA' }}>
-                                    {error}
-                                </div>
-                            )}
-
-                            {isConnected && (
-                                <div style={{ marginTop: '2rem', padding: '1rem', background: '#ECFDF5', border: '1px solid #D1FAE5', borderRadius: '4px' }}>
-                                    <h4 style={{ margin: '0 0 0.5rem 0', color: '#047857' }}>החיבור הצליח!</h4>
-                                    <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#065F46', listStylePosition: 'inside' }}>
-                                        <li>נמצאו <strong>{sheetData.teams.length}</strong> קבוצות</li>
-                                        <li>שורת כותרת זוהתה: {sheetData.headers.slice(0, 3).join(', ')}...</li>
-                                    </ul>
-                                </div>
-                            )}
-
-                            <div style={{ marginTop: '2rem' }}>
-                                <h4>הגדרות שמירה (מתקדם)</h4>
-                                <p style={{ fontSize: '0.9rem', color: '#666' }}>כדי לשמור ישירות לגיליון, יש ליצור <a href="/GOOGLE_SHEETS_SETUP.md" target="_blank">Google Apps Script Webhook</a>.</p>
-
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>כתובת ה-API לשמירה (Web App URL)</label>
-                                <input
-                                    type="text"
-                                    value={saveUrl}
-                                    onChange={(e) => setSaveUrl(e.target.value)}
-                                    placeholder="https://script.google.com/macros/s/..."
-                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', direction: 'ltr' }}
-                                />
-                                {saveUrl && saveUrl.includes('/library/') && (
-                                    <div style={{ color: '#E11D48', fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: 500 }}>
-                                        🛑 שגיאה: זו כתובת של ספריה (Library). <br />
-                                        אנא חזור ל-Apps Script, לחץ על <strong>Deploy</strong> (כפתור כחול) -{'>'} <strong>New deployment</strong>, ובחר "Web App". <br />
-                                        העתק את הכתובת שמסתיימת ב-<code>/exec</code>.
-                                    </div>
-                                )}
-                                {saveUrl && !saveUrl.includes('/library/') && !saveUrl.includes('macros/s/') && !saveUrl.includes('script.google.com') && (
-                                    <div style={{ color: '#F59E0B', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                                        ⚠️ שים לב: הכתובת לא נראית כמו כתובת Google Apps Script תקינה.
-                                    </div>
-                                )}
-                            </div>
-
-                            <div style={{ marginTop: '2rem' }}>
-                                <h4>הגדרות נוספות</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>שם הגיליון (Tab)</label>
-                                        <input
-                                            type="text"
-                                            value={sheetName}
-                                            onChange={(e) => setSheetName(e.target.value)}
-                                            style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>מיפוי עמודות</label>
-                                        <div style={{ padding: '0.5rem', background: '#f9fafb', borderRadius: '4px', fontSize: '0.9rem', color: '#666' }}>
-                                            זיהוי אוטומטי (כותרת בשורה 2, קבוצות בעמודה A)
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'weekBuilder' && (
-                        <WeekBuilder
-                            teams={sheetData.teams}
-                            headers={sheetData.headers}
-                            teamConfig={teamConfig}
-                            setTeamConfig={setTeamConfig}
-                            indices={sheetData.indices}
-                        />
-                    )}
-
-                    {activeTab === 'preview' && (
-                        <Preview
-                            teams={sheetData.teams}
-                            headers={sheetData.headers}
-                            rawRows={sheetData.rawRows}
-                            teamConfig={teamConfig}
-                            saveUrl={saveUrl}
-                            sheetName={sheetName}
-                            indices={sheetData.indices}
-                        />
-                    )}
+                    {renderContent()}
                 </main>
             </div>
-        </div>
+        </div >
     );
 };
 
@@ -387,3 +350,5 @@ const menuButtonStyle = (isActive) => ({
 });
 
 export default AdminDashboard;
+
+

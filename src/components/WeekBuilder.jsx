@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
+const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }) => {
     // teamConfig and setTeamConfig are now passed from props for persistence
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,9 +24,22 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
     const handleSessionCountChange = (index, delta) => {
         const newConfig = [...teamConfig];
         const newVal = (newConfig[index].sessionsPerWeek || 0) + delta;
-        if (newVal >= 0 && newVal <= 10) {
+        if (newVal >= 0 && newVal <= 7) {
             newConfig[index].sessionsPerWeek = newVal;
             setTeamConfig(newConfig);
+        }
+    };
+
+    const handleTypeChange = (index) => {
+        const newConfig = [...teamConfig];
+        const currentType = newConfig[index].type || 'M';
+        const newType = currentType === 'M' ? 'W' : 'M';
+        newConfig[index].type = newType;
+        setTeamConfig(newConfig);
+
+        // Notify parent to update the raw sheet data if possible
+        if (onTeamUpdate) {
+            onTeamUpdate(index, { type: newType });
         }
     };
 
@@ -64,8 +77,12 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
 
         const constraint = { ...newConstraint };
 
-        // Conflict Check
-        if (constraint.type === 'FIXED') {
+        // Conflict Check logic... same as before but enhanced if needed
+        // For now relying on Preview's visual check is better as it covers everything?
+        // But user asked for alerts.
+        // Let's implement robust check here too.
+
+        if (constraint.type === 'FIXED' || constraint.type === 'MATCH') {
             const getMinutes = (timeStr) => {
                 const [h, m] = timeStr.split(':').map(Number);
                 return h * 60 + m;
@@ -73,32 +90,34 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
 
             const newStart = getMinutes(constraint.startTime);
             const newEnd = getMinutes(constraint.endTime);
+            const newLoc = constraint.location.trim();
 
-            // Iterate all teams to find conflicts
             for (let i = 0; i < teamConfig.length; i++) {
-                if (i === selectedTeamIndex) continue; // Skip current team ("another team")
-
-                const currentTeam = teamConfig[selectedTeamIndex];
+                if (i === selectedTeamIndex) continue;
                 const otherTeam = teamConfig[i];
                 if (!otherTeam.constraints) continue;
 
                 for (const c of otherTeam.constraints) {
-                    if (c.type !== 'FIXED' || c.day !== constraint.day) continue;
+                    if (c.day !== constraint.day) continue;
+                    if (c.type === 'OFF') continue;
 
                     const otherStart = getMinutes(c.startTime);
                     const otherEnd = getMinutes(c.endTime);
-                    const isTimeOverlap = Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd);
+                    // Check time overlap
+                    if (Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd)) {
 
-                    if (isTimeOverlap) {
-                        // 1. Same Coach Conflict (Regardless of location)
-                        if (currentTeam.coach && otherTeam.coach && currentTeam.coach === otherTeam.coach) {
-                            alert(`שגיאת אילוץ: המאמן/ת ${currentTeam.coach} כבר משובץ/ת עם קבוצת ${otherTeam.name} בשעות אלו!`);
+                        // 1. Same Coach
+                        if (teamConfig[selectedTeamIndex].coach && otherTeam.coach &&
+                            teamConfig[selectedTeamIndex].coach === otherTeam.coach) {
+                            alert(`שגיאה: המאמן/ת ${otherTeam.coach} כבר משובץ/ת באותו זמן עם ${otherTeam.name}`);
                             return;
                         }
 
-                        // 2. Same Location Conflict
-                        if (c.location === constraint.location) {
-                            alert(`שים לב! התנגשות בשיבוץ:\nקבוצת ${otherTeam.name} כבר משובצת ב-${c.location} בשעות ${c.startTime}-${c.endTime}`);
+                        // 2. Same Location (Hall)
+                        const otherLoc = c.location.trim();
+                        // Simple check?
+                        if (newLoc && otherLoc && newLoc === otherLoc) {
+                            alert(`שגיאה: האולם ${newLoc} תפוס באותו זמן ע"י ${otherTeam.name}`);
                             return;
                         }
                     }
@@ -142,8 +161,9 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
         <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
             <h3 style={{ marginTop: 0, marginBottom: '1.5rem' }}>הגדרות שבועיות לאימון</h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1.5fr) 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
                 <div>קבוצה</div>
+                <div style={{ textAlign: 'center' }}>מגדר</div>
                 <div style={{ textAlign: 'center' }}>אימונים בשבוע</div>
                 <div>אילוצים ושריון מגרשים</div>
             </div>
@@ -152,7 +172,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
                 {teamConfig.map((team, index) => (
                     <div key={index} style={{
                         display: 'grid',
-                        gridTemplateColumns: 'minmax(200px, 1.5fr) 150px 3fr',
+                        gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 150px 3fr',
                         gap: '1rem',
                         padding: '0.8rem 0',
                         borderBottom: '1px solid #f0f0f0',
@@ -163,6 +183,27 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig }) => {
                             <div style={{ fontWeight: '500' }}>{team.name}</div>
                             {team.coach && <div style={{ fontSize: '0.85rem', color: '#666' }}>{team.coach}</div>}
                         </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => handleTypeChange(index)}
+                                style={{
+                                    border: 'none',
+                                    background: team.type === 'W' ? '#BE185D' : '#3b82f6',
+                                    color: 'white',
+                                    borderRadius: '50%',
+                                    width: '30px',
+                                    height: '30px',
+                                    fontSize: '0.8rem',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold'
+                                }}
+                                title={team.type === 'W' ? 'נשים' : 'גברים'}
+                            >
+                                {team.type === 'W' ? 'W' : 'M'}
+                            </button>
+                        </div>
+
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                             <button
                                 onClick={() => handleSessionCountChange(index, -1)}

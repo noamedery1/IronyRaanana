@@ -26,59 +26,68 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
         if (!data) return conflictSet;
 
         const coachMap = {}; // coachName -> day -> [{start, end, row, col}]
+        const hallMap = {}; // hallName -> day -> [{start, end, row, col}]
 
         data.forEach((row, rIdx) => {
-            // Find coach for this row (either from row data or matching config)
-            // The row might be raw array.
-            // If we passed indices, we can look up coach column.
+            // Coach
             let coachName = '';
             if (coachIndex !== undefined && coachIndex !== -1) {
                 coachName = row[coachIndex];
             } else {
-                // Fallback: try to find in teamConfig by name (row[0])
                 const cfg = teamConfig.find(tc => tc.name === row[0]);
                 if (cfg) coachName = cfg.coach;
             }
+            if (coachName) coachName = coachName.trim();
 
-            if (!coachName || !coachName.trim()) return;
-            coachName = coachName.trim();
-
-            if (!coachMap[coachName]) coachMap[coachName] = {};
-
-            // Check each day column
+            // Check each day
             for (let d = 0; d < 7; d++) {
                 const cIdx = dayStart + d;
                 const cellContent = row[cIdx];
                 if (!cellContent || typeof cellContent !== 'string') continue;
 
-                // Parse time from cell (e.g. "Maccabi 17:00-18:30")
-                const timeMatch = cellContent.match(/(\d{1,2}:\d{2}).*?(\d{1,2}:\d{2})/); // simple regex search
-                // Or searching for just one time if "1700" format?
-                // Let's use a robust parser helper or just look for 4 digits ranges
-                // Existing format appears to be "Location 1700-1830" or "Location 17:00-18:30"
-                // Let's normalize
+                // Normalize time parsing - "Location 1700-1830"
                 const nums = cellContent.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
 
                 if (nums) {
                     const start = parseInt(nums[1]);
                     const end = parseInt(nums[2]);
 
-                    if (!coachMap[coachName][d]) coachMap[coachName][d] = [];
+                    if (isNaN(start) || isNaN(end)) continue;
 
-                    // Check overlap with existing events for this coach on this day
-                    const events = coachMap[coachName][d];
-                    let hasConflict = false;
+                    // Extract Location (remove time digits)
+                    let location = cellContent.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
+                    location = location.replace(/משחק|ב-/g, '').trim();
+                    if (!location) location = "Unknown";
 
-                    events.forEach(ev => {
-                        if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
-                            // Overlap found!
-                            conflictSet.add(`${rIdx}_${cIdx}`);
-                            conflictSet.add(`${ev.row}_${ev.col}`);
-                            hasConflict = true;
-                        }
-                    });
+                    // 1. Check Coach Conflict
+                    if (coachName) {
+                        if (!coachMap[coachName]) coachMap[coachName] = {};
+                        if (!coachMap[coachName][d]) coachMap[coachName][d] = [];
 
-                    events.push({ start, end, row: rIdx, col: cIdx });
+                        const coachEvents = coachMap[coachName][d];
+                        coachEvents.forEach(ev => {
+                            if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
+                                conflictSet.add(`${rIdx}_${cIdx}`);
+                                conflictSet.add(`${ev.row}_${ev.col}`);
+                            }
+                        });
+                        coachEvents.push({ start, end, row: rIdx, col: cIdx });
+                    }
+
+                    // 2. Check Hall Conflict
+                    if (location) {
+                        if (!hallMap[location]) hallMap[location] = {};
+                        if (!hallMap[location][d]) hallMap[location][d] = [];
+
+                        const hallEvents = hallMap[location][d];
+                        hallEvents.forEach(ev => {
+                            if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
+                                conflictSet.add(`${rIdx}_${cIdx}`);
+                                conflictSet.add(`${ev.row}_${ev.col}`);
+                            }
+                        });
+                        hallEvents.push({ start, end, row: rIdx, col: cIdx });
+                    }
                 }
             }
         });
@@ -137,6 +146,25 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
     // Helper to format time for sheet (17:00 -> 1700)
     const formatTimeForSheet = (timeStr) => {
         return timeStr ? timeStr.replace(':', '') : '';
+    };
+
+    const handleClear = () => {
+        if (!window.confirm('האם אתה בטוח שברצונך לנקות את כל הלו"ז? פעולה זו תמחק את כל השיבוצים בטבלה הנוכחית (לא בגיליון המקורי עד שתשמור).')) {
+            return;
+        }
+
+        // Clone rawRows
+        const cleanSchedule = JSON.parse(JSON.stringify(rawRows));
+
+        // Iterate and clear day columns
+        cleanSchedule.forEach(row => {
+            // We assume row has length > dayStart
+            for (let i = dayStart; i < row.length; i++) {
+                row[i] = ''; // Clear cell
+            }
+        });
+
+        setGeneratedSchedule(cleanSchedule);
     };
 
     const handleGenerate = () => {
@@ -339,6 +367,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ margin: 0 }}>תצוגה מקדימה {generatedSchedule && '(תוצאת חישוב)'}</h3>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button onClick={handleClear} style={{ background: '#EF476F', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>
+                        נקה הכל (שבוע חדש)
+                    </button>
                     <button onClick={handleGenerate} disabled={isGenerating} style={{ background: '#FCA311', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, opacity: isGenerating ? 0.7 : 1 }}>
                         {isGenerating ? 'מחשב...' : 'צור לו"ז אוטומטי'}
                     </button>
@@ -387,7 +418,23 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
 
                         return (
                             <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fcfcfc' }}>
-                                <td style={{ padding: '0.8rem', border: '1px solid #eee', fontWeight: '500' }}>{teamName}</td>
+                                <td style={{ padding: '0.8rem', border: '1px solid #eee', fontWeight: '500' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        {teamName}
+                                        {teamObj.type && (
+                                            <span style={{
+                                                fontSize: '0.7rem',
+                                                padding: '2px 6px',
+                                                borderRadius: '10px',
+                                                background: teamObj.type === 'W' ? '#BE185D' : '#3B82F6',
+                                                color: 'white',
+                                                fontWeight: 'bold'
+                                            }}>
+                                                {teamObj.type}
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
                                 {coachIndex !== undefined && coachIndex !== -1 && (
                                     <td style={{ padding: '0.8rem', border: '1px solid #eee', color: '#666' }}>
                                         {rowData ? rowData[coachIndex] : ''}
