@@ -11,8 +11,8 @@ import DailyView from '../components/DailyView';
 const parseScheduleContent = parseCellContent;
 
 
-// TODO: Replace this with the Women's Google Sheet URL provided by the user
-const DATA_URL = "https://docs.google.com/spreadsheets/d/1wqo1MVDAbEWRHUA7XlwS_TpD-St2KpwEPVwLyq6SO2E/edit?gid=0#gid=0";
+// Merged Data Source (Same as Men's)
+const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
 
 function PublicScheduleWomen() {
     const [data, setData] = useState([]);
@@ -30,7 +30,7 @@ function PublicScheduleWomen() {
     useEffect(() => {
         const fetchData = async () => {
             if (!DATA_URL) {
-                setError('טרם הוגדר קישור לגיליון הנשים.');
+                setError('טרם הוגדר קישור לגיליון.');
                 setLoading(false);
                 return;
             }
@@ -40,13 +40,9 @@ function PublicScheduleWomen() {
                 const match = DATA_URL.match(/\/d\/([a-zA-Z0-9-_]+)/);
                 const id = match ? match[1] : null;
 
-                if (!id) {
-                    setError('Invalid Google Sheet URL.');
-                    setLoading(false);
-                    return;
-                }
-
-                const csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`;
+                // The DATA_URL is already the CSV export URL, so no need to reconstruct it
+                // const csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`;
+                const csvUrl = DATA_URL; // Use the provided DATA_URL directly
 
                 const response = await fetch(csvUrl);
                 if (!response.ok) throw new Error('Network response was not ok');
@@ -76,6 +72,7 @@ function PublicScheduleWomen() {
                             // Dynamic Column Detection
                             const teamIndex = 0;
                             let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
+                            let typeIndex = headerRow.findIndex(h => h && (h.toLowerCase() === 'type' || h.includes('סוג')));
                             let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
 
                             // Fallbacks
@@ -91,8 +88,10 @@ function PublicScheduleWomen() {
                                 const name = row[teamIndex];
                                 if (!name || name.trim() === '') return;
 
-                                // Exclude Banner row from teams list
+                                // Filter out Banner rows
                                 if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
+
+                                const typeVal = (typeIndex !== -1 && row[typeIndex]) ? row[typeIndex].trim().toUpperCase() : 'M'; // Default to M
 
                                 const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                                 // Form unique label
@@ -103,6 +102,7 @@ function PublicScheduleWomen() {
                                     value: rowIndex.toString(), // Use rowIndex as unique ID
                                     name: name.trim(),
                                     coach: coach ? coach.trim() : '',
+                                    type: typeVal,
                                     row: row
                                 });
                             });
@@ -114,9 +114,10 @@ function PublicScheduleWomen() {
                             setTeams(teamObjects);
                             setData(dataRows);
 
-                            // Set default team if available
-                            if (teamObjects.length > 0) {
-                                setSelectedTeamId(teamObjects[0].value);
+                            // Set default team from Women's list
+                            const womenTeams = teamObjects.filter(t => t.type === 'W');
+                            if (womenTeams.length > 0) {
+                                setSelectedTeamId(womenTeams[0].value);
                             }
                         } else {
                             setError('לא נמצאה שורת כותרת ("קבוצות") בגיליון.');
@@ -154,6 +155,9 @@ function PublicScheduleWomen() {
     };
 
     const schedule = getTeamSchedule();
+
+    // Filter teams for the dropdown (Women only)
+    const dropdownTeams = teams.filter(t => t.type === 'W');
 
     // Format text to add colons to times (e.g. 1700 -> 17:00)
     const formatTime = (text) => {
@@ -299,7 +303,7 @@ function PublicScheduleWomen() {
                                 style={{ borderColor: '#FCE7F3', flex: 1, minWidth: '200px' }}
                             >
                                 <option value="" disabled>בחר קבוצה / Select a Team</option>
-                                {teams.map((team, index) => (
+                                {dropdownTeams.map((team, index) => (
                                     <option key={team.value} value={team.value}>
                                         {team.label}
                                     </option>

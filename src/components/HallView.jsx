@@ -1,14 +1,21 @@
+
 import { useState, useMemo } from 'react';
 import { flattenScheduleData, exportToExcel, parseCellContent } from '../utils/scheduleUtils';
 
+
 const HallView = ({ data, headers, teams, dayStart }) => {
+    const [selectedHall, setSelectedHall] = useState('all');
+    const [filterGender, setFilterGender] = useState('all'); // 'all', 'M', 'W'
+
+    const filteredTeams = useMemo(() => {
+        if (filterGender === 'all') return teams;
+        return teams.filter(t => (t.type || 'M') === filterGender);
+    }, [teams, filterGender]);
     // Flatten data
     const flatData = useMemo(() => {
         // We need to reconstruct "teams" array with rows because 'teams' prop has { row, name, coach }
-        return flattenScheduleData(teams, headers, dayStart);
-    }, [teams, headers, dayStart]);
-
-    const [selectedHall, setSelectedHall] = useState('all');
+        return flattenScheduleData(filteredTeams, headers, dayStart);
+    }, [filteredTeams, headers, dayStart]);
 
     // Get unique halls
     const uniqueHalls = useMemo(() => {
@@ -48,6 +55,18 @@ const HallView = ({ data, headers, teams, dayStart }) => {
         Object.values(byDay).forEach(day => {
             Object.keys(day.halls).forEach(hall => {
                 day.halls[hall].sort((a, b) => a.time.localeCompare(b.time));
+
+                // Detect conflicts (same time in same hall)
+                const timeCounts = {};
+                day.halls[hall].forEach(s => {
+                    const t = s.time;
+                    if (t) timeCounts[t] = (timeCounts[t] || 0) + 1;
+                });
+                day.halls[hall].forEach(s => {
+                    if (s.time && timeCounts[s.time] > 1) {
+                        s.hasConflict = true;
+                    }
+                });
             });
         });
 
@@ -67,7 +86,55 @@ const HallView = ({ data, headers, teams, dayStart }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <h3 style={{ margin: 0, color: '#831843' }}>לו"ז אולמות מרוכז</h3>
 
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.2rem', background: '#f3f4f6', padding: '0.2rem', borderRadius: '6px' }}>
+                        <button
+                            onClick={() => setFilterGender('all')}
+                            style={{
+                                border: 'none',
+                                background: filterGender === 'all' ? '#1f2937' : 'transparent',
+                                color: filterGender === 'all' ? 'white' : '#666',
+                                padding: '0.4rem 0.8rem',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            הכל
+                        </button>
+                        <button
+                            onClick={() => setFilterGender('M')}
+                            style={{
+                                border: 'none',
+                                background: filterGender === 'M' ? '#ea580c' : 'transparent',
+                                color: filterGender === 'M' ? 'white' : '#666',
+                                padding: '0.4rem 0.8rem',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            גברים
+                        </button>
+                        <button
+                            onClick={() => setFilterGender('W')}
+                            style={{
+                                border: 'none',
+                                background: filterGender === 'W' ? '#be185d' : 'transparent',
+                                color: filterGender === 'W' ? 'white' : '#666',
+                                padding: '0.4rem 0.8rem',
+                                borderRadius: '4px',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            נשים
+                        </button>
+                    </div>
+
                     <select
                         value={selectedHall}
                         onChange={(e) => setSelectedHall(e.target.value)}
@@ -130,7 +197,8 @@ const HallView = ({ data, headers, teams, dayStart }) => {
                                                         borderRadius: '4px',
                                                         borderRight: session.isMatch ? '3px solid #BE185D' : '3px solid #ddd'
                                                     }}>
-                                                        <div style={{ fontWeight: '600', color: '#333' }}>
+                                                        <div style={{ fontWeight: '600', color: '#333', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                            {session.hasConflict && <span title="התנגשות שעות!" style={{ fontSize: '1rem' }}>⚠️</span>}
                                                             {session.time}
                                                             <span style={{ fontWeight: 'normal', color: '#666', marginRight: '5px' }}>
                                                                 {session.team}

@@ -54,6 +54,7 @@ function PublicSchedule() {
                             // Dynamic Column Detection
                             const teamIndex = 0;
                             let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
+                            let typeIndex = headerRow.findIndex(h => h && (h.toLowerCase() === 'type' || h.includes('סוג'))); // Exact match preferred for 'type'
                             let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
 
                             // Fallbacks
@@ -62,6 +63,7 @@ function PublicSchedule() {
                             }
                             setDayStart(dayStartIndex);
 
+                            // Extract teams with unique identifiers
                             const teamObjects = [];
 
                             dataRows.forEach((row, rowIndex) => {
@@ -70,6 +72,8 @@ function PublicSchedule() {
 
                                 // Filter out Banner rows
                                 if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
+
+                                const typeVal = (typeIndex !== -1 && row[typeIndex]) ? row[typeIndex].trim().toUpperCase() : 'M'; // Default to M
 
                                 const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                                 // Form unique label
@@ -80,6 +84,7 @@ function PublicSchedule() {
                                     value: rowIndex.toString(), // Use rowIndex as unique ID
                                     name: name.trim(),
                                     coach: coach ? coach.trim() : '',
+                                    type: typeVal,
                                     row: row
                                 });
                             });
@@ -91,9 +96,10 @@ function PublicSchedule() {
                             setTeams(teamObjects);
                             setData(dataRows);
 
-                            // Set default team if available
-                            if (teamObjects.length > 0) {
-                                setSelectedTeamId(teamObjects[0].value);
+                            // Set default team from Men's list if available
+                            const menTeams = teamObjects.filter(t => t.type !== 'W');
+                            if (menTeams.length > 0) {
+                                setSelectedTeamId(menTeams[0].value);
                             }
                         }
                         setLoading(false);
@@ -128,6 +134,9 @@ function PublicSchedule() {
 
     const schedule = getTeamSchedule();
 
+    // Filter teams for the dropdown (Men only)
+    const dropdownTeams = teams.filter(t => t.type !== 'W');
+
     // Format text to add colons to times (e.g. 1700 -> 17:00)
     const formatTime = (text) => {
         if (!text) return text;
@@ -152,10 +161,14 @@ function PublicSchedule() {
             const date = parts[1] || '';
             const content = schedule[dayStart + index];
 
+            const { time, location, status, isMatch } = parseScheduleContent(content);
             const isOffDay = !content || content.trim() === '' || content.toLowerCase().includes('xxx');
-            const isMatch = content && content.includes('משחק');
 
-            let dayContent = isOffDay ? 'מנוחה' : formatTime(content);
+            let dayContent = isOffDay ? 'מנוחה' : `${time} ${location}`;
+
+            if (status === 'cancelled') dayContent = `❌ [בוטל] ${dayContent}`;
+            else if (status === 'changed') dayContent = `⚠️ [שינוי] ${dayContent}`;
+
             if (isMatch) dayContent = `${sparkles} ${dayContent} ${sparkles}`;
 
             // Request: Remove empty days from message
@@ -267,7 +280,7 @@ function PublicSchedule() {
                                 style={{ flex: 1, minWidth: '200px' }}
                             >
                                 <option value="" disabled>בחר קבוצה / Select a Team</option>
-                                {teams.map((team, index) => (
+                                {dropdownTeams.map((team, index) => (
                                     <option key={team.value} value={team.value}>
                                         {team.label}
                                     </option>

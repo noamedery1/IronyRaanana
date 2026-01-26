@@ -78,6 +78,7 @@ const AdminDashboard = () => {
                         // Dynamic Column Detection
                         const teamIndex = 0; // Always A
                         let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
+                        let typeIndex = headerRow.findIndex(h => h && (h.toLowerCase() === 'type' || h.includes('סוג')));
                         let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
 
                         // Fallbacks if detection fails
@@ -97,6 +98,12 @@ const AdminDashboard = () => {
 
                             // Filter out Banner rows
                             if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
+
+                            // Filter by Type (Men's Admin)
+                            if (typeIndex !== -1) {
+                                const typeVal = row[typeIndex] ? row[typeIndex].trim().toUpperCase() : '';
+                                if (typeVal === 'W') return; // Hide Women
+                            }
 
                             const coach = (coachIndex !== -1) ? row[coachIndex] : '';
                             const key = `${name.trim()}_${coach ? coach.trim() : ''}`; // Unique key
