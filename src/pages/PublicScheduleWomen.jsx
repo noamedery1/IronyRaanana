@@ -412,6 +412,7 @@ function PublicScheduleWomen() {
                                 headers={headers}
                                 teams={teams}
                                 dayStart={dayStart}
+                                defaultGender="W"
                             />
                         ) : viewMode === 'daily' ? (
                             <DailyView
@@ -419,6 +420,7 @@ function PublicScheduleWomen() {
                                 headers={headers}
                                 teams={teams}
                                 dayStart={dayStart}
+                                defaultGender="W"
                             />
                         ) : (
                             <div className="schedule-grid">

@@ -387,6 +387,7 @@ function PublicSchedule() {
                                 headers={headers}
                                 teams={teams}
                                 dayStart={dayStart}
+                                defaultGender="M"
                             />
                         ) : viewMode === 'daily' ? (
                             <DailyView
@@ -394,6 +395,7 @@ function PublicSchedule() {
                                 headers={headers}
                                 teams={teams}
                                 dayStart={dayStart}
+                                defaultGender="M"
                             />
                         ) : (
 

@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { flattenScheduleData } from '../utils/scheduleUtils';
 
-const DailyView = ({ data, headers, teams, dayStart }) => {
+const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
     const [sortBy, setSortBy] = useState('hall'); // 'hall', 'time'
-    const [filterGender, setFilterGender] = useState('all'); // 'all', 'M', 'W'
+    const [filterGender, setFilterGender] = useState(defaultGender || 'all'); // 'all', 'M', 'W'
 
     // Filter teams based on gender selection first
     const filteredTeams = useMemo(() => {

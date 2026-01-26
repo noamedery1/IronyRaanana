@@ -3,9 +3,9 @@ import { useState, useMemo } from 'react';
 import { flattenScheduleData, exportToExcel, parseCellContent } from '../utils/scheduleUtils';
 
 
-const HallView = ({ data, headers, teams, dayStart }) => {
+const HallView = ({ data, headers, teams, dayStart, defaultGender }) => {
     const [selectedHall, setSelectedHall] = useState('all');
-    const [filterGender, setFilterGender] = useState('all'); // 'all', 'M', 'W'
+    const [filterGender, setFilterGender] = useState(defaultGender || 'all'); // 'all', 'M', 'W'
 
     const filteredTeams = useMemo(() => {
         if (filterGender === 'all') return teams;
