@@ -187,26 +187,34 @@ const HallView = ({ data, headers, teams, dayStart, defaultGender }) => {
                                         <div key={hall} style={{ border: '1px solid #f0f0f0', borderRadius: '8px', padding: '0.8rem', background: '#fffafa' }}>
                                             <h4 style={{ margin: '0 0 0.8rem 0', color: '#831843', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>{hall}</h4>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                {day.halls[hall].map((session, sIdx) => (
-                                                    <div key={sIdx} style={{
-                                                        display: 'flex',
-                                                        justifyContent: 'space-between',
-                                                        fontSize: '0.9rem',
-                                                        padding: '0.4rem',
-                                                        background: session.isMatch ? '#fff1f2' : 'white',
-                                                        borderRadius: '4px',
-                                                        borderRight: session.isMatch ? '3px solid #BE185D' : '3px solid #ddd'
-                                                    }}>
-                                                        <div style={{ fontWeight: '600', color: '#333', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                            {session.hasConflict && <span title="התנגשות שעות!" style={{ fontSize: '1rem' }}>⚠️</span>}
-                                                            {session.time}
-                                                            <span style={{ fontWeight: 'normal', color: '#666', marginRight: '5px' }}>
-                                                                {session.team}
-                                                            </span>
+                                                {day.halls[hall].map((session, sIdx) => {
+                                                    const isCancelled = session.status === 'cancelled';
+                                                    const isChanged = session.status === 'changed';
+
+                                                    return (
+                                                        <div key={sIdx} style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            fontSize: '0.9rem',
+                                                            padding: '0.4rem',
+                                                            background: isCancelled ? '#fee2e2' : (isChanged ? '#fef3c7' : (session.isMatch ? '#fff1f2' : 'white')),
+                                                            borderRadius: '4px',
+                                                            borderRight: isCancelled ? '3px solid #ef4444' : (isChanged ? '3px solid #f59e0b' : (session.isMatch ? '3px solid #BE185D' : '3px solid #ddd')),
+                                                            opacity: isCancelled ? 0.7 : 1,
+                                                            position: 'relative'
+                                                        }}>
+                                                            <div style={{ fontWeight: '600', color: '#333', display: 'flex', alignItems: 'center', gap: '5px', textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                                                                {session.hasConflict && <span title="התנגשות שעות!" style={{ fontSize: '1rem' }}>⚠️</span>}
+                                                                {isCancelled && <span style={{ textDecoration: 'none' }}>❌</span>}
+                                                                {session.time}
+                                                                <span style={{ fontWeight: 'normal', color: '#666', marginRight: '5px' }}>
+                                                                    {session.team}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ fontSize: '0.8rem', color: '#888', textDecoration: isCancelled ? 'line-through' : 'none' }}>{session.coach}</div>
                                                         </div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#888' }}>{session.coach}</div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     ))}

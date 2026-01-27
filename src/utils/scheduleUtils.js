@@ -24,7 +24,7 @@ export const flattenScheduleData = (teams, headers, dayStart, indices) => {
 
             // Simple parsing of location/time
             // Matches "17:00-18:30 Hall Name" or "Hall Name 17:00"
-            const { time, location, isMatch } = parseCellContent(content);
+            const { time, location, isMatch, status } = parseCellContent(content);
 
             flatData.push({
                 team: team.name,
@@ -52,10 +52,17 @@ export const parseCellContent = (text) => {
     let cleanText = text;
 
     // Check for Cancellation
-    if (text.match(/^(x|X|בוטל|CANCELED)\b/) || text.includes('X ') || text.includes('בוטל')) {
+    if (text.match(/x|בוטל|canceled|cancelled/i)) {
         status = 'cancelled';
         // Aggressively remove X and labels
-        cleanText = text.replace(/^(x|X|בוטל|X |CANCELED)/i, '').replace(/בוטל|CANCELED/g, '').replace(/\bX\b/g, '').trim();
+        cleanText = text.replace(/x|בוטל|canceled|cancelled/gi, '')
+            .trim();
+
+        // Remove leading dashes/punctuation often left behind (e.g., "- 17:00")
+        // But be careful not to remove the dash in "17:00-18:00" if it was somehow at the start (unlikely)
+        // We only remove leading non-digit characters that aren't letters (for Hebrew names maybe?)
+        // Actually, just removing leading dashes/colons is safe.
+        cleanText = cleanText.replace(/^[\s\-:–]+/, '').trim();
     }
     // Check for Change (prefixes or symbols: !, ⚠️, שינוי)
     else if (text.includes('!') || text.includes('⚠️') || text.includes('שינוי') || text.includes('CHANGE')) {

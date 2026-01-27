@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { flattenScheduleData } from '../utils/scheduleUtils';
+import { flattenScheduleData, exportToExcel } from '../utils/scheduleUtils';
 
 const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
     const [sortBy, setSortBy] = useState('hall'); // 'hall', 'time'
     const [filterGender, setFilterGender] = useState(defaultGender || 'all'); // 'all', 'M', 'W'
+    const [showGamesOnly, setShowGamesOnly] = useState(false);
 
     // Filter teams based on gender selection first
     const filteredTeams = useMemo(() => {
@@ -15,6 +16,14 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
     const flatData = useMemo(() => {
         return flattenScheduleData(filteredTeams, headers, dayStart);
     }, [filteredTeams, headers, dayStart]);
+
+    // Apply Games Only filter
+    const processedData = useMemo(() => {
+        if (showGamesOnly) {
+            return flatData.filter(item => item.isMatch);
+        }
+        return flatData;
+    }, [flatData, showGamesOnly]);
 
     // Group by Day
     const scheduleByDay = useMemo(() => {
@@ -32,7 +41,7 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
             }
         }
 
-        flatData.forEach(item => {
+        processedData.forEach(item => {
             const dayIdx = item.dayIndex;
             if (byDay[dayIdx]) {
                 byDay[dayIdx].sessions.push(item);
@@ -59,7 +68,14 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
         });
 
         return byDay;
-    }, [flatData, headers, dayStart, sortBy]);
+    }, [processedData, headers, dayStart, sortBy]);
+
+    const handleExport = () => {
+        const genderLabel = filterGender === 'all' ? 'All' : (filterGender === 'M' ? 'Men' : 'Women');
+        const typeLabel = showGamesOnly ? 'GamesOnly' : 'Full';
+        const fileName = `DailySchedule_${genderLabel}_${typeLabel}.xlsx`;
+        exportToExcel(processedData, fileName);
+    };
 
     return (
         <div style={{ marginTop: '2rem' }}>
@@ -114,7 +130,7 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button
                         onClick={() => setSortBy('hall')}
                         style={{
@@ -149,6 +165,41 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
                     >
                         ⏰ לפי שעה
                     </button>
+                    <button
+                        onClick={() => setShowGamesOnly(!showGamesOnly)}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '6px',
+                            border: showGamesOnly ? '2px solid #be185d' : '1px solid #ccc',
+                            background: showGamesOnly ? '#fff1f2' : 'white',
+                            color: showGamesOnly ? '#be185d' : '#666',
+                            fontWeight: showGamesOnly ? 'bold' : 'normal',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                        }}
+                    >
+                        🏀 רק משחקים
+                    </button>
+                    <button
+                        onClick={handleExport}
+                        style={{
+                            padding: '0.5rem 1rem',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: '#10B981',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            marginLeft: '10px'
+                        }}
+                    >
+                        📊 ייצוא לאקסל
+                    </button>
                 </div>
             </div>
 
@@ -173,29 +224,36 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
                                 <div style={{ padding: '1rem', textAlign: 'center', color: '#aaa' }}>אין פעילות מתוכננת</div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {day.sessions.map((session, sIdx) => (
-                                        <div key={sIdx} style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '0.8rem',
-                                            borderBottom: sIdx < day.sessions.length - 1 ? '1px solid #f0f0f0' : 'none',
-                                            background: session.isMatch ? '#fff1f2' : (sIdx % 2 === 0 ? '#fafafa' : 'white'),
-                                            borderRight: session.isMatch ? '4px solid #be185d' : '4px solid transparent'
-                                        }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1 }}>
-                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                    <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1f2937' }}>{session.time}</span>
-                                                    {session.isMatch && <span style={{ fontSize: '0.7rem', background: '#be185d', color: 'white', padding: '2px 6px', borderRadius: '10px' }}>משחק</span>}
-                                                </div>
-                                                <div style={{ fontWeight: '600', color: '#374151' }}>{session.team}</div>
-                                                <div style={{ fontSize: '0.85rem', color: '#6b7280', display: 'flex', gap: '5px' }}>
-                                                    <span style={{ fontWeight: '800', color: '#000' }}>{session.location}</span>
-                                                    {session.coach && <span> • מאמן: {session.coach}</span>}
+                                    {day.sessions.map((session, sIdx) => {
+                                        const isCancelled = session.status === 'cancelled';
+                                        const isChanged = session.status === 'changed';
+
+                                        return (
+                                            <div key={sIdx} style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '0.8rem',
+                                                borderBottom: sIdx < day.sessions.length - 1 ? '1px solid #f0f0f0' : 'none',
+                                                background: isCancelled ? '#fee2e2' : (isChanged ? '#fffbeb' : (session.isMatch ? '#fff1f2' : (sIdx % 2 === 0 ? '#fafafa' : 'white'))),
+                                                borderRight: isCancelled ? '4px solid #ef4444' : (isChanged ? '4px solid #f59e0b' : (session.isMatch ? '4px solid #be185d' : '4px solid transparent')),
+                                                opacity: isCancelled ? 0.7 : 1
+                                            }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1, textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                        {isCancelled && <span style={{ textDecoration: 'none' }}>❌</span>}
+                                                        <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1f2937' }}>{session.time}</span>
+                                                        {session.isMatch && <span style={{ fontSize: '0.7rem', background: '#be185d', color: 'white', padding: '2px 6px', borderRadius: '10px' }}>משחק</span>}
+                                                    </div>
+                                                    <div style={{ fontWeight: '600', color: '#374151' }}>{session.team}</div>
+                                                    <div style={{ fontSize: '0.85rem', color: '#6b7280', display: 'flex', gap: '5px' }}>
+                                                        <span style={{ fontWeight: '800', color: '#000' }}>{session.location}</span>
+                                                        {session.coach && <span> • מאמן: {session.coach}</span>}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
