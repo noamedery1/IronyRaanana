@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 // URLs for the two sheets
-const MEN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/export?format=csv&gid=0";
-const WOMEN_SHEET_URL = "https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/export?format=csv&gid=0";
-
+const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
 const LeagueGamesBanner = () => {
     const [games, setGames] = useState([]);
     const [isVisible, setIsVisible] = useState(true);
@@ -23,12 +21,8 @@ const LeagueGamesBanner = () => {
                 });
             };
 
-            const [menData, womenData] = await Promise.all([
-                fetchSheet(MEN_SHEET_URL),
-                fetchSheet(WOMEN_SHEET_URL)
-            ]);
-
-            const allRows = [...menData, ...womenData];
+            const data = await fetchSheet(DATA_URL);
+            const allRows = data;
             const parsedGames = [];
 
             allRows.forEach(row => {
