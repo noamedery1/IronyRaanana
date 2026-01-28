@@ -5,6 +5,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
     const [generatedSchedule, setGeneratedSchedule] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [dragStart, setDragStart] = useState(null);
 
     // Manage headers locally
     const [currentHeaders, setCurrentHeaders] = useState(headers || []);
@@ -18,18 +19,19 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
     const dayStart = indices?.dayStart || 1;
     const coachIndex = indices?.coach;
 
+    // Helper to get data to show
+    const dataToShow = generatedSchedule || rawRows;
+
     // Calculate conflicts
-    // Returns a Set of "rowIndex_colIndex" strings that have conflicts
     const conflicts = (() => {
         const conflictSet = new Set();
-        const data = generatedSchedule || rawRows;
+        const data = dataToShow;
         if (!data) return conflictSet;
 
-        const coachMap = {}; // coachName -> day -> [{start, end, row, col}]
-        const hallMap = {}; // hallName -> day -> [{start, end, row, col}]
+        const coachMap = {};
+        const hallMap = {};
 
         data.forEach((row, rIdx) => {
-            // Coach
             let coachName = '';
             if (coachIndex !== undefined && coachIndex !== -1) {
                 coachName = row[coachIndex];
@@ -39,13 +41,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
             }
             if (coachName) coachName = coachName.trim();
 
-            // Check each day
             for (let d = 0; d < 7; d++) {
                 const cIdx = dayStart + d;
                 const cellContent = row[cIdx];
                 if (!cellContent || typeof cellContent !== 'string') continue;
 
-                // Normalize time parsing - "Location 1700-1830"
                 const nums = cellContent.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
 
                 if (nums) {
@@ -54,12 +54,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
 
                     if (isNaN(start) || isNaN(end)) continue;
 
-                    // Extract Location (remove time digits)
                     let location = cellContent.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
                     location = location.replace(/משחק|ב-/g, '').trim();
                     if (!location) location = "Unknown";
 
-                    // 1. Check Coach Conflict
+                    // Coach Check
                     if (coachName) {
                         if (!coachMap[coachName]) coachMap[coachName] = {};
                         if (!coachMap[coachName][d]) coachMap[coachName][d] = [];
@@ -74,7 +73,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                         coachEvents.push({ start, end, row: rIdx, col: cIdx });
                     }
 
-                    // 2. Check Hall Conflict
+                    // Hall Check
                     if (location) {
                         if (!hallMap[location]) hallMap[location] = {};
                         if (!hallMap[location][d]) hallMap[location][d] = [];
@@ -116,86 +115,81 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
     const handleDateChange = (e) => {
         const dateVal = e.target.value;
         setSelectedDate(dateVal);
-
         if (!dateVal) return;
 
         const start = new Date(dateVal);
         const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-
         const newHeaders = [...currentHeaders];
-
-        // Ensure we have enough columns (up to start + 7)
-        // If array is short, we might crash, but generally headers array is long enough from CSV
 
         for (let i = 0; i < 7; i++) {
             const currentDay = new Date(start);
             currentDay.setDate(start.getDate() + i);
-
             const dayName = days[i];
             const formattedDate = `${currentDay.getDate()}/${currentDay.getMonth() + 1}`;
-
-            // We update the specific column index
             if (newHeaders[dayStart + i]) {
                 newHeaders[dayStart + i] = `${dayName} ${formattedDate}`;
             }
         }
-
         setCurrentHeaders(newHeaders);
     };
 
-    // Helper to format time for sheet (17:00 -> 1700)
-    const formatTimeForSheet = (timeStr) => {
-        return timeStr ? timeStr.replace(':', '') : '';
-    };
-
     const handleClear = () => {
-        if (!window.confirm('האם אתה בטוח שברצונך לנקות את כל הלו"ז? פעולה זו תמחק את כל השיבוצים בטבלה הנוכחית (לא בגיליון המקורי עד שתשמור).')) {
+        if (!window.confirm('האם אתה בטוח שברצונך לנקות את כל הלו"ז? פעולה זו תמחק את כל השיבוצים בטבלה הנוכחית.')) {
             return;
         }
-
-        // Clone rawRows
         const cleanSchedule = JSON.parse(JSON.stringify(rawRows));
-
-        // Iterate and clear day columns
         cleanSchedule.forEach(row => {
-            // We assume row has length > dayStart
             for (let i = dayStart; i < row.length; i++) {
-                row[i] = ''; // Clear cell
+                row[i] = '';
             }
         });
-
         setGeneratedSchedule(cleanSchedule);
     };
 
     const handleGenerate = () => {
         setIsGenerating(true);
         setTimeout(() => {
-            // 1. Create a map of team rows for direct access
-            const newSchedule = JSON.parse(JSON.stringify(rawRows)); // Deep copy
+            // Deep copy rawRows to start fresh or use current
+            // We'll use rawRows as base to ensure we don't duplicate constraints if re-running
+            // tailored choice: Start from clean slate + constraints OR keep manual?
+            // "Automatic" usually implies full generation. let's respect manual edits if they exist in `generatedSchedule`? 
+            // Simpler: Start from `rawRows` (source) + Constraints.
 
-            // Resource Tracker: Map<Location|Coach, Map<Day, Array<{start, end}>>>
+            const newSchedule = JSON.parse(JSON.stringify(rawRows));
+
+            // Allow manual pre-fills from current view if user edited? 
+            // For now, let's assume "Generate" is a fresh calculation based on Rules.
+            // If user wants to keep manual, they should add it as a constraint (Fixed).
+
+            // Clear the schedule area first to ensure clean generation
+            newSchedule.forEach(row => {
+                for (let i = dayStart; i < row.length; i++) {
+                    row[i] = '';
+                }
+            });
+
+            // Resource Tracker
             const bookedResources = {};
-
-            // Helper to parse time string "HHMM" to minutes
             const toMin = (t) => {
                 const s = String(t).padStart(4, '0');
-                const h = parseInt(s.substring(0, 2));
-                const m = parseInt(s.substring(2, 4));
-                return h * 60 + m;
+                return parseInt(s.substring(0, 2)) * 60 + parseInt(s.substring(2, 4));
+            };
+            const toTimeStr = (min) => {
+                const h = Math.floor(min / 60);
+                const m = min % 60;
+                return `${String(h).padStart(2, '0')}${String(m).padStart(2, '0')}`;
             };
 
-            // Helper to check and book
             const tryBook = (resourceType, resourceName, day, startMin, endMin) => {
-                if (!resourceName) return true; // No resource to check (e.g. no coach)
+                if (!resourceName) return true;
                 const key = `${resourceType}_${resourceName}`;
                 if (!bookedResources[key]) bookedResources[key] = {};
                 if (!bookedResources[key][day]) bookedResources[key][day] = [];
 
-                // Check overlap
                 const intervals = bookedResources[key][day];
                 for (const iv of intervals) {
                     if (Math.max(startMin, iv.start) < Math.min(endMin, iv.end)) {
-                        return false; // Overlap
+                        return false;
                     }
                 }
                 return true;
@@ -209,83 +203,78 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                 bookedResources[key][day].push({ start: startMin, end: endMin });
             };
 
-            // Pre-fill existing manual bookings or constraints from the sheet if needed?
-            // For now we assume we overwrite or fill empty.
-            // Better to SCAN existing cells first to populate `bookedResources`.
-
-            // Scan existing schedule to block resources
+            // 1. APPLY CONSTRAINTS FIRST
             teamConfig.forEach(team => {
-                const teamRow = newSchedule.find(r => r[0] === team.name && (!team.coach || (r[coachIndex] || '').trim() === team.coach));
-                if (!teamRow) return;
+                if (!team.constraints) return;
 
-                for (let d = 0; d < 7; d++) {
-                    const colIndex = dayStart + d;
-                    const cell = teamRow[colIndex];
-                    if (cell && cell.trim()) {
-                        // Parse rough time
-                        const nums = cell.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
-                        if (nums) {
-                            const s = toMin(nums[1]);
-                            const e = toMin(nums[2]);
-                            // Extract location roughly
-                            let loc = cell.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
-                            loc = loc.replace(/משחק|ב-/g, '').trim();
+                const teamRowIndex = newSchedule.findIndex(r => r[0] === team.name && (!team.coach || (r[coachIndex] || '').trim() === team.coach));
+                if (teamRowIndex === -1) return;
 
-                            if (loc) confirmBook('HALL', loc, d, s, e);
-                            if (team.coach) confirmBook('COACH', team.coach, d, s, e);
-                        } else if (cell.includes('xxxxxxxx')) {
-                            // Block full day? Or just mark occupied?
-                            // OFF day doesn't block resources necessarily, but stops us from booking this team
-                        }
+                team.constraints.forEach(c => {
+                    if (c.type === 'OFF') {
+                        // Mark somewhere? We will just check this later
+                        return;
                     }
-                }
+
+                    // Fixed or Match
+                    const dayIdx = c.day; // 0..6
+                    const startMin = toMin(c.startTime.replace(':', ''));
+                    const endMin = toMin(c.endTime.replace(':', ''));
+                    const loc = c.location.trim();
+
+                    // Place in schedule
+                    const content = c.type === 'MATCH'
+                        ? `🏀 משחק ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`
+                        : `${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
+
+                    // Write
+                    newSchedule[teamRowIndex][dayStart + dayIdx] = content;
+
+                    // Book Resources
+                    if (loc) confirmBook('HALL', loc, dayIdx, startMin, endMin);
+                    if (team.coach) confirmBook('COACH', team.coach, dayIdx, startMin, endMin);
+                });
             });
 
-
-            // Generate Candidates
-            // Possible start times every 30 or 45 mins from 16:00 to 22:00
-            const CANDIDATE_STARTS = [];
-            let curr = 16 * 60; // 16:00
-            const END_LIMIT = 22 * 60; // 22:00
-            while (curr < END_LIMIT) {
-                CANDIDATE_STARTS.push(curr);
-                curr += 15; // 15 min granularity for finding slots? 30 is safer for speed
-            }
-
-            // 2. Process each team
-            // Sort teams by priority? maybe difficult teams first (more sessions, constraints)
-            // For now simple order.
-
-            // Shuffle teams to avoid bias?
+            // 2. GENERATE REMAINING
             const shuffledConfig = [...teamConfig].sort(() => 0.5 - Math.random());
 
+            const CANDIDATE_STARTS = [];
+            let curr = 16 * 60;
+            const END_LIMIT = 22 * 60;
+            while (curr < END_LIMIT) {
+                CANDIDATE_STARTS.push(curr);
+                curr += 30; // 30 min jumps
+            }
+
             shuffledConfig.forEach(team => {
-                const teamRow = newSchedule.find(r => r[0] === team.name && (!team.coach || (r[coachIndex] || '').trim() === team.coach));
-                if (!teamRow) return;
+                const teamRowIndex = newSchedule.findIndex(r => r[0] === team.name && (!team.coach || (r[coachIndex] || '').trim() === team.coach));
+                if (teamRowIndex === -1) return;
 
-                let sessionsScheduled = 0;
+                const teamRow = newSchedule[teamRowIndex];
                 const sessionsNeeded = team.sessionsPerWeek || 3;
-                const duration = team.duration || 90; // Default 90 min
+                let sessionsScheduled = 0;
 
-                // Count existing
+                // Count already scheduled (from constraints)
                 for (let d = 0; d < 7; d++) {
                     if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) sessionsScheduled++;
                 }
 
                 let sessionsToFill = sessionsNeeded - sessionsScheduled;
-                const preferredLocations = LOCATIONS; // Could specific this per team later
+                const duration = team.duration || 90;
+
+                // Blocked days (OFF)
+                const blockedDays = (team.constraints || []).filter(c => c.type === 'OFF').map(c => c.day);
 
                 for (let d = 0; d < 7 && sessionsToFill > 0; d++) {
-                    // Check if team is free this day (simple check: if cell is empty)
-                    if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) continue;
+                    if (blockedDays.includes(d)) continue;
+                    if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) continue; // Already booked
 
                     let foundSlot = false;
-
                     // Try locations
-                    for (const loc of preferredLocations) {
+                    for (const loc of LOCATIONS) {
                         if (foundSlot) break;
 
-                        // Try start times
                         for (const startMin of CANDIDATE_STARTS) {
                             const endMin = startMin + duration;
 
@@ -294,24 +283,17 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                 const limit = toMin(team.maxEndTime.replace(':', ''));
                                 if (endMin > limit) continue;
                             }
-                            if (endMin > END_LIMIT + 60) continue; // Abs limit
+                            if (endMin > END_LIMIT + 60) continue;
 
-                            // Check Resources: Hall & Coach
+                            // Check Resources
                             if (!tryBook('HALL', loc, d, startMin, endMin)) continue;
                             if (team.coach && !tryBook('COACH', team.coach, d, startMin, endMin)) continue;
 
-                            // Success - Book it
+                            // Book
                             confirmBook('HALL', loc, d, startMin, endMin);
                             if (team.coach) confirmBook('COACH', team.coach, d, startMin, endMin);
 
-                            // Format text
-                            const formatM = (min) => {
-                                const h = Math.floor(min / 60);
-                                const m = min % 60;
-                                return `${String(h).padStart(2, '0')}${String(m).padStart(2, '0')}`;
-                            };
-
-                            teamRow[dayStart + d] = `${loc} ${formatM(startMin)}-${formatM(endMin)}`;
+                            teamRow[dayStart + d] = `${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
                             sessionsToFill--;
                             foundSlot = true;
                             break;
@@ -326,25 +308,57 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
     };
 
     const handleCellChange = (rowIndex, colIndex, value) => {
-        let currentData = generatedSchedule;
-        if (!currentData) {
-            try {
-                currentData = JSON.parse(JSON.stringify(rawRows));
-            } catch (e) {
-                console.error("Error cloning rawRows", e);
-                return;
-            }
-        } else {
-            currentData = JSON.parse(JSON.stringify(currentData));
-        }
+        let currentData = generatedSchedule || JSON.parse(JSON.stringify(rawRows));
+        // Ensure state copy
+        currentData = [...currentData];
+        currentData[rowIndex] = [...currentData[rowIndex]];
 
-        if (rowIndex >= 0 && rowIndex < currentData.length) {
-            currentData[rowIndex][colIndex] = value;
-            setGeneratedSchedule(currentData);
-        }
+        currentData[rowIndex][colIndex] = value;
+        setGeneratedSchedule(currentData);
     };
 
-    const dataToShow = generatedSchedule || rawRows;
+    // Drag and Drop Logic
+    const onDragStart = (e, rowIndex, colIndex, value) => {
+        if (!value) {
+            e.preventDefault();
+            return;
+        }
+        setDragStart({ rowIndex, colIndex, value });
+        e.dataTransfer.effectAllowed = "move";
+    };
+
+    const onDragOver = (e) => {
+        e.preventDefault(); // Allow drop
+    };
+
+    const onDrop = (e, targetRowIndex, targetColIndex) => {
+        e.preventDefault();
+        if (!dragStart) return;
+
+        // Clone current data
+        let newData = generatedSchedule
+            ? JSON.parse(JSON.stringify(generatedSchedule))
+            : JSON.parse(JSON.stringify(rawRows));
+
+        // Move value
+        const valToMove = dragStart.value;
+        const targetVal = newData[targetRowIndex][targetColIndex];
+
+        // If dragging to same cell, do nothing
+        if (dragStart.rowIndex === targetRowIndex && dragStart.colIndex === targetColIndex) {
+            setDragStart(null);
+            return;
+        }
+
+        // Overwrite target, clear source
+        newData[targetRowIndex][targetColIndex] = valToMove; // Or swap? User said "move... drag and drop", assuming move.
+        // Confirm: "move sunday 11:00 for team a to monday team b" implies the source becomes empty.
+        newData[dragStart.rowIndex][dragStart.colIndex] = '';
+
+        setGeneratedSchedule(newData);
+        setDragStart(null);
+    };
+
 
     const handleSave = async () => {
         if (saveUrl) {
@@ -366,11 +380,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                     headers: { 'Content-Type': 'text/plain' }
                 });
 
-                alert('הבקשה נשלחה לגיליון! (נא לבדוק אם הוא התעדכן תוך מספר שניות)');
+                alert('הבקשה נשלחה לגיליון!');
 
             } catch (err) {
                 console.error("Save Error:", err);
-                alert('שגיאה בשליחה לגיליון. מנסה להוריד קובץ גיבוי...');
+                alert('שגיאה בשליחה לגיליון.');
                 downloadCsv();
             } finally {
                 setIsSaving(false);
@@ -391,7 +405,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
         const url = URL.createObjectURL(blobWithBOM);
         link.setAttribute('href', url);
         link.setAttribute('download', 'raanana_schedule_export.csv');
-        link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -403,7 +416,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                 <h3 style={{ margin: 0 }}>תצוגה מקדימה {generatedSchedule && '(תוצאת חישוב)'}</h3>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button onClick={handleClear} style={{ background: '#EF476F', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>
-                        נקה הכל (שבוע חדש)
+                        נקה הכל
                     </button>
                     <button onClick={handleGenerate} disabled={isGenerating} style={{ background: '#FCA311', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, opacity: isGenerating ? 0.7 : 1 }}>
                         {isGenerating ? 'מחשב...' : 'צור לו"ז אוטומטי'}
@@ -415,12 +428,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
             </div>
 
             <div style={{ padding: '1rem', background: '#f0f9ff', borderRadius: '4px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontWeight: '600', color: '#0369a1' }}>📅 עדכון תאריכים מהיר:</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <label style={{ fontSize: '0.9rem' }}>בחר יום ראשון:</label>
-                    <input type="date" value={selectedDate} onChange={handleDateChange} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }} />
-                </div>
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>(הכותרות בטבלה למטה יתעדכנו אוטומטית)</span>
+                <span style={{ fontWeight: '600', color: '#0369a1' }}>📅 עדכון תאריכים:</span>
+                <input type="date" value={selectedDate} onChange={handleDateChange} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }} />
             </div>
 
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
@@ -439,36 +448,22 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                 </thead>
                 <tbody>
                     {teams.map((teamObj, i) => {
-                        // teamObj is {name, coach, key, rowIndex} 
-                        // If teams hasn't been updated to objects yet (compatibility), handle string
                         const teamName = teamObj.name || teamObj;
-
-                        // Find row index. Preferably use rowIndex from object, otherwise search
                         let rowIndex = teamObj.rowIndex;
                         if (rowIndex === undefined) {
                             rowIndex = dataToShow.findIndex(r => r[0] === teamName);
                         }
-
                         const rowData = dataToShow[rowIndex];
 
                         return (
                             <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fcfcfc' }}>
                                 <td style={{ padding: '0.8rem', border: '1px solid #eee', fontWeight: '500' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {teamName}
-                                        {teamObj.type && (
-                                            <span style={{
-                                                fontSize: '0.7rem',
-                                                padding: '2px 6px',
-                                                borderRadius: '10px',
-                                                background: teamObj.type === 'W' ? '#BE185D' : '#3B82F6',
-                                                color: 'white',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                {teamObj.type}
-                                            </span>
-                                        )}
-                                    </div>
+                                    {teamName}
+                                    {teamObj.type && (
+                                        <span style={{ fontSize: '0.7rem', marginLeft: '5px', padding: '2px 6px', borderRadius: '10px', background: teamObj.type === 'W' ? '#BE185D' : '#3B82F6', color: 'white' }}>
+                                            {teamObj.type}
+                                        </span>
+                                    )}
                                 </td>
                                 {coachIndex !== undefined && coachIndex !== -1 && (
                                     <td style={{ padding: '0.8rem', border: '1px solid #eee', color: '#666' }}>
@@ -478,16 +473,22 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                 {dayHeaders.map((_, colMapIndex) => {
                                     const colIndex = dayStart + colMapIndex;
                                     const cellData = rowData ? rowData[colIndex] : '';
-
                                     const isConflict = conflicts.has(`${rowIndex}_${colIndex}`);
 
                                     return (
-                                        <td key={colMapIndex} style={{
-                                            padding: 0,
-                                            border: isConflict ? '2px solid #ef4444' : '1px solid #eee',
-                                            textAlign: 'center',
-                                            backgroundColor: isConflict ? '#fee2e2' : 'transparent'
-                                        }}>
+                                        <td
+                                            key={colMapIndex}
+                                            style={{
+                                                padding: 0,
+                                                border: isConflict ? '2px solid #ef4444' : '1px solid #eee',
+                                                backgroundColor: isConflict ? '#fee2e2' : 'transparent',
+                                                cursor: cellData ? 'grab' : 'default'
+                                            }}
+                                            draggable={!!cellData}
+                                            onDragStart={(e) => onDragStart(e, rowIndex, colIndex, cellData)}
+                                            onDragOver={onDragOver}
+                                            onDrop={(e) => onDrop(e, rowIndex, colIndex)}
+                                        >
                                             <input
                                                 type="text"
                                                 value={cellData || ''}
@@ -499,13 +500,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                                     padding: '0.8rem 0.5rem',
                                                     textAlign: 'center',
                                                     background: 'transparent',
-                                                    fontFamily: 'inherit',
-                                                    fontSize: 'inherit',
-                                                    fontWeight: 'normal',
                                                     outline: 'none',
+                                                    cursor: 'inherit',
                                                     color: isConflict ? '#b91c1c' : 'inherit'
                                                 }}
-                                                title={isConflict ? 'התנגשות מאמן או משאב!' : ''}
                                             />
                                         </td>
                                     );
