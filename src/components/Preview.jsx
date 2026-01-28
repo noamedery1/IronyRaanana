@@ -6,6 +6,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [dragStart, setDragStart] = useState(null);
+    const [hoveredCell, setHoveredCell] = useState(null);
 
     // Manage headers locally
     const [currentHeaders, setCurrentHeaders] = useState(headers || []);
@@ -359,6 +360,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
         setDragStart(null);
     };
 
+    const handleCellClear = (rIdx, cIdx) => {
+        handleCellChange(rIdx, cIdx, '');
+    };
+
 
     const handleSave = async () => {
         if (saveUrl) {
@@ -373,14 +378,22 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                     sheetName: sheetName || 'Sheet1'
                 };
 
+                console.log("Saving to URL:", saveUrl);
+
                 await fetch(saveUrl, {
                     method: 'POST',
                     mode: 'no-cors',
-                    body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'text/plain' }
+                    cache: 'no-cache',
+                    redirect: 'follow',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8',
+                    },
+                    body: JSON.stringify(payload)
                 });
 
-                alert('הבקשה נשלחה לגיליון!');
+                // With no-cors, we can't read the response, but it means the request was sent.
+                console.log("Payload sent to script:", payload);
+                alert('הבקשה נשלחה! (בגלל מגבלות גישה, לא ניתן לקבל אישור סופי, אנא בדוק את הגיליון בעוד רגע)');
 
             } catch (err) {
                 console.error("Save Error:", err);
@@ -475,6 +488,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                     const cellData = rowData ? rowData[colIndex] : '';
                                     const isConflict = conflicts.has(`${rowIndex}_${colIndex}`);
 
+                                    const isHovered = hoveredCell && hoveredCell.r === rowIndex && hoveredCell.c === colIndex;
+
                                     return (
                                         <td
                                             key={colMapIndex}
@@ -482,12 +497,15 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                                 padding: 0,
                                                 border: isConflict ? '2px solid #ef4444' : '1px solid #eee',
                                                 backgroundColor: isConflict ? '#fee2e2' : 'transparent',
-                                                cursor: cellData ? 'grab' : 'default'
+                                                cursor: cellData ? 'grab' : 'default',
+                                                position: 'relative'
                                             }}
                                             draggable={!!cellData}
                                             onDragStart={(e) => onDragStart(e, rowIndex, colIndex, cellData)}
                                             onDragOver={onDragOver}
                                             onDrop={(e) => onDrop(e, rowIndex, colIndex)}
+                                            onMouseEnter={() => setHoveredCell({ r: rowIndex, c: colIndex })}
+                                            onMouseLeave={() => setHoveredCell(null)}
                                         >
                                             <input
                                                 type="text"
@@ -505,6 +523,34 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                                     color: isConflict ? '#b91c1c' : 'inherit'
                                                 }}
                                             />
+                                            {cellData && isHovered && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCellClear(rowIndex, colIndex);
+                                                    }}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '2px',
+                                                        right: '2px',
+                                                        width: '18px',
+                                                        height: '18px',
+                                                        background: '#EF476F',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '50%',
+                                                        fontSize: '10px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        cursor: 'pointer',
+                                                        zIndex: 10
+                                                    }}
+                                                    title="נקה משבצת"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
                                         </td>
                                     );
                                 })}
