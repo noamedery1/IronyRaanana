@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indices }) => {
-    const [generatedSchedule, setGeneratedSchedule] = useState(null);
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indices, currentSchedule, setCurrentSchedule }) => {
+    // const [generatedSchedule, setGeneratedSchedule] = useState(null); // Lifted up
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [dragStart, setDragStart] = useState(null);
@@ -21,7 +21,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
     const coachIndex = indices?.coach;
 
     // Helper to get data to show
-    const dataToShow = generatedSchedule || rawRows;
+    const dataToShow = currentSchedule || rawRows;
 
     // Calculate conflicts
     const conflicts = (() => {
@@ -134,18 +134,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
         setCurrentHeaders(newHeaders);
     };
 
-    const handleClear = () => {
-        if (!window.confirm('האם אתה בטוח שברצונך לנקות את כל הלו"ז? פעולה זו תמחק את כל השיבוצים בטבלה הנוכחית.')) {
-            return;
-        }
-        const cleanSchedule = JSON.parse(JSON.stringify(rawRows));
-        cleanSchedule.forEach(row => {
-            for (let i = dayStart; i < row.length; i++) {
-                row[i] = '';
-            }
-        });
-        setGeneratedSchedule(cleanSchedule);
-    };
+
 
     const handleGenerate = () => {
         setIsGenerating(true);
@@ -303,19 +292,19 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                 }
             });
 
-            setGeneratedSchedule(newSchedule);
+            setCurrentSchedule(newSchedule);
             setIsGenerating(false);
         }, 1000);
     };
 
     const handleCellChange = (rowIndex, colIndex, value) => {
-        let currentData = generatedSchedule || JSON.parse(JSON.stringify(rawRows));
+        let currentData = currentSchedule || JSON.parse(JSON.stringify(rawRows));
         // Ensure state copy
         currentData = [...currentData];
         currentData[rowIndex] = [...currentData[rowIndex]];
 
         currentData[rowIndex][colIndex] = value;
-        setGeneratedSchedule(currentData);
+        setCurrentSchedule(currentData);
     };
 
     // Drag and Drop Logic
@@ -337,26 +326,18 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
         if (!dragStart) return;
 
         // Clone current data
-        let newData = generatedSchedule
-            ? JSON.parse(JSON.stringify(generatedSchedule))
+        let newData = currentSchedule
+            ? JSON.parse(JSON.stringify(currentSchedule))
             : JSON.parse(JSON.stringify(rawRows));
 
-        // Move value
+        // Swap values
         const valToMove = dragStart.value;
         const targetVal = newData[targetRowIndex][targetColIndex];
 
-        // If dragging to same cell, do nothing
-        if (dragStart.rowIndex === targetRowIndex && dragStart.colIndex === targetColIndex) {
-            setDragStart(null);
-            return;
-        }
+        newData[targetRowIndex][targetColIndex] = valToMove;
+        newData[dragStart.rowIndex][dragStart.colIndex] = targetVal; // SWAP
 
-        // Overwrite target, clear source
-        newData[targetRowIndex][targetColIndex] = valToMove; // Or swap? User said "move... drag and drop", assuming move.
-        // Confirm: "move sunday 11:00 for team a to monday team b" implies the source becomes empty.
-        newData[dragStart.rowIndex][dragStart.colIndex] = '';
-
-        setGeneratedSchedule(newData);
+        setCurrentSchedule(newData);
         setDragStart(null);
     };
 
@@ -423,13 +404,19 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
         document.body.removeChild(link);
     };
 
+    const handleClear = () => {
+        if (window.confirm('האם אתה בטוח שברצונך לנקות את כל השינויים ולחזור למצב הגיליון המקורי?')) {
+            setCurrentSchedule(null);
+        }
+    };
+
     return (
         <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0 }}>תצוגה מקדימה {generatedSchedule && '(תוצאת חישוב)'}</h3>
+                <h3 style={{ margin: 0 }}>תצוגה מקדימה {currentSchedule && '(תוצאת חישוב)'}</h3>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button onClick={handleClear} style={{ background: '#EF476F', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>
-                        נקה הכל
+                        נקה הכל (חזור למקור)
                     </button>
                     <button onClick={handleGenerate} disabled={isGenerating} style={{ background: '#FCA311', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, opacity: isGenerating ? 0.7 : 1 }}>
                         {isGenerating ? 'מחשב...' : 'צור לו"ז אוטומטי'}

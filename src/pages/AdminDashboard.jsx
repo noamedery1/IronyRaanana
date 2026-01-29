@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 import WeekBuilder from '../components/WeekBuilder';
@@ -10,7 +10,7 @@ const AdminDashboard = () => {
 
     // Setup state
     const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/edit?usp=sharing');
-    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbz0hCpKPTUcETxyv5IBLfhHqLiS3IyM2jla24bTXzBCFlO2kENxoBq1WOqAVYo5tCfS/exec');
+    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbzXzCDHLFUb2jZlBwrgsxaN_4Q_IAnPaFcGL9rEtL5pLScKxwPpyaV2Xo2Yn-iOoUYB/exec');
     const [sheetName, setSheetName] = useState('גיליון1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -21,10 +21,41 @@ const AdminDashboard = () => {
         rawRows: []
     });
     const [teamConfig, setTeamConfig] = useState([]);
+    const [currentSchedule, setCurrentSchedule] = useState(null);
+
+    // Load saved rules on mount
+    useEffect(() => {
+        const savedConfig = localStorage.getItem('teamRulesConfig');
+        if (savedConfig) {
+            try {
+                const parsed = JSON.parse(savedConfig);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setTeamConfig(parsed);
+                }
+            } catch (e) {
+                console.error("Failed to load saved rules", e);
+            }
+        }
+    }, []);
+
+    // Save rules on change
+    useEffect(() => {
+        if (teamConfig.length > 0) {
+            localStorage.setItem('teamRulesConfig', JSON.stringify(teamConfig));
+        }
+    }, [teamConfig]);
 
     const handleLogout = () => {
         localStorage.removeItem('isAdmin');
         navigate('/admin');
+    };
+
+    const handleClearRules = () => {
+        if (window.confirm("Are you sure you want to clear all saved rules (constraints)?")) {
+            setTeamConfig([]);
+            localStorage.removeItem('teamRulesConfig');
+            alert("Rules cleared. Re-connect to sheet to reset.");
+        }
     };
 
     const extractSheetId = (url) => {
@@ -32,10 +63,85 @@ const AdminDashboard = () => {
         return match ? match[1] : null;
     };
 
+    const loadRulesFromCloud = async () => {
+        if (!saveUrl) return null;
+        try {
+            // Fetch from script with GET parameter
+            const response = await fetch(`${saveUrl}?sheet=SavedRules`);
+            if (!response.ok) return null;
+            const data = await response.json();
+
+            // Expecting array of arrays: [[Team, Coach, ConfigJSON], ...]
+            if (Array.isArray(data) && data.length > 0) {
+                const rulesMap = {};
+                data.forEach(row => {
+                    // skip header if strictly "Team"
+                    if (row[0] === 'Team' && row[2] === 'Config') return;
+
+                    try {
+                        if (row[2]) { // The JSON config
+                            const config = JSON.parse(row[2]);
+                            const key = `${row[0]}_${row[1] || ''}`;
+                            rulesMap[key] = config;
+                        }
+                    } catch (e) {
+                        // ignore parse error for row
+                    }
+                });
+                return rulesMap;
+            }
+        } catch (e) {
+            console.warn("Could not load rules from cloud:", e);
+        }
+        return null;
+    };
+
+    const saveRulesToCloud = async (currentConfig) => {
+        if (!saveUrl || !currentConfig) return;
+
+        const rows = [['Team', 'Coach', 'Config']];
+        currentConfig.forEach(t => {
+            rows.push([t.name, t.coach, JSON.stringify(t)]);
+        });
+
+        const payload = {
+            sheetName: 'SavedRules',
+            rows: rows
+        };
+
+        try {
+            await fetch(saveUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                cache: 'no-cache',
+                redirect: 'follow',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                },
+                body: JSON.stringify(payload)
+            });
+            alert('החוקים נשמרו בגיליון SavedRules בהצלחה!');
+        } catch (e) {
+            console.error("Save rules error:", e);
+            alert('שגיאה בשמירת החוקים לענן.');
+        }
+    };
+
     const handleConnect = async () => {
         setLoading(true);
         setError('');
         setIsConnected(false);
+
+        // 1. Try to load rules from Cloud first
+        let cloudRulesMap = null;
+        try {
+            cloudRulesMap = await loadRulesFromCloud();
+            if (cloudRulesMap) {
+                console.log("Loaded rules from cloud:", Object.keys(cloudRulesMap).length);
+            }
+        } catch (e) {
+            console.log("No cloud rules or error loading them");
+        }
 
         const id = extractSheetId(sheetUrl);
         if (!id) {
@@ -139,14 +245,26 @@ const AdminDashboard = () => {
                         });
 
                         // Initialize team config
-                        // We need to support migration if existing config exists, but for now reset or map
+                        // Merge Strategy: Cloud > LocalStorage > Defaults
                         setTeamConfig(prevConfig => {
+                            // prevConfig here has LocalStorage data due to useEffect on mount
+
                             return uniqueTeams.map(teamObj => {
-                                // Try to find match
+                                const teamKey = `${teamObj.name}_${teamObj.coach}`;
+
+                                // 1. Cloud match?
+                                if (cloudRulesMap && cloudRulesMap[teamKey]) {
+                                    // Merge cloud data but use fresh type info from sheet
+                                    return { ...cloudRulesMap[teamKey], type: teamObj.type };
+                                }
+
+                                // 2. Local match?
                                 const existing = prevConfig.find(tc => tc.name === teamObj.name && tc.coach === teamObj.coach);
                                 if (existing) {
-                                    return { ...existing, type: teamObj.type }; // Sync type from sheet
+                                    return { ...existing, type: teamObj.type };
                                 }
+
+                                // 3. Default
                                 return {
                                     name: teamObj.name,
                                     coach: teamObj.coach,
@@ -158,8 +276,6 @@ const AdminDashboard = () => {
                         });
 
                         setIsConnected(true);
-                        // Optional: Switch to Week Builder automatically
-                        // setActiveTab('weekBuilder'); 
                     } else {
                         setError('Could not find header row starting with "קבוצות". Check the sheet structure.');
                     }
@@ -244,13 +360,23 @@ const AdminDashboard = () => {
                 );
             case 'weekBuilder':
                 return (
-                    <WeekBuilder
-                        teams={sheetData?.teams || []}
-                        headers={sheetData?.headers || []}
-                        teamConfig={teamConfig}
-                        setTeamConfig={setTeamConfig}
-                        onTeamUpdate={handleTeamUpdate}
-                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => saveRulesToCloud(teamConfig)}
+                                style={{ background: '#7C3AED', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                            >
+                                💾 שמור חוקים לענן (SavedRules)
+                            </button>
+                        </div>
+                        <WeekBuilder
+                            teams={sheetData?.teams || []}
+                            headers={sheetData?.headers || []}
+                            teamConfig={teamConfig}
+                            setTeamConfig={setTeamConfig}
+                            onTeamUpdate={handleTeamUpdate}
+                        />
+                    </div>
                 );
             case 'preview':
                 return (
@@ -262,6 +388,8 @@ const AdminDashboard = () => {
                         saveUrl={saveUrl}
                         sheetName={sheetName}
                         indices={sheetData?.indices}
+                        currentSchedule={currentSchedule}
+                        setCurrentSchedule={setCurrentSchedule}
                     />
                 );
             default:
