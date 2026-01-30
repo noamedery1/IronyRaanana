@@ -169,7 +169,7 @@ function PublicSchedule() {
             if (status === 'cancelled') dayContent = `❌ [בוטל] ${dayContent}`;
             else if (status === 'changed') dayContent = `⚠️ [שינוי] ${dayContent}`;
 
-            if (isMatch) dayContent = `${sparkles} ${dayContent} ${sparkles}`;
+            if (isMatch) dayContent = `🎆 *משחק ${dayContent}* 🎆`;
 
             // Request: Remove empty days from message
             if (!isOffDay) {
