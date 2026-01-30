@@ -173,7 +173,7 @@ function PublicSchedule() {
 
             // Request: Remove empty days from message
             if (!isOffDay) {
-                message += `*${dayName} ${date}*: ${dayContent}\n`;
+                message += `${dayName} ${date}: ${dayContent}\n`;
             }
         });
 

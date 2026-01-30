@@ -194,7 +194,7 @@ function PublicScheduleWomen() {
             if (isMatch) dayContent = `🎆 *משחק ${dayContent}* 🎆`;
 
             if (!isOffDay) {
-                message += `*${dayName} ${date}*: ${dayContent}\n`;
+                message += `${dayName} ${date}: ${dayContent}\n`;
             }
         });
 
