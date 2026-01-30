@@ -191,7 +191,7 @@ function PublicScheduleWomen() {
 
             if (status === 'cancelled') dayContent = `❌ [בוטל] ${dayContent}`;
             if (status === 'changed') dayContent = `⚠️ [שינוי] ${dayContent}`;
-            if (isMatch) dayContent = `✨ ${dayContent} ✨`;
+            if (isMatch) dayContent = `🎆 *משחק ${dayContent}* 🎆`;
 
             if (!isOffDay) {
                 message += `*${dayName} ${date}*: ${dayContent}\n`;
