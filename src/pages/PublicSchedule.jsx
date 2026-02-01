@@ -233,7 +233,7 @@ function PublicSchedule() {
             </div>
 
             <div style={{ marginTop: '50px' }}>
-                <LeagueGamesBanner />
+                <LeagueGamesBanner data={data} headers={headers} targetGender="M" />
             </div>
 
             <header className="header" style={{

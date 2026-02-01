@@ -254,7 +254,7 @@ function PublicScheduleWomen() {
             </div>
 
             <div style={{ marginTop: '50px' }}>
-                <LeagueGamesBanner />
+                <LeagueGamesBanner data={data} headers={headers} targetGender="W" />
             </div>
 
             <header className="header" style={{

@@ -1,68 +1,80 @@
 import { useState, useEffect } from 'react';
-import Papa from 'papaparse';
 
-// URLs for the two sheets
-const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
-const LeagueGamesBanner = () => {
+const LeagueGamesBanner = ({ data, headers, targetGender }) => {
     const [games, setGames] = useState([]);
-    const [isVisible, setIsVisible] = useState(true);
 
     useEffect(() => {
-        const fetchBannerData = async () => {
-            const fetchSheet = (url) => {
-                return new Promise((resolve) => {
-                    Papa.parse(url, {
-                        download: true,
-                        complete: (results) => {
-                            resolve(results.data);
-                        },
-                        error: () => resolve([])
-                    });
-                });
-            };
+        if (!data || data.length === 0 || !headers) {
+            setGames([]);
+            return;
+        }
 
-            const data = await fetchSheet(DATA_URL);
-            const allRows = data;
+        const processBanner = () => {
+            // 1. Find Type/Gender Column - Enhanced detection
+            const typeIndex = headers.findIndex(h => h && (
+                h.toLowerCase() === 'type' ||
+                h.toLowerCase() === 'category' ||
+                h.includes('סוג') ||
+                h.toLowerCase().includes('gender') ||
+                h.includes('מין')
+            ));
+
             const parsedGames = [];
 
-            allRows.forEach(row => {
+            data.forEach(row => {
+                const name = row[0];
+                if (!name) return;
+
                 // Check if row is a "Banner" row
-                // User should write "באנר" or "Banner" in the first column (Team Name)
-                if (row[0] && (row[0].trim() === 'באנר' || row[0].trim().toLowerCase() === 'banner')) {
+                if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) {
 
-                    // We assume standard structure: 
-                    // Col 0: "Banner", Col ...: Days
-                    // We need to find the day headers to map correct dates, but since we concatenated rows without headers, 
-                    // it's tricky. 
-                    // BETTER APPROACH: Just find the row and assume columns 1 to 7 are the days? 
-                    // OR: Use the fact that usually Sunday is col index ~4 or 5?
-                    // To be safe, let's look for content in the row and try to parse it.
+                    // Check Gender
+                    let show = true;
+                    if (typeIndex !== -1 && targetGender) {
+                        const rawType = row[typeIndex];
+                        const type = rawType ? rawType.trim().toUpperCase() : '';
 
-                    // Let's assume the user puts the *full text* to display in the cells.
-                    // e.g. Under "Sunday" col, they write "Game vs Gilboa...".
-                    // The banner will just show non-empty cells.
+                        // Logic:
+                        // If type matches valid gender indicators (W/M) and doesn't match target, hide it.
+                        // If type is empty, we assume it's for everyone.
 
-                    // We Iterate columns 1 to 20 to find content
-                    for (let i = 1; i < row.length; i++) {
-                        const content = row[i];
-                        if (content && content.trim() && !content.toLowerCase().includes('xxx')) {
-                            parsedGames.push({
-                                text: content.trim()
-                            });
+                        // Check explicit mismatch
+                        if (type === 'W' && targetGender !== 'W') show = false;
+                        if (type === 'M' && targetGender !== 'M') show = false;
+
+                        // Handle localized or full names just in case
+                        if ((type === 'WOMEN' || type === 'נשים') && targetGender !== 'W') show = false;
+                        if ((type === 'MEN' || type === 'גברים') && targetGender !== 'M') show = false;
+                    }
+
+                    if (show) {
+                        // Extract content from all columns except Name (0) and Type/Gender
+                        for (let i = 1; i < row.length; i++) {
+                            if (i === typeIndex) continue; // Skip type column text
+
+                            // IMPORTANT: We do NOT skip the 'Coach' column here. 
+                            // The banner text usually spans across columns B, C etc. 
+                            // Column B is usually "Coach", so skipping it hides the main message.
+
+                            const content = row[i];
+                            if (content && content.trim() && !content.toLowerCase().includes('xxx')) {
+                                parsedGames.push({
+                                    text: content.trim()
+                                });
+                            }
                         }
                     }
                 }
             });
 
-            if (parsedGames.length > 0) {
-                setGames(parsedGames);
-            }
+            console.log("LeagueGamesBanner processed:", parsedGames.length, "games. Target:", targetGender);
+            setGames(parsedGames);
         };
 
-        fetchBannerData();
-    }, []);
+        processBanner();
+    }, [data, headers, targetGender]);
 
-    if (!isVisible || games.length === 0) return null;
+    if (games.length === 0) return null;
 
     return (
         <div style={{
