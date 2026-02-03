@@ -79,14 +79,19 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                         if (!hallMap[location]) hallMap[location] = {};
                         if (!hallMap[location][d]) hallMap[location][d] = [];
 
+                        const isMatch = cellContent.includes('משחק');
+
                         const hallEvents = hallMap[location][d];
                         hallEvents.forEach(ev => {
                             if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
+                                // Ignore conflict if both are games
+                                if (isMatch && ev.isMatch) return;
+
                                 conflictSet.add(`${rIdx}_${cIdx}`);
                                 conflictSet.add(`${ev.row}_${ev.col}`);
                             }
                         });
-                        hallEvents.push({ start, end, row: rIdx, col: cIdx });
+                        hallEvents.push({ start, end, row: rIdx, col: cIdx, isMatch });
                     }
                 }
             }
@@ -213,9 +218,12 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                     const loc = c.location.trim();
 
                     // Place in schedule
-                    const content = c.type === 'MATCH'
-                        ? `🏀 משחק ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`
-                        : `${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
+                    let content = `${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
+                    if (c.type === 'MATCH') {
+                        content = `🏀 משחק ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
+                    } else if (c.type === 'ATHLETICS') {
+                        content = `🏃 אתלטיקה ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
+                    }
 
                     // Write
                     newSchedule[teamRowIndex][dayStart + dayIdx] = content;

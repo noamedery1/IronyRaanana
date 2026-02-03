@@ -6,11 +6,12 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTeamIndex, setSelectedTeamIndex] = useState(null);
     const [newConstraint, setNewConstraint] = useState({
-        type: 'FIXED', // FIXED, MATCH, OFF
+        type: 'FIXED', // FIXED, MATCH, ATHLETICS, OFF
         day: 0, // 0 = Sunday
         startTime: '17:00',
         endTime: '18:30',
-        location: 'מטרו'
+        location: 'מטרו',
+        hasConflict: false
     });
 
     // Default time limit settings
@@ -67,22 +68,47 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
             day: 0,
             startTime: '17:00',
             endTime: '18:30',
-            location: 'מטרו'
+            location: 'מטרו',
+            hasConflict: false
         });
         setIsModalOpen(true);
+    };
+
+    const cleanLocation = (name) => {
+        if (!name) return '';
+        const trimmed = name.trim();
+        if (trimmed.startsWith('ב') && trimmed.length > 2) {
+            if (trimmed.startsWith('ב-')) return trimmed.substring(2);
+            return trimmed.substring(1);
+        }
+        return trimmed;
+    };
+
+    const getLocationColor = (loc) => {
+        if (!loc) return '#6b7280';
+        let hash = 0;
+        for (let i = 0; i < loc.length; i++) {
+            hash = loc.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const hue = Math.abs(hash % 360);
+        return `hsl(${hue}, 65%, 45%)`; // Distinct colors
     };
 
     const addConstraint = () => {
         if (selectedTeamIndex === null) return;
 
-        const constraint = { ...newConstraint };
+        let constraint = { ...newConstraint };
 
-        // Conflict Check logic... same as before but enhanced if needed
-        // For now relying on Preview's visual check is better as it covers everything?
-        // But user asked for alerts.
-        // Let's implement robust check here too.
+        // 1. Clean Hall Name
+        if (constraint.location) {
+            constraint.location = cleanLocation(constraint.location);
+        }
 
-        if (constraint.type === 'FIXED' || constraint.type === 'MATCH') {
+        // Conflict Check logic
+        let isConflict = false;
+        let conflictMsg = '';
+
+        if (constraint.type === 'FIXED' || constraint.type === 'MATCH' || constraint.type === 'ATHLETICS') {
             const getMinutes = (timeStr) => {
                 const [h, m] = timeStr.split(':').map(Number);
                 return h * 60 + m;
@@ -90,7 +116,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
 
             const newStart = getMinutes(constraint.startTime);
             const newEnd = getMinutes(constraint.endTime);
-            const newLoc = constraint.location.trim();
+            const newLoc = constraint.location;
 
             for (let i = 0; i < teamConfig.length; i++) {
                 if (i === selectedTeamIndex) continue;
@@ -103,26 +129,39 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
 
                     const otherStart = getMinutes(c.startTime);
                     const otherEnd = getMinutes(c.endTime);
-                    // Check time overlap
-                    if (Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd)) {
 
+                    if (Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd)) {
                         // 1. Same Coach
                         if (teamConfig[selectedTeamIndex].coach && otherTeam.coach &&
                             teamConfig[selectedTeamIndex].coach === otherTeam.coach) {
-                            alert(`שגיאה: המאמן/ת ${otherTeam.coach} כבר משובץ/ת באותו זמן עם ${otherTeam.name}`);
-                            return;
+                            isConflict = true;
+                            conflictMsg = `התנגשות מאמן: ${otherTeam.coach} כבר משובץ עם ${otherTeam.name}`;
                         }
 
                         // 2. Same Location (Hall)
-                        const otherLoc = c.location.trim();
-                        // Simple check?
-                        if (newLoc && otherLoc && newLoc === otherLoc) {
-                            alert(`שגיאה: האולם ${newLoc} תפוס באותו זמן ע"י ${otherTeam.name}`);
-                            return;
+                        const otherLoc = c.location ? cleanLocation(c.location) : '';
+
+                        // "Games are orange always" - User says dont block games in same hall
+                        const bothMatches = constraint.type === 'MATCH' && c.type === 'MATCH';
+                        const locationsMatch = newLoc && otherLoc && newLoc === otherLoc;
+
+                        if (locationsMatch && !bothMatches) {
+                            isConflict = true;
+                            conflictMsg = isConflict ? conflictMsg + " | " : "";
+                            conflictMsg += `התנגשות מיקום: ${newLoc} תפוס ע"י ${otherTeam.name}`;
                         }
                     }
                 }
             }
+        }
+
+        if (isConflict) {
+            if (!window.confirm(`נמצאה התנגשות:\n${conflictMsg}\n\nהאם להוסיף בכל זאת?`)) {
+                return;
+            }
+            constraint.hasConflict = true;
+        } else {
+            constraint.hasConflict = false;
         }
 
         // Create a human readable label
@@ -132,7 +171,9 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
         if (constraint.type === 'OFF') {
             label = `${dayName}: יום חופש`;
         } else if (constraint.type === 'MATCH') {
-            label = `${dayName} ${constraint.startTime}: משחק ב${constraint.location}`;
+            label = `${dayName} ${constraint.startTime}: משחק ${constraint.location}`;
+        } else if (constraint.type === 'ATHLETICS') {
+            label = `${dayName} ${constraint.startTime}-${constraint.endTime}: אתלטיקה ${constraint.location}`;
         } else {
             label = `${dayName} ${constraint.startTime}-${constraint.endTime}: ${constraint.location}`;
         }
@@ -249,19 +290,24 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
                             {team.constraints.map((c, cIdx) => (
                                 <span key={cIdx} style={{
-                                    background: getTypeColor(c.type),
+                                    background: c.type === 'OFF' ? '#EF476F' :
+                                        c.type === 'MATCH' ? '#FCA311' :
+                                            getLocationColor(c.location),
                                     color: 'white',
                                     padding: '0.2rem 0.6rem',
                                     borderRadius: '12px',
                                     fontSize: '0.8rem',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '5px'
+                                    gap: '5px',
+                                    border: c.hasConflict ? '2px solid red' : 'none',
+                                    boxShadow: c.hasConflict ? '0 0 5px red' : 'none'
                                 }}>
+                                    {c.hasConflict && <span>⚠️</span>}
                                     {c.label}
                                     <span
                                         onClick={() => removeConstraint(index, cIdx)}
-                                        style={{ cursor: 'pointer', fontWeight: 'bold' }}
+                                        style={{ cursor: 'pointer', fontWeight: 'bold', marginLeft: '4px' }}
                                     >×</span>
                                 </span>
                             ))}
@@ -300,11 +346,22 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
                                 <label style={labelStyle}>סוג האילוץ</label>
                                 <select
                                     value={newConstraint.type}
-                                    onChange={(e) => setNewConstraint({ ...newConstraint, type: e.target.value })}
+                                    onChange={(e) => {
+                                        const t = e.target.value;
+                                        const update = { type: t };
+                                        if (t === 'ATHLETICS') {
+                                            // Default 1 hour for athletics
+                                            const [h, m] = newConstraint.startTime.split(':').map(Number);
+                                            const endH = h + 1;
+                                            update.endTime = `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                                        }
+                                        setNewConstraint({ ...newConstraint, ...update });
+                                    }}
                                     style={inputStyle}
                                 >
                                     <option value="FIXED">אימון קבוע (שריון)</option>
                                     <option value="MATCH">משחק</option>
+                                    <option value="ATHLETICS">אימון אתלטיקה</option>
                                     <option value="OFF">יום חופש</option>
                                 </select>
                             </div>
@@ -407,6 +464,7 @@ const getTypeColor = (type) => {
     switch (type) {
         case 'FIXED': return '#3b82f6'; // Blue
         case 'MATCH': return '#FCA311'; // Orange
+        case 'ATHLETICS': return '#10B981';
         case 'OFF': return '#EF476F'; // Red
         default: return '#ccc';
     }
