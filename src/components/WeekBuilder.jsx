@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }) => {
+const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, hallColors }) => {
     // teamConfig and setTeamConfig are now passed from props for persistence
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -11,6 +11,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
         startTime: '17:00',
         endTime: '18:30',
         location: 'מטרו',
+        subType: 'HOME', // HOME, AWAY
         hasConflict: false
     });
 
@@ -69,6 +70,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
             startTime: '17:00',
             endTime: '18:30',
             location: 'מטרו',
+            subType: 'HOME',
             hasConflict: false
         });
         setIsModalOpen(true);
@@ -86,6 +88,9 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
 
     const getLocationColor = (loc) => {
         if (!loc) return '#6b7280';
+        if (hallColors && hallColors[loc]) {
+            return hallColors[loc];
+        }
         let hash = 0;
         for (let i = 0; i < loc.length; i++) {
             hash = loc.charCodeAt(i) + ((hash << 5) - hash);
@@ -171,7 +176,8 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
         if (constraint.type === 'OFF') {
             label = `${dayName}: יום חופש`;
         } else if (constraint.type === 'MATCH') {
-            label = `${dayName} ${constraint.startTime}: משחק ${constraint.location}`;
+            const where = constraint.subType === 'AWAY' ? 'חוץ' : 'בית';
+            label = `${dayName} ${constraint.startTime}: משחק ${where} - ${constraint.location}`;
         } else if (constraint.type === 'ATHLETICS') {
             label = `${dayName} ${constraint.startTime}-${constraint.endTime}: אתלטיקה ${constraint.location}`;
         } else {
@@ -365,6 +371,34 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate }
                                     <option value="OFF">יום חופש</option>
                                 </select>
                             </div>
+
+                            {newConstraint.type === 'MATCH' && (
+                                <div>
+                                    <label style={labelStyle}>סוג משחק</label>
+                                    <div style={{ display: 'flex', gap: '1rem' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="radio"
+                                                name="subType"
+                                                value="HOME"
+                                                checked={newConstraint.subType !== 'AWAY'}
+                                                onChange={() => setNewConstraint({ ...newConstraint, subType: 'HOME' })}
+                                            />
+                                            בית
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                            <input
+                                                type="radio"
+                                                name="subType"
+                                                value="AWAY"
+                                                checked={newConstraint.subType === 'AWAY'}
+                                                onChange={() => setNewConstraint({ ...newConstraint, subType: 'AWAY' })}
+                                            />
+                                            חוץ
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
 
                             <div>
                                 <label style={labelStyle}>יום בשבוע</label>

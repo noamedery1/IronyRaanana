@@ -124,6 +124,42 @@ const WomenDashboard = () => {
                             }
                         });
 
+                        // Extract Unique Halls & Assign Colors
+                        const locationsSet = new Set();
+                        dataRows.forEach(row => {
+                            for (let i = dayStartIndex; i < dayStartIndex + 7; i++) {
+                                const cell = row[i];
+                                if (!cell) continue;
+                                // Basic extraction regex (similar to Preview.jsx logic)
+                                const nums = cell.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
+                                if (nums) {
+                                    let loc = cell.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
+                                    loc = loc.replace(/משחק|ב-/g, '').trim();
+                                    if (loc) locationsSet.add(loc);
+                                }
+                            }
+                        });
+
+                        const locationPalette = [
+                            '#e11d48', // rose-600
+                            '#059669', // emerald-600
+                            '#0284c7', // sky-600
+                            '#7c3aed', // violet-600
+                            '#db2777', // pink-600
+                            '#d97706', // amber-600
+                            '#4f46e5', // indigo-600
+                            '#dc2626', // red-600
+                            '#16a34a', // green-600
+                            '#2563eb', // blue-600
+                        ];
+
+                        const hallColorsMap = {};
+                        Array.from(locationsSet).sort().forEach((loc, idx) => {
+                            hallColorsMap[loc] = locationPalette[idx % locationPalette.length];
+                        });
+                        // Also store this somewhere if needed, for potentially passing to other components
+                        setSheetData(prev => ({ ...prev, hallColors: hallColorsMap }));
+
                         // Initialize team config if not exists
                         // Note: If teams change, this reset might lose configs? 
                         // For now, we regenerate based on loaded teams. 
@@ -342,6 +378,7 @@ const WomenDashboard = () => {
                             teamConfig={teamConfig}
                             setTeamConfig={setTeamConfig}
                             indices={sheetData.indices}
+                            hallColors={sheetData.hallColors}
                         />
                     )}
 

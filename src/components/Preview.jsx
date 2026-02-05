@@ -220,7 +220,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                     // Place in schedule
                     let content = `${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
                     if (c.type === 'MATCH') {
-                        content = `🏀 משחק ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
+                        const where = c.subType === 'AWAY' ? 'חוץ' : (c.subType === 'HOME' ? 'בית' : '');
+                        content = `🏀 משחק ${where} ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`.replace('  ', ' ');
                     } else if (c.type === 'ATHLETICS') {
                         content = `🏃 אתלטיקה ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
                     }
