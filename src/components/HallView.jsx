@@ -205,6 +205,7 @@ const HallView = ({ data, headers, teams, dayStart, defaultGender }) => {
                                                         }}>
                                                             <div style={{ fontWeight: '600', color: '#333', display: 'flex', alignItems: 'center', gap: '5px', textDecoration: isCancelled ? 'line-through' : 'none' }}>
                                                                 {session.hasConflict && <span title="התנגשות שעות!" style={{ fontSize: '1rem' }}>⚠️</span>}
+                                                                {session.isMatch && <span title="משחק">🏀</span>}
                                                                 {isCancelled && <span style={{ textDecoration: 'none' }}>❌</span>}
                                                                 {session.time}
                                                                 <span style={{ fontWeight: 'normal', color: '#666', marginRight: '5px' }}>

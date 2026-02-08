@@ -70,7 +70,8 @@ export const parseCellContent = (text) => {
         cleanText = text.replace(/[!⚠️]/g, '').replace(/(שינוי|CHANGE)/g, '').trim();
     }
 
-    const isMatch = cleanText.includes('משחק');
+    // Check for Match (text "משחק" or basketball icon)
+    const isMatch = cleanText.includes('משחק') || cleanText.includes('🏀');
 
     // Normalize time format to HH:MM
     let formatted = cleanText.replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, '$1:$2');
@@ -90,9 +91,14 @@ export const parseCellContent = (text) => {
         });
     }
 
+    // Clean up location: remove "משחק", emojis, and extra whitespace
+    location = location
+        .replace('משחק', '')
+        .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F2FF}]/gu, '')
+        .trim();
     return {
         time: time.trim(),
-        location: location.replace('משחק', '').trim(), // Clean up
+        location: location,
         isMatch,
         status, // 'normal', 'cancelled', 'changed'
         originalText: text
