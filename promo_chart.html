@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raanana Scheduler Features</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Heebo', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            padding: 60px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            margin: 0;
+            background: linear-gradient(to right, #60a5fa, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 30px rgba(192, 132, 252, 0.3);
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.6rem;
+            color: #94a3b8;
+            margin-top: 15px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+            padding: 40px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(96, 165, 250, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 24px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(192, 132, 252, 0.1));
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            color: #60a5fa;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #f1f5f9;
+            letter-spacing: -0.5px;
+        }
+
+        .card p {
+            margin: 0;
+            color: #cbd5e1;
+            line-height: 1.7;
+            font-size: 1.15rem;
+            font-weight: 300;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-new {
+            background: rgba(52, 211, 153, 0.2);
+            color: #34d399;
+        }
+
+        .badge-hot {
+            background: rgba(244, 114, 182, 0.2);
+            color: #f472b6;
+        }
+
+        .badge-pro {
+            background: rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+        }
+
+        /* Decorative background elements */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.15;
+            animation: float 20s infinite alternate ease-in-out;
+        }
+
+        .bg-blob-1 {
+            top: -20%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            background: #3b82f6;
+        }
+
+        .bg-blob-2 {
+            bottom: -20%;
+            right: -10%;
+            width: 700px;
+            height: 700px;
+            background: #a855f7;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(50px, 50px) rotate(10deg);
+            }
+        }
+
+        .highlight {
+            color: #38bdf8;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-blob bg-blob-1"></div>
+    <div class="bg-blob bg-blob-2"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>המערכת שתשנה את המועדון שלך</h1>
+            <p>שליטה מלאה, יעילות מקסימלית וחוויית משתמש מנצחת – הכל במקום אחד.</p>
+        </div>
+
+        <div class="card">
+            <span class="badge badge-hot">הכי מבוקש</span>
+            <div class="icon">📅</div>
+            <h3>מערכת שעות חכמה</h3>
+            <p>בניית לו"ז שבועי בקלילות עם ממשק <span class="highlight">Drag & Drop</span> מתקדם. תצוגה ברורה של כל
+                האימונים והמשחקים בזמן אמת.</p>
+        </div>
+
+        <div class="card">
+            <span class="badge badge-pro">בטיחות</span>
+            <div class="icon">🛡️</div>
+            <h3>מניעת התנגשויות אוטומטית</h3>
+            <p>המערכת מזהה ומתריעה במקום על כפילויות באולמות, מאמנים וזמנים. <span class="highlight">אפס טעויות
+                    שיבוץ.</span></p>
+        </div>
+
+        <div class="card">
+            <span class="badge badge-new">חדש</span>
+            <div class="icon">📱</div>
+            <h3>פורטל מאמנים אישי</h3>
+            <p>אזור אישי לכל מאמן מהנייד: צפייה בלו"ז, עדכון נוכחות ודיווח תוצאות מהשטח.</p>
+        </div>
+
+        <div class="card">
+            <div class="icon">🔄</div>
+            <h3>סנכרון ענן מלא</h3>
+            <p>חיבור ישיר ודו-כיווני ל-<span class="highlight">Google Sheets</span>. כל הנתונים מגובים, זמינים
+                ומסונכרנים אוטומטית.</p>
+        </div>
+
+        <div class="card">
+            <div class="icon">💬</div>
+            <h3>תקשורת ושיווק</h3>
+            <p>מחולל הודעות <span class="highlight">WhatsApp</span> מעוצבות לקבוצות ובאנרים אוטומטיים למשחקי הליגה
+                והבית.</p>
+        </div>
+
+        <div class="card">
+            <div class="icon">🏟️</div>
+            <h3>ניהול מתקנים עירוני</h3>
+            <p>תמונת מצב מלאה (Bird's-eye view) על כל האולמות והמגרשים בעיר לניצול מקסימלי של משאבי המועדון.</p>
+        </div>
+    </div>
+</body>
+
+</html>

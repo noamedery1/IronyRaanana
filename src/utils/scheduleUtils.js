@@ -22,21 +22,26 @@ export const flattenScheduleData = (teams, headers, dayStart, indices) => {
             const dayParts = header.split(' ');
             const dayName = dayParts[0];
 
-            // Simple parsing of location/time
-            // Matches "17:00-18:30 Hall Name" or "Hall Name 17:00"
-            const { time, location, isMatch, status } = parseCellContent(content);
+            // Split content by newline to support multiple events in one cell
+            const lines = content.split('\n');
 
-            flatData.push({
-                team: team.name,
-                coach: team.coach,
-                dayIndex: i,
-                dayName: dayName,
-                rawContent: content,
-                time: time,
-                location: location,
-                isMatch: isMatch,
-                status: status,
-                fullDate: header // e.g. "Sunday 25.1"
+            lines.forEach(lineContent => {
+                if (!lineContent || !lineContent.trim()) return;
+
+                const { time, location, isMatch, status } = parseCellContent(lineContent);
+
+                flatData.push({
+                    team: team.name,
+                    coach: team.coach,
+                    dayIndex: i,
+                    dayName: dayName,
+                    rawContent: lineContent,
+                    time: time,
+                    location: location,
+                    isMatch: isMatch,
+                    status: status,
+                    fullDate: header // e.g. "Sunday 25.1"
+                });
             });
         }
     });
@@ -340,5 +345,7 @@ export const createICSFile = (events, calendarName = 'Schedule') => {
     icsContent += "END:VCALENDAR";
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    saveAs(blob, `${calendarName}.ics`);
+    // Sanitize filename
+    const safeName = calendarName.replace(/[\\/:*?"<>|]/g, '_');
+    saveAs(blob, `${safeName}.ics`);
 };

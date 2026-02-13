@@ -107,10 +107,24 @@ function PublicSchedule() {
                             setData(dataRows);
 
                             // Set default team from Men's list if available
+                            // Set default team from Men's list if available
                             const menTeams = teamObjects.filter(t => t.type !== 'W');
-                            if (menTeams.length > 0) {
-                                setSelectedTeamId(menTeams[0].value);
+
+                            // Check URL Params for deep linking
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const sharedTeam = urlParams.get('team');
+                            let defaultTeamId = '';
+
+                            if (sharedTeam) {
+                                const found = teamObjects.find(t => t.label === sharedTeam || t.name === sharedTeam);
+                                if (found) defaultTeamId = found.value;
                             }
+
+                            if (!defaultTeamId && menTeams.length > 0) {
+                                defaultTeamId = menTeams[0].value;
+                            }
+
+                            setSelectedTeamId(defaultTeamId);
                         }
                         setLoading(false);
                     },
@@ -299,11 +313,63 @@ function PublicSchedule() {
                         {viewMode === 'team' && selectedTeamId && (
                             <div className="actions-section">
                                 <button onClick={() => {
-                                    // Copy logic re-implemented or function called if kept
                                     const teamName = getSelectedTeamName();
-                                    // ... simplified for brevity, assume similar logic to before
-                                    // Actually let's just use window.share if mobile or fallback
-                                    const message = `לוז ${teamName} - לחץ לצפייה: ${window.location.href}`;
+                                    const teamObj = getTeamObj();
+                                    if (!teamObj) return;
+
+                                    const schedule = teamObj.row;
+                                    const basketball = '\uD83C\uDFC0';
+                                    const muscle = '\uD83D\uDCAA';
+
+                                    let message = `${basketball} *לו"ז שבועי - ${teamName}* ${basketball}\n\n`;
+
+                                    headers.slice(dayStart, dayStart + 7).forEach((dayHeader, index) => {
+                                        const parts = dayHeader.split(' ');
+                                        const dayName = parts[0];
+                                        const date = parts[1] || '';
+                                        const content = schedule[dayStart + index];
+
+                                        if (!content || !content.trim() || content.toLowerCase().includes('xxx')) return; // Skip off days
+
+                                        const lines = content.split('\n');
+
+                                        lines.forEach(line => {
+                                            if (!line.trim()) return;
+                                            const { time, location, status, isMatch } = parseScheduleContent(line);
+
+                                            let dayContent = `${time} ${location}`;
+
+                                            if (status === 'cancelled') dayContent = `❌ [בוטל] ${dayContent}`;
+                                            if (status === 'changed') dayContent = `⚠️ [שינוי] ${dayContent}`;
+                                            if (isMatch) dayContent = `🎆 *משחק ${dayContent}* 🎆`;
+
+                                            message += `${dayName} ${date}: ${dayContent}\n`;
+                                        });
+                                    });
+
+                                    // Generate Deep Link
+                                    // Use minimal encoding for "prettier" link (keep Hebrew chars, only encode special chars)
+                                    // WhatsApp handles IRIs (Hebrew URLs) well if spaces are encoded.
+                                    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+                                    // Manually encode only spaces and critical chars if we want "pretty" looking Hebrew
+                                    // But safest "pretty" way is to let the browser encoded it when clicked, 
+                                    // so we provide a link that LOOKS readable.
+                                    // However, simpler is just using the URL API which encodes.
+                                    // User specifically complained about %D7...
+                                    // Let's try to construct a string with Hebrew characters and %20 for spaces.
+                                    const safeTeamParam = teamName
+                                        .replace(/%/g, '%25')
+                                        .replace(/&/g, '%26')
+                                        .replace(/\+/g, '%2B')
+                                        .replace(/#/g, '%23')
+                                        .replace(/\?/g, '%3F')
+                                        .replace(/=/g, '%3D')
+                                        .replace(/ /g, '%20');
+                                    const link = `${baseUrl}?team=${safeTeamParam}`;
+
+                                    // Ensure link is on a new line to be clickable
+                                    message += `\nלצפייה בלו"ז המלא:\n${link}\n\nבהצלחה! ${muscle}`;
+
                                     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
                                 }} className="whatsapp-btn action-btn">
                                     <span>שתף בוואטסאפ</span>
@@ -383,18 +449,25 @@ function PublicSchedule() {
 
                                         const isMatch = content && (content.includes('משחק') || content.includes('🏀'));
 
-                                        const { location, time, status } = parseScheduleContent(content);
+                                        // Split content by newline
+                                        const lines = content ? content.split('\n').filter(l => l.trim().length > 0) : [];
 
-                                        let bg = isMatch ? '#fee2e2' : '#f3f4f6';
-                                        let border = isMatch ? '#ef4444' : 'transparent';
-                                        let textDecoration = 'none';
+                                        // Determine overall card style based on first event or if any match exists?
+                                        // Let's keep it simple: if any event is a match on this day, color it match?
+                                        // Or just use neutral unless ALL are matches?
+                                        // For now, let's stick to the first event defining the "Day Card" style, or just separate items inside.
+
+                                        const anyMatch = lines.some(l => l.includes('משחק') || l.includes('🏀'));
+                                        const anyCancelled = lines.every(l => l.match(/x|בוטל|canceled|cancelled/i));
+
+                                        let bg = anyMatch ? '#fee2e2' : '#f3f4f6';
+                                        let border = anyMatch ? '#ef4444' : 'transparent';
                                         let opacity = 1;
 
-                                        if (status === 'cancelled') {
+                                        if (anyCancelled) {
                                             bg = '#fee2e2';
-                                            textDecoration = 'line-through';
                                             opacity = 0.6;
-                                        } else if (status === 'changed') {
+                                        } else if (lines.some(l => l.includes('!') || l.includes('⚠️'))) {
                                             bg = '#fef3c7';
                                             border = '#f59e0b';
                                         }
@@ -406,7 +479,7 @@ function PublicSchedule() {
                                                 background: bg,
                                                 borderRight: `5px solid ${border}`,
                                                 opacity: opacity,
-                                                position: 'relative' // Needed for absolute positioning of edit button
+                                                position: 'relative'
                                             }}>
                                                 {/* Edit Button - Only visible if not cancelled? Or always allow edits to restore/change? Always. */}
                                                 <button
@@ -436,27 +509,31 @@ function PublicSchedule() {
                                                     ✏️
                                                 </button>
 
-                                                <div className="day-header" style={{ color: isMatch ? '#b91c1c' : '#1f2937' }}>
+                                                <div className="day-header" style={{ color: anyMatch ? '#b91c1c' : '#1f2937' }}>
                                                     <span className="day-name">{dayName}</span>
                                                     <span className="day-date">{date}</span>
                                                 </div>
-                                                <div className="event-details" style={{ textDecoration }}>
-                                                    {status === 'cancelled' && <div style={{ color: 'red', fontWeight: 'bold' }}>❌ בוטל</div>}
-                                                    {status === 'changed' && <div style={{ color: '#d97706', fontWeight: 'bold' }}>⚠️ שינוי</div>}
+                                                <div className="events-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    {lines.map((line, lIdx) => {
+                                                        const { location, time, status, isMatch } = parseScheduleContent(line);
+                                                        const isCancelled = status === 'cancelled';
+                                                        const isChanged = status === 'changed';
 
-                                                    {!isOffDay ? (
-                                                        <>
-                                                            <div className="event-time" style={{ fontSize: '1.2rem', fontWeight: '800' }}>
-                                                                {time}
+                                                        return (
+                                                            <div key={lIdx} className="event-item" style={{
+                                                                textDecoration: isCancelled ? 'line-through' : 'none',
+                                                                borderBottom: lIdx < lines.length - 1 ? '1px solid rgba(0,0,0,0.1)' : 'none',
+                                                                paddingBottom: lIdx < lines.length - 1 ? '4px' : '0'
+                                                            }}>
+                                                                {isCancelled && <div style={{ color: 'red', fontWeight: 'bold', fontSize: '0.8rem' }}>❌ בוטל</div>}
+                                                                {isChanged && <div style={{ color: '#d97706', fontWeight: 'bold', fontSize: '0.8rem' }}>⚠️ שינוי</div>}
+
+                                                                <div className="event-time" style={{ fontSize: '1.2rem', fontWeight: '800' }}>{time}</div>
+                                                                <div className="event-location" style={{ fontSize: '1rem' }}>{location}</div>
+                                                                {isMatch && <div className="match-badge">🏀 משחק</div>}
                                                             </div>
-                                                            <div className="event-location" style={{ fontSize: '1rem' }}>
-                                                                {location}
-                                                            </div>
-                                                            {isMatch && <div className="match-badge">🏀 משחק</div>}
-                                                        </>
-                                                    ) : (
-                                                        <div className="no-event">מנוחה</div>
-                                                    )}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         );
@@ -470,7 +547,8 @@ function PublicSchedule() {
                         )}
                     </>
                 </>
-            )}
+            )
+            }
 
             <TrainerEditModal
                 isOpen={isEditModalOpen}
@@ -478,7 +556,7 @@ function PublicSchedule() {
                 sessionData={selectedSessionForEdit}
                 sheetUrl={LIVE_SHEET_API}
             />
-        </div>
+        </div >
     );
 }
 

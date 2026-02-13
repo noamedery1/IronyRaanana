@@ -47,53 +47,58 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                 const cellContent = row[cIdx];
                 if (!cellContent || typeof cellContent !== 'string') continue;
 
-                const nums = cellContent.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
+                const lines = cellContent.split('\n');
+                lines.forEach(line => {
+                    if (!line || !line.trim()) return;
 
-                if (nums) {
-                    const start = parseInt(nums[1]);
-                    const end = parseInt(nums[2]);
+                    const nums = line.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
 
-                    if (isNaN(start) || isNaN(end)) continue;
+                    if (nums) {
+                        const start = parseInt(nums[1]);
+                        const end = parseInt(nums[2]);
 
-                    let location = cellContent.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
-                    location = location.replace(/משחק|ב-/g, '').trim();
-                    if (!location) location = "Unknown";
+                        if (isNaN(start) || isNaN(end)) return;
 
-                    // Coach Check
-                    if (coachName) {
-                        if (!coachMap[coachName]) coachMap[coachName] = {};
-                        if (!coachMap[coachName][d]) coachMap[coachName][d] = [];
+                        let location = line.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
+                        location = location.replace(/משחק|ב-/g, '').trim();
+                        if (!location) location = "Unknown";
 
-                        const coachEvents = coachMap[coachName][d];
-                        coachEvents.forEach(ev => {
-                            if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
-                                conflictSet.add(`${rIdx}_${cIdx}`);
-                                conflictSet.add(`${ev.row}_${ev.col}`);
-                            }
-                        });
-                        coachEvents.push({ start, end, row: rIdx, col: cIdx });
+                        // Coach Check
+                        if (coachName) {
+                            if (!coachMap[coachName]) coachMap[coachName] = {};
+                            if (!coachMap[coachName][d]) coachMap[coachName][d] = [];
+
+                            const coachEvents = coachMap[coachName][d];
+                            coachEvents.forEach(ev => {
+                                if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
+                                    conflictSet.add(`${rIdx}_${cIdx}`);
+                                    conflictSet.add(`${ev.row}_${ev.col}`);
+                                }
+                            });
+                            coachEvents.push({ start, end, row: rIdx, col: cIdx });
+                        }
+
+                        // Hall Check
+                        if (location) {
+                            if (!hallMap[location]) hallMap[location] = {};
+                            if (!hallMap[location][d]) hallMap[location][d] = [];
+
+                            const isMatch = cellContent.includes('משחק');
+
+                            const hallEvents = hallMap[location][d];
+                            hallEvents.forEach(ev => {
+                                if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
+                                    // Ignore conflict if both are games
+                                    if (isMatch && ev.isMatch) return;
+
+                                    conflictSet.add(`${rIdx}_${cIdx}`);
+                                    conflictSet.add(`${ev.row}_${ev.col}`);
+                                }
+                            });
+                            hallEvents.push({ start, end, row: rIdx, col: cIdx, isMatch });
+                        }
                     }
-
-                    // Hall Check
-                    if (location) {
-                        if (!hallMap[location]) hallMap[location] = {};
-                        if (!hallMap[location][d]) hallMap[location][d] = [];
-
-                        const isMatch = cellContent.includes('משחק');
-
-                        const hallEvents = hallMap[location][d];
-                        hallEvents.forEach(ev => {
-                            if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
-                                // Ignore conflict if both are games
-                                if (isMatch && ev.isMatch) return;
-
-                                conflictSet.add(`${rIdx}_${cIdx}`);
-                                conflictSet.add(`${ev.row}_${ev.col}`);
-                            }
-                        });
-                        hallEvents.push({ start, end, row: rIdx, col: cIdx, isMatch });
-                    }
-                }
+                });
             }
         });
         return conflictSet;
@@ -503,20 +508,25 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                             onMouseEnter={() => setHoveredCell({ r: rowIndex, c: colIndex })}
                                             onMouseLeave={() => setHoveredCell(null)}
                                         >
-                                            <input
-                                                type="text"
+                                            <textarea
                                                 value={cellData || ''}
                                                 onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
                                                 style={{
                                                     width: '100%',
                                                     height: '100%',
                                                     border: 'none',
-                                                    padding: '0.8rem 0.5rem',
+                                                    padding: '0.4rem',
                                                     textAlign: 'center',
                                                     background: 'transparent',
                                                     outline: 'none',
                                                     cursor: 'inherit',
-                                                    color: isConflict ? '#b91c1c' : 'inherit'
+                                                    color: isConflict ? '#b91c1c' : 'inherit',
+                                                    resize: 'none',
+                                                    fontFamily: 'inherit',
+                                                    fontSize: 'inherit',
+                                                    lineHeight: '1.4',
+                                                    whiteSpace: 'pre-wrap',
+                                                    overflow: 'hidden' // Or 'auto' if scrolling needed, but let's encourage concise content or expand row height? row heights are dynamic in table.
                                                 }}
                                             />
                                             {cellData && isHovered && (
