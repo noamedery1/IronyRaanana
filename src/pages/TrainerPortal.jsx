@@ -30,9 +30,10 @@ const TrainerPortal = () => {
     // Edit Modal
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedSession, setSelectedSession] = useState(null);
-    const [editType, setEditType] = useState('CHANGE'); // 'CHANGE', 'CANCEL'
+    const [editType, setEditType] = useState('CHANGE'); // 'CHANGE', 'CANCEL', 'MOVE'
     const [newTime, setNewTime] = useState('');
     const [newLocation, setNewLocation] = useState('');
+    const [newDay, setNewDay] = useState('');
     const [changeReason, setChangeReason] = useState('');
 
     // --------------------------------------------------------------------------
@@ -169,6 +170,7 @@ const TrainerPortal = () => {
         setEditType('CHANGE');
         setNewTime('');
         setNewLocation('');
+        setNewDay('');
         setChangeReason('');
         setEditModalOpen(true);
     };
@@ -188,9 +190,14 @@ const TrainerPortal = () => {
                 day: selectedSession.day,
                 time: selectedSession.raw, // Current value
                 type: editType,
+                newTime: (editType === 'CHANGE' || editType === 'MOVE') ? newTime : '',
+                newLocation: (editType === 'CHANGE' || editType === 'MOVE') ? newLocation : '',
+                newDay: editType === 'MOVE' ? newDay : '',
                 details: editType === 'CANCEL'
                     ? `ביטול אימון. סיבה: ${changeReason}`
-                    : `שינוי ל: ${newTime} ב-${newLocation}. סיבה: ${changeReason}`,
+                    : (editType === 'MOVE'
+                        ? `הזזה ליום ${newDay}, שעה ${newTime}, ${newLocation}. סיבה: ${changeReason}`
+                        : `שינוי ל: ${newTime} ב-${newLocation}. סיבה: ${changeReason}`),
                 // Metadata for admin
                 row: selectedSession.originalrow,
                 col: selectedSession.originalcol
@@ -310,12 +317,18 @@ const TrainerPortal = () => {
 
                         <div style={{ marginBottom: '1rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>סוג בקשה</label>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
                                     onClick={() => setEditType('CHANGE')}
                                     style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #BE185D' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fdf2f8' : 'white', color: editType === 'CHANGE' ? '#BE185D' : '#64748b' }}
                                 >
                                     שינוי פרטים
+                                </button>
+                                <button
+                                    onClick={() => setEditType('MOVE')}
+                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'MOVE' ? '2px solid #7C3AED' : '1px solid #ddd', background: editType === 'MOVE' ? '#f5f3ff' : 'white', color: editType === 'MOVE' ? '#7C3AED' : '#64748b' }}
+                                >
+                                    החלפת יום
                                 </button>
                                 <button
                                     onClick={() => setEditType('CANCEL')}
@@ -326,8 +339,23 @@ const TrainerPortal = () => {
                             </div>
                         </div>
 
-                        {editType === 'CHANGE' && (
+                        {(editType === 'CHANGE' || editType === 'MOVE') && (
                             <>
+                                {editType === 'MOVE' && (
+                                    <div style={{ marginBottom: '1rem' }}>
+                                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>יום חדש</label>
+                                        <select
+                                            value={newDay}
+                                            onChange={(e) => setNewDay(e.target.value)}
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                                        >
+                                            <option value="">בחר יום...</option>
+                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'].map(d => (
+                                                <option key={d} value={d}>{d}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                                 <div style={{ marginBottom: '1rem' }}>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>שעה חדשה</label>
                                     <input type="text" value={newTime} onChange={(e) => setNewTime(e.target.value)} placeholder="לדוגמה: 18:00-19:30" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }} />

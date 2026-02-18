@@ -12,9 +12,10 @@ const TrainerEditModal = ({
     const [error, setError] = useState('');
 
     // Edit Form State
-    const [editType, setEditType] = useState('CHANGE'); // 'CHANGE', 'CANCEL'
+    const [editType, setEditType] = useState('CHANGE'); // 'CHANGE', 'CANCEL', 'MOVE'
     const [newTime, setNewTime] = useState('');
     const [newLocation, setNewLocation] = useState('');
+    const [newDay, setNewDay] = useState('');
     const [reason, setReason] = useState('');
 
     // Initialize state with current values when switching to EDIT
@@ -22,6 +23,7 @@ const TrainerEditModal = ({
         if (step === 'EDIT' && sessionData) {
             setNewTime(sessionData.time || '');
             setNewLocation(sessionData.location || '');
+            setNewDay('');
         }
     }, [step, sessionData]);
 
@@ -33,7 +35,7 @@ const TrainerEditModal = ({
 
     const hasChanges = editType === 'CHANGE'
         ? (newTime !== time || newLocation !== loc)
-        : true; // CANCEL is always a change
+        : (editType === 'MOVE' ? (newDay && newTime && newLocation) : true); // CANCEL is always a change
 
     const handleAuth = async (e) => {
         e.preventDefault();
@@ -82,11 +84,14 @@ const TrainerEditModal = ({
                 day: sessionData.day,
                 time: sessionData.raw,
                 type: editType,
-                newTime: editType === 'CHANGE' ? newTime : '',
-                newLocation: editType === 'CHANGE' ? newLocation : '',
+                newTime: (editType === 'CHANGE' || editType === 'MOVE') ? newTime : '',
+                newLocation: (editType === 'CHANGE' || editType === 'MOVE') ? newLocation : '',
+                newDay: editType === 'MOVE' ? newDay : '',
                 details: editType === 'CANCEL'
                     ? `ביטול אימון. סיבה: ${reason}`
-                    : `שינוי ל: ${newTime} ב-${newLocation}. סיבה: ${reason}`,
+                    : (editType === 'MOVE'
+                        ? `הזזה ליום ${newDay}, שעה ${newTime}, ${newLocation}. סיבה: ${reason}`
+                        : `שינוי ל: ${newTime} ב-${newLocation}. סיבה: ${reason}`),
                 reason: reason,
                 row: sessionData.row,
                 col: sessionData.col
@@ -169,19 +174,39 @@ const TrainerEditModal = ({
 
                 {step === 'EDIT' && (
                     <div>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                             <button
                                 onClick={() => setEditType('CHANGE')}
                                 style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #BE185D' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fdf2f8' : 'white', color: editType === 'CHANGE' ? '#BE185D' : '#64748b' }}
-                            >שינוי</button>
+                            >שינוי פרטים</button>
+                            <button
+                                onClick={() => setEditType('MOVE')}
+                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: editType === 'MOVE' ? '2px solid #7C3AED' : '1px solid #ddd', background: editType === 'MOVE' ? '#f5f3ff' : 'white', color: editType === 'MOVE' ? '#7C3AED' : '#64748b' }}
+                            >החלפת יום</button>
                             <button
                                 onClick={() => setEditType('CANCEL')}
                                 style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: editType === 'CANCEL' ? '2px solid #ef4444' : '1px solid #ddd', background: editType === 'CANCEL' ? '#fef2f2' : 'white', color: editType === 'CANCEL' ? '#ef4444' : '#64748b' }}
                             >ביטול</button>
                         </div>
 
-                        {editType === 'CHANGE' && (
+                        {(editType === 'CHANGE' || editType === 'MOVE') && (
                             <>
+                                {editType === 'MOVE' && (
+                                    <>
+                                        <label style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', display: 'block' }}>יום חדש</label>
+                                        <select
+                                            value={newDay}
+                                            onChange={(e) => setNewDay(e.target.value)}
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }}
+                                        >
+                                            <option value="">בחר יום...</option>
+                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'].map(d => (
+                                                <option key={d} value={d}>{d}</option>
+                                            ))}
+                                        </select>
+                                    </>
+                                )}
+
                                 <label style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', display: 'block' }}>שעה</label>
                                 <input type="text" value={newTime} onChange={(e) => setNewTime(e.target.value)} placeholder="שעה" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }} />
 
