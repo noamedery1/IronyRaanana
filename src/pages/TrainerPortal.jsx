@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
+import { parseCellContent } from '../utils/scheduleUtils';
 
 const TrainerPortal = () => {
     // --------------------------------------------------------------------------
@@ -20,6 +21,7 @@ const TrainerPortal = () => {
     const [view, setView] = useState('login'); // 'login', 'dashboard'
     const [trainer, setTrainer] = useState(null); // { name: 'Noam', teams: ['U16'] }
     const [schedule, setSchedule] = useState([]);
+    const [locations, setLocations] = useState([]); // Available halls
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -33,6 +35,7 @@ const TrainerPortal = () => {
     const [editType, setEditType] = useState('CHANGE'); // 'CHANGE', 'CANCEL', 'MOVE'
     const [newTime, setNewTime] = useState('');
     const [newLocation, setNewLocation] = useState('');
+    const [isCustomLocation, setIsCustomLocation] = useState(false);
     const [newDay, setNewDay] = useState('');
     const [changeReason, setChangeReason] = useState('');
 
@@ -129,11 +132,22 @@ const TrainerPortal = () => {
                 const coachIndex = headers.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach')));
 
                 const mySessions = [];
+                const locSet = new Set();
                 const now = new Date();
 
                 rows.slice(headerRowIndex + 1).forEach((row, rIdx) => {
                     const teamName = row[0];
                     const coach = coachIndex !== -1 ? row[coachIndex] : '';
+
+                    // Collect Locations from all valid cells
+                    for (let d = 0; d < 7; d++) {
+                        const colIdx = dayStartIndex + d;
+                        const cell = row[colIdx];
+                        if (cell && cell.trim() && !cell.toLowerCase().includes('xxx')) {
+                            const { location } = parseCellContent(cell);
+                            if (location && location.trim().length > 1) locSet.add(location.trim());
+                        }
+                    }
 
                     // Filter: Coach match OR (if undefined) match team name? 
                     // Let's match strictly by Coach Column if possible, or fuzzy match if user is assigned to team
@@ -159,6 +173,7 @@ const TrainerPortal = () => {
                     }
                 });
 
+                setLocations(Array.from(locSet).sort());
                 setSchedule(mySessions);
                 setLoading(false);
             }
@@ -170,6 +185,7 @@ const TrainerPortal = () => {
         setEditType('CHANGE');
         setNewTime('');
         setNewLocation('');
+        setIsCustomLocation(false);
         setNewDay('');
         setChangeReason('');
         setEditModalOpen(true);
@@ -350,7 +366,7 @@ const TrainerPortal = () => {
                                             style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }}
                                         >
                                             <option value="">בחר יום...</option>
-                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'].map(d => (
+                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map(d => (
                                                 <option key={d} value={d}>{d}</option>
                                             ))}
                                         </select>
@@ -362,7 +378,41 @@ const TrainerPortal = () => {
                                 </div>
                                 <div style={{ marginBottom: '1rem' }}>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>מיקום חדש (אופציונלי)</label>
-                                    <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="שם אולם" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }} />
+                                    {locations.length > 0 ? (
+                                        <>
+                                            <select
+                                                value={isCustomLocation ? 'OTHER' : newLocation}
+                                                onChange={(e) => {
+                                                    if (e.target.value === 'OTHER') {
+                                                        setIsCustomLocation(true);
+                                                        setNewLocation('');
+                                                    } else {
+                                                        setIsCustomLocation(false);
+                                                        setNewLocation(e.target.value);
+                                                    }
+                                                }}
+                                                style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                                            >
+                                                <option value="">בחר אולם...</option>
+                                                {locations.map(loc => (
+                                                    <option key={loc} value={loc}>{loc}</option>
+                                                ))}
+                                                <option value="OTHER">אחר / יצירת חדש...</option>
+                                            </select>
+                                            {isCustomLocation && (
+                                                <input
+                                                    type="text"
+                                                    value={newLocation}
+                                                    onChange={(e) => setNewLocation(e.target.value)}
+                                                    placeholder="הקלד שם אולם חדש..."
+                                                    style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', border: '1px solid #BE185D', background: '#fff1f2' }}
+                                                    autoFocus
+                                                />
+                                            )}
+                                        </>
+                                    ) : (
+                                        <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="שם אולם" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }} />
+                                    )}
                                 </div>
                             </>
                         )}

@@ -16,10 +16,12 @@ const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbxyv1boTjKjDOj8R
 const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
 
 function PublicSchedule() {
+    const [locations, setLocations] = useState([]); // Store active halls for dropdown
     const [data, setData] = useState([]);
     const [teams, setTeams] = useState([]); // Array of objects
     const [headers, setHeaders] = useState([]);
     const [dayStart, setDayStart] = useState(1);
+
     const [selectedTeamId, setSelectedTeamId] = useState('');
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
@@ -65,6 +67,23 @@ function PublicSchedule() {
                                 dayStartIndex = (coachIndex !== -1) ? coachIndex + 1 : 1;
                             }
                             setDayStart(dayStartIndex);
+
+                            // Extract Halls
+                            const locSet = new Set();
+                            dataRows.forEach(r => {
+                                for (let d = dayStartIndex; d < dayStartIndex + 7; d++) {
+                                    const c = r[d];
+                                    if (c && c.trim() && !c.toLowerCase().includes('xxx')) {
+                                        const parts = c.split('\n');
+                                        parts.forEach(p => {
+                                            const { location } = parseCellContent(p);
+                                            if (location && location.trim().length > 1) locSet.add(location.trim());
+                                        });
+                                    }
+                                }
+                            });
+                            setLocations(Array.from(locSet).sort());
+
 
                             // Extract teams with unique identifiers
                             const teamObjects = [];
@@ -555,6 +574,7 @@ function PublicSchedule() {
                 onClose={() => setIsEditModalOpen(false)}
                 sessionData={selectedSessionForEdit}
                 sheetUrl={LIVE_SHEET_API}
+                availableLocations={locations}
             />
         </div >
     );

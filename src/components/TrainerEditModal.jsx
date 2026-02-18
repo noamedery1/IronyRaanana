@@ -4,7 +4,8 @@ const TrainerEditModal = ({
     isOpen,
     onClose,
     sessionData, // { team, coach, day, time, raw, row, col }
-    sheetUrl // LIVE_SHEET_API
+    sheetUrl, // LIVE_SHEET_API
+    availableLocations = [] // Optional: List of halls/locations to choose from
 }) => {
     const [step, setStep] = useState('AUTH'); // 'AUTH', 'EDIT'
     const [password, setPassword] = useState('');
@@ -16,6 +17,7 @@ const TrainerEditModal = ({
     const [newTime, setNewTime] = useState('');
     const [newLocation, setNewLocation] = useState('');
     const [newDay, setNewDay] = useState('');
+    const [isCustomLocation, setIsCustomLocation] = useState(false);
     const [reason, setReason] = useState('');
 
     // Initialize state with current values when switching to EDIT
@@ -23,6 +25,7 @@ const TrainerEditModal = ({
         if (step === 'EDIT' && sessionData) {
             setNewTime(sessionData.time || '');
             setNewLocation(sessionData.location || '');
+            setIsCustomLocation(false);
             setNewDay('');
         }
     }, [step, sessionData]);
@@ -200,7 +203,7 @@ const TrainerEditModal = ({
                                             style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }}
                                         >
                                             <option value="">בחר יום...</option>
-                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'].map(d => (
+                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map(d => (
                                                 <option key={d} value={d}>{d}</option>
                                             ))}
                                         </select>
@@ -211,7 +214,41 @@ const TrainerEditModal = ({
                                 <input type="text" value={newTime} onChange={(e) => setNewTime(e.target.value)} placeholder="שעה" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }} />
 
                                 <label style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', display: 'block' }}>מיקום / אולם</label>
-                                <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="מיקום" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }} />
+                                {availableLocations && availableLocations.length > 0 ? (
+                                    <>
+                                        <select
+                                            value={isCustomLocation ? 'OTHER' : newLocation}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'OTHER') {
+                                                    setIsCustomLocation(true);
+                                                    setNewLocation('');
+                                                } else {
+                                                    setIsCustomLocation(false);
+                                                    setNewLocation(e.target.value);
+                                                }
+                                            }}
+                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }}
+                                        >
+                                            <option value="">בחר אולם...</option>
+                                            {availableLocations.map(loc => (
+                                                <option key={loc} value={loc}>{loc}</option>
+                                            ))}
+                                            <option value="OTHER">אחר / יצירת חדש...</option>
+                                        </select>
+                                        {isCustomLocation && (
+                                            <input
+                                                type="text"
+                                                value={newLocation}
+                                                onChange={(e) => setNewLocation(e.target.value)}
+                                                placeholder="הקלד שם אולם חדש..."
+                                                style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #BE185D', marginBottom: '0.8rem', background: '#fff1f2' }}
+                                                autoFocus
+                                            />
+                                        )}
+                                    </>
+                                ) : (
+                                    <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="מיקום" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }} />
+                                )}
                             </>
                         )}
 

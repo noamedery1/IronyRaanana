@@ -349,3 +349,31 @@ export const createICSFile = (events, calendarName = 'Schedule') => {
     const safeName = calendarName.replace(/[\\/:*?"<>|]/g, '_');
     saveAs(blob, `${safeName}.ics`);
 };
+
+// Helper to extract unique hall names from raw data rows. Used for dropdowns.
+export const extractUniqueLocations = (rows, dayStartIndex) => {
+    // rows: array of arrays (data rows from CSV)
+    // dayStartIndex: integer
+
+    if (!rows || rows.length === 0 || dayStartIndex === -1) return [];
+
+    const locationsSet = new Set();
+
+    rows.forEach(row => {
+        // Loop through 7 days
+        for (let i = 0; i < 7; i++) {
+            const cell = row[dayStartIndex + i];
+            if (!cell || !cell.trim() || cell.toLowerCase().includes('xxx')) continue;
+
+            const lines = cell.split('\n');
+            lines.forEach(line => {
+                const { location } = parseCellContent(line);
+                if (location && location.trim().length > 1) {
+                    locationsSet.add(location.trim());
+                }
+            });
+        }
+    });
+
+    return Array.from(locationsSet).sort();
+};
