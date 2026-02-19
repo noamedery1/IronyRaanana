@@ -69,7 +69,8 @@ function handleSubmitRequest(data) {
   
   if (!sheet) {
     sheet = ss.insertSheet("Requests");
-    sheet.appendRow(["Timestamp", "Trainer", "Day", "Original", "Team", "Type", "NewTime", "NewLoc", "Reason", "Status", "Row", "Col"]);
+    // Added NewDay to headers
+    sheet.appendRow(["Timestamp", "Trainer", "Day", "Original", "Team", "Type", "NewTime", "NewLoc", "NewDay", "Reason", "Status", "Row", "Col"]);
   }
 
   const timestamp = new Date();
@@ -84,6 +85,7 @@ function handleSubmitRequest(data) {
     data.type,      
     data.newTime || "",
     data.newLocation || "",
+    data.newDay || "", // Store the new day for MOVE requests
     data.reason || "",
     "PENDING",
     data.row, 
@@ -97,14 +99,23 @@ function handleSubmitRequest(data) {
   const rejectLink = serviceUrl + "?action=reject&reqId=" + rowIndex;
 
   const adminEmail = "Dani.tankel@gmail.com";
+  
+  let detailsHtml = `<p><strong>Team:</strong> ${data.team}</p>
+                     <p><strong>Type:</strong> ${data.type}</p>`;
+  
+  if (data.type === 'MOVE') {
+      detailsHtml += `<p><strong>Move To:</strong> ${data.newDay} at ${data.newTime} (${data.newLocation})</p>`;
+  } else if (data.type === 'CHANGE') {
+      detailsHtml += `<p><strong>Change To:</strong> ${data.newTime} (${data.newLocation})</p>`;
+  }
+
   MailApp.sendEmail({
     to: adminEmail,
-    subject: "Request: " + data.trainerName,
+    subject: `Request: ${data.trainerName} - ${data.type}`,
     htmlBody: `
       <h3>Request from ${data.trainerName}</h3>
-      <p><strong>Team:</strong> ${data.team}</p>
-      <p><strong>Change:</strong> ${data.type} (${data.day})</p>
-      <p><strong>Details:</strong> ${data.details}</p>
+      ${detailsHtml}
+      <p><strong>Reason:</strong> ${data.reason}</p>
       <br/>
       <a href="${approveLink}" style="background:green;color:white;padding:10px;text-decoration:none;border-radius:5px;">✅ APPROVE</a>
       &nbsp;&nbsp;
@@ -132,74 +143,142 @@ function handleApprove(reqRow) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const reqSheet = ss.getSheetByName("Requests");
   
-  // Safety check range
   if (reqRow < 2 || reqRow > reqSheet.getLastRow()) return HtmlService.createHtmlOutput("<h3>Invalid Request ID</h3>");
 
-  const data = reqSheet.getRange(reqRow, 1, 1, 12).getValues()[0]; 
+  // Schema: Time(0), Trainer(1), Day(2), Orig(3), Team(4), Type(5), NewTime(6), NewLoc(7), NewDay(8), Reason(9), Status(10), Row(11), Col(12)
+  const dataRange = reqSheet.getRange(reqRow, 1, 1, 13);
+  const data = dataRange.getValues()[0]; 
   
-  const status = data[9];
+  const status = data[10]; // Index 10 is Status
   if (status !== 'PENDING') return HtmlService.createHtmlOutput("<h3>Already processed: " + status + "</h3>");
 
-  const targetRow = data[10];
-  const targetCol = data[11]; // 0-based col index from frontend
+  const targetRow = Number(data[11]); // Index 11 is Row
+  if (isNaN(targetRow) || targetRow < 2) return HtmlService.createHtmlOutput("<h3 style='color:red'>Invalid Row.</h3>");
+
+  // ROBUST SHEET FINDING: Find the sheet that actually contains the schedule
+  const oldDayName = data[2]; // e.g. "ראשון"
   
-  const sheetRow = Number(targetRow); 
-  // Safety check for invalid rows (e.g. 0 or 1 if header)
-  if (isNaN(sheetRow) || sheetRow < 2) return HtmlService.createHtmlOutput("<h3 style='color:red'>Invalid Schedule Row Index. Cancelled to protect sheet.</h3>");
+  const scheduleInfo = findScheduleSheetAndCol(ss, oldDayName);
+  if (!scheduleInfo) {
+      return HtmlService.createHtmlOutput("<h3 style='color:red'>Could not find Schedule Sheet containing: " + oldDayName + "</h3>");
+  }
+  
+  const mainSheet = scheduleInfo.sheet;
+  const oldDayCol = scheduleInfo.col; // Dynamically found column index (1-based)
 
-  const sheetCol = Number(targetCol) + 1; 
-
-  const mainSheet = ss.getSheets()[0]; 
-  const cell = mainSheet.getRange(sheetRow, sheetCol);
+  const cell = mainSheet.getRange(targetRow, oldDayCol);
   const currentVal = cell.getValue().toString();
   
   const type = data[5];
   let newTime = data[6];
   const newLoc = data[7];
+  const newDay = data[8]; // New Day Name
 
-  // Normalize time to HH:MM format (e.g. 1630 -> 16:30) to match parsing logic
+  // Normalize time
   if (newTime) {
       newTime = newTime.toString().replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, "$1:$2");
   }
   
-  let newVal = "";
   if (type === 'CANCEL') {
-      let original = currentVal;
-      if (!original.toUpperCase().includes('XXX')) {
-          newVal = "XXX " + original;
-      } else {
-          newVal = original;
+      if (!currentVal.toUpperCase().includes('XXX')) {
+          cell.setValue("XXX " + currentVal);
+          cell.setBackground('#F4CCCC');
       }
-  } else { // CHANGE
-      // Clean currentVal of old times AND status markers
-      let cleanCurrent = currentVal
-          .replace(/x|בוטל|canceled|cancelled|⚠️|!|שינוי|CHANGE/gi, '')
-          // Support HH:MM and HHMM formats (with or without dashes)
-          .replace(/\b(?:\d{1,2}:\d{2}|\d{3,4})(?:\s*[-–]\s*(?:\d{1,2}:\d{2}|\d{3,4}))?\b/g, '') 
-          .replace(/\s+/g, ' ')
-          .trim();
+  } 
+  else if (type === 'CHANGE') {
+      const newVal = constructNewVal(currentVal, newTime, newLoc);
+      cell.setValue(newVal);
+      cell.setBackground('#FFF2CC');
+  }
+  else if (type === 'MOVE') {
+      // 1. Mark Old Cell
+      if (!currentVal.includes('moved') && !currentVal.includes('הוזז')) {
+           cell.setValue("XXX (הוזז) " + currentVal);
+           cell.setBackground('#F4CCCC');
+      }
       
-      if (newLoc && newLoc.toString().trim() !== "") {
-          newVal = newTime + " " + newLoc;
-      } else {
-          // Keep old context (Loc + Match + etc)
-          newVal = newTime + (cleanCurrent ? " " + cleanCurrent : "");
+      // 2. Find New Cell Column
+      const newDayCol = findColumnForDayInSheet(mainSheet, newDay);
+      if (newDayCol === -1) {
+          return HtmlService.createHtmlOutput("<h3 style='color:red'>Could not find column for NEW day: " + newDay + "</h3>");
       }
+      
+      // 3. Update New Cell
+      const newCell = mainSheet.getRange(targetRow, newDayCol);
+      // const currentNewVal = newCell.getValue().toString();
+      const moveVal = newTime + " " + (newLoc || "");
+      newCell.setValue(moveVal);
+      newCell.setBackground('#D9EAD3');
   }
 
-  cell.setValue(newVal);
-  if (type === 'CHANGE') cell.setBackground('#FFF2CC');
-  if (type === 'CANCEL') cell.setBackground('#F4CCCC');
-  
-  reqSheet.getRange(reqRow, 10).setValue("APPROVED");
+  reqSheet.getRange(reqRow, 11).setValue("APPROVED"); // Status is at col 11 (1-based)
   return HtmlService.createHtmlOutput("<h1 style='color:green'>Request Approved & Updated!</h1>");
 }
 
 function handleReject(reqRow) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const reqSheet = ss.getSheetByName("Requests");
-  reqSheet.getRange(reqRow, 10).setValue("REJECTED");
+  reqSheet.getRange(reqRow, 11).setValue("REJECTED");
   return HtmlService.createHtmlOutput("<h1 style='color:red'>Request Rejected.</h1>");
+}
+
+// Helper to construct new string preserving context
+function constructNewVal(currentVal, newTime, newLoc) {
+    let cleanCurrent = currentVal
+          .replace(/x|בוטל|canceled|cancelled|⚠️|!|שינוי|CHANGE/gi, '')
+          .replace(/\b(?:\d{1,2}:\d{2}|\d{3,4})(?:\s*[-–]\s*(?:\d{1,2}:\d{2}|\d{3,4}))?\b/g, '') 
+          .replace(/\s+/g, ' ')
+          .trim();
+      
+    if (newLoc && newLoc.toString().trim() !== "") {
+        return newTime + " " + newLoc;
+    } else {
+        return newTime + (cleanCurrent ? " " + cleanCurrent : "");
+    }
+}
+
+
+
+
+function findScheduleSheetAndCol(ss, dayName) {
+    if (!dayName) return null;
+    const sheets = ss.getSheets();
+    for (var i = 0; i < sheets.length; i++) {
+        const sheet = sheets[i];
+        const name = sheet.getName();
+        if (name === "Requests" || name === "Trainers" || name === "SavedRules") continue;
+        
+        const col = findColumnForDayInSheet(sheet, dayName);
+        if (col !== -1) {
+            return { sheet: sheet, col: col };
+        }
+    }
+    return null;
+}
+
+function findColumnForDayInSheet(sheet, dayName) {
+    if (!dayName) return -1;
+    // Search first 20 rows, all columns
+    const lastCol = sheet.getLastColumn();
+    // Optimization: limit to 30 columns if lastCol is huge
+    const searchCols = lastCol > 30 ? 30 : lastCol; 
+    
+    if (searchCols < 1) return -1;
+
+    const range = sheet.getRange(1, 1, 20, searchCols); 
+    const values = range.getValues();
+    
+    for (let r = 0; r < values.length; r++) {
+        // First check if this row looks like a header (contains "ראשון" or "Day")
+        // But dayName itself is "ראשון", so just look for dayName.
+        const row = values[r];
+        for (let c = 0; c < row.length; c++) {
+            if (row[c] && row[c].toString().trim().includes(dayName)) {
+                return c + 1; // 1-based
+            }
+        }
+    }
+    return -1;
 }
 
 function createSuccessResponse(payload) {
