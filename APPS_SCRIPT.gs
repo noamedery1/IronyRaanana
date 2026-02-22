@@ -12,6 +12,7 @@ function doPost(e) {
   if (action === 'sendFeedback') return handleSendFeedback(postData);
   if (action === 'trainerLogin') return handleTrainerLogin(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
+  if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   
   return createErrorResponse("Unknown action: " + action);
 }
@@ -215,6 +216,16 @@ function handleApprove(reqRow) {
   }
 
   reqSheet.getRange(reqRow, 11).setValue("APPROVED"); // Status is at col 11 (1-based)
+  
+  // Notify Subscribers
+  const team = data[4];
+  let msgDesc = "";
+  if (type === 'CANCEL') msgDesc = "האימון ב" + oldDayName + " בוטל/נמחק.";
+  else if (type === 'CHANGE') msgDesc = `האימון ב${oldDayName} שונה ל: ${newTime} ב-${newLoc}.`;
+  else if (type === 'MOVE') msgDesc = `האימון שהיה ב${oldDayName} הוזז ליום ${newDay}, שעה ${newTime}, ${newLoc}.`;
+  
+  notifySubscribers(team, "שים לב! בוצע שינוי בלוח הזמנים של הקבוצה:<br/>" + msgDesc);
+  
   return HtmlService.createHtmlOutput("<h1 style='color:green'>Request Approved & Updated!</h1>");
 }
 
@@ -282,6 +293,154 @@ function findColumnForDayInSheet(sheet, dayName) {
         }
     }
     return -1;
+}
+
+function handleRegisterSubscriber(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("Subscribers");
+  if (!sheet) {
+    sheet = ss.insertSheet("Subscribers");
+    sheet.appendRow(["Timestamp", "Name", "Email", "Team"]);
+  }
+  
+  if (!data.email || !data.team) {
+      return createErrorResponse("Missing email or team");
+  }
+  
+  // Check if already registered
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][2].toString().toLowerCase() === data.email.toLowerCase() &&
+        values[i][3].toString() === data.team) {
+        return createErrorResponse("Email already registered for this team");
+    }
+  }
+  
+  sheet.appendRow([new Date(), data.name || "", data.email, data.team]);
+  return createSuccessResponse("Registered successfully");
+}
+
+function notifySubscribers(team, message) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("Subscribers");
+  if (!sheet) return;
+  
+  const values = sheet.getDataRange().getValues();
+  const bccEmails = [];
+  
+  const normalizedTeam = (team || "").toString().trim();
+  
+  for (let i = 1; i < values.length; i++) {
+    const sheetTeam = (values[i][3] || "").toString().trim();
+    // Allow matching either exact label "Team - Coach" or just "Team" (for older requests)
+    if ((sheetTeam === normalizedTeam || sheetTeam.startsWith(normalizedTeam)) && values[i][2]) {
+        bccEmails.push(values[i][2].toString().trim());
+    }
+  }
+  
+  if (bccEmails.length > 0) {
+      // Force sending to Admin to avoid "no valid recipient" errors, BCC to subscribers
+      MailApp.sendEmail({
+          to: "Dani.tankel@gmail.com",
+          bcc: bccEmails.join(","),
+          subject: "מערכת רעננה כדורסל: עדכון לו\"ז לקבוצת " + normalizedTeam,
+          htmlBody: `
+            <!DOCTYPE html>
+            <html dir="rtl" lang="he">
+            <head>
+              <meta charset="utf-8">
+              <style>
+                body {
+                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                  background-color: #f3f4f6;
+                  margin: 0;
+                  padding: 20px;
+                  color: #333;
+                }
+                .container {
+                  max-width: 600px;
+                  margin: 0 auto;
+                  background-color: #ffffff;
+                  border-radius: 12px;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+                  overflow: hidden;
+                }
+                .header {
+                  background-color: #2563eb;
+                  color: #ffffff;
+                  padding: 20px;
+                  text-align: center;
+                  font-size: 24px;
+                  font-weight: bold;
+                }
+                .content {
+                  padding: 30px;
+                  line-height: 1.6;
+                  font-size: 16px;
+                }
+                .team-name {
+                  color: #2563eb;
+                  font-size: 20px;
+                  font-weight: bold;
+                  margin-bottom: 15px;
+                  padding-bottom: 15px;
+                  border-bottom: 2px solid #f3f4f6;
+                }
+                .message-box {
+                  background-color: #fef2f2;
+                  border-right: 4px solid #ef4444;
+                  padding: 15px;
+                  margin: 20px 0;
+                  border-radius: 4px;
+                }
+                .footer {
+                  background-color: #f9fafb;
+                  padding: 20px;
+                  text-align: center;
+                  font-size: 13px;
+                  color: #6b7280;
+                  border-top: 1px solid #e5e7eb;
+                }
+                .link-btn {
+                  display: inline-block;
+                  background-color: #2563eb;
+                  color: white;
+                  text-decoration: none;
+                  padding: 10px 20px;
+                  border-radius: 6px;
+                  margin-top: 20px;
+                  font-weight: bold;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  🏀 מכבי עירוני רעננה
+                </div>
+                <div class="content">
+                  <div class="team-name">עדכון לגבי קבוצת: ${team}</div>
+                  
+                  <div class="message-box">
+                    <strong>${message}</strong>
+                  </div>
+                  
+                  <p>נא לשים לב לשינויים בלוח הזמנים. לפרטים נוספים וצפייה בלוח המלא, ניתן להיכנס לאתר.</p>
+                  
+                  <div style="text-align: center; margin-top: 30px; margin-bottom: 10px;">
+                    <a href="https://ironyraanana-production.up.railway.app/" class="link-btn">מעבר ללוח הזמנים המלא &larr;</a>
+                  </div>
+                </div>
+                <div class="footer">
+                  <p>הודעה זו נשלחה אוטומטית ממערכת עירוני רעננה כדורסל בעקבות רישומך לקבלת עדכונים לקבוצה זו.</p>
+                  <p>במידה ואינך מעוניין לקבל עדכונים נוספים, אנא פנה להנהלת המועדון.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+      });
+  }
 }
 
 function createSuccessResponse(payload) {

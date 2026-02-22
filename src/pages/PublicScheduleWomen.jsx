@@ -6,11 +6,13 @@ import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createI
 import LeagueGamesBanner from '../components/LeagueGamesBanner';
 import HallView from '../components/HallView';
 import DailyView from '../components/DailyView';
+import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
 const parseScheduleContent = parseCellContent;
 
-
+// This URL should be the LIVE sheet's Web App URL
+const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbyUzPGUSE7SQb6_jLO9P3OQER1wPAP6jaDq4B7P0zBTuwLvSTZQjPOZcnR6M7ts7b0/exec";
 // Merged Data Source (Same as Men's)
 const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
 
@@ -24,8 +26,7 @@ function PublicScheduleWomen() {
     const [error, setError] = useState('');
 
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
-
-
+    const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -379,6 +380,14 @@ function PublicScheduleWomen() {
 
                         {viewMode === 'team' && selectedTeamId && (
                             <div className="actions-section">
+                                <button
+                                    onClick={() => setIsRegisterModalOpen(true)}
+                                    className="action-btn"
+                                    style={{ background: '#BE185D', color: 'white' }}
+                                >
+                                    <span>עידכונים</span>
+                                    <span className="btn-icon">🔔</span>
+                                </button>
                                 <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                     <span>שתף בוואטסאפ</span>
                                     <span className="btn-icon">💬</span>
@@ -534,6 +543,13 @@ function PublicScheduleWomen() {
                     </>
                 </>
             )}
+
+            <RegisterUpdatesModal
+                isOpen={isRegisterModalOpen}
+                onClose={() => setIsRegisterModalOpen(false)}
+                teamName={getSelectedTeamName()}
+                sheetUrl={LIVE_SHEET_API}
+            />
         </div>
     );
 }

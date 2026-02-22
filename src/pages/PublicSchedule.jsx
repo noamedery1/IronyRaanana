@@ -7,12 +7,13 @@ import LeagueGamesBanner from '../components/LeagueGamesBanner';
 import HallView from '../components/HallView';
 import DailyView from '../components/DailyView';
 import TrainerEditModal from '../components/TrainerEditModal'; // Import the Modal
+import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
 const parseScheduleContent = parseCellContent;
 
 // This URL should be the LIVE sheet's Web App URL
-const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbwYvRj8HoUzqrOcteCiqRQFGAKsrU4unmv5WZm4OujxmncI5epkO32FjtVFvG2XNLw/exec";
+const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbyUzPGUSE7SQb6_jLO9P3OQER1wPAP6jaDq4B7P0zBTuwLvSTZQjPOZcnR6M7ts7b0/exec";
 const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
 
 function PublicSchedule() {
@@ -25,6 +26,7 @@ function PublicSchedule() {
     const [selectedTeamId, setSelectedTeamId] = useState('');
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
+    const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -187,7 +189,7 @@ function PublicSchedule() {
         const row = teamObj.absoluteRow;
 
         setSelectedSessionForEdit({
-            team: teamObj.name,
+            team: teamObj.label,
             coach: teamObj.coach,
             day: dayName,
             time: time,
@@ -331,6 +333,14 @@ function PublicSchedule() {
 
                         {viewMode === 'team' && selectedTeamId && (
                             <div className="actions-section">
+                                <button
+                                    onClick={() => setIsRegisterModalOpen(true)}
+                                    className="action-btn"
+                                    style={{ background: '#EA580C', color: 'white' }}
+                                >
+                                    <span>עידכונים</span>
+                                    <span className="btn-icon">🔔</span>
+                                </button>
                                 <button onClick={() => {
                                     const teamName = getSelectedTeamName();
                                     const teamObj = getTeamObj();
@@ -575,6 +585,13 @@ function PublicSchedule() {
                 sessionData={selectedSessionForEdit}
                 sheetUrl={LIVE_SHEET_API}
                 availableLocations={locations}
+            />
+
+            <RegisterUpdatesModal
+                isOpen={isRegisterModalOpen}
+                onClose={() => setIsRegisterModalOpen(false)}
+                teamName={getSelectedTeamName()}
+                sheetUrl={LIVE_SHEET_API}
             />
         </div >
     );
