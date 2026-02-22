@@ -35,8 +35,11 @@ function handleSendFeedback(data) {
   const adminEmail = "Dani.tankel@gmail.com"; 
   MailApp.sendEmail({
     to: adminEmail,
-    subject: "New Feedback",
-    body: "Name: " + (data.name || "Anon") + "\nMessage:\n" + data.message
+    replyTo: data.email || "",
+    subject: "New Feedback: " + (data.name || "Anon"),
+    body: "Name: " + (data.name || "Anon") + 
+          "\nEmail: " + (data.email || "Not provided") + 
+          "\n\nMessage:\n" + data.message
   });
   return createSuccessResponse("Sent");
 }
@@ -147,7 +150,7 @@ function handleApprove(reqRow) {
 
   // Schema: Time(0), Trainer(1), Day(2), Orig(3), Team(4), Type(5), NewTime(6), NewLoc(7), NewDay(8), Reason(9), Status(10), Row(11), Col(12)
   const dataRange = reqSheet.getRange(reqRow, 1, 1, 13);
-  const data = dataRange.getValues()[0]; 
+  const data = dataRange.getDisplayValues()[0]; 
   
   const status = data[10]; // Index 10 is Status
   if (status !== 'PENDING') return HtmlService.createHtmlOutput("<h3>Already processed: " + status + "</h3>");
@@ -205,8 +208,8 @@ function handleApprove(reqRow) {
       
       // 3. Update New Cell
       const newCell = mainSheet.getRange(targetRow, newDayCol);
-      // const currentNewVal = newCell.getValue().toString();
-      const moveVal = newTime + " " + (newLoc || "");
+      // Construct move string - ensuring newTime is a string
+      const moveVal = newTime.toString() + " " + (newLoc || "");
       newCell.setValue(moveVal);
       newCell.setBackground('#D9EAD3');
   }

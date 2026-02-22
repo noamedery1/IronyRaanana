@@ -7,7 +7,7 @@ const TrainerPortal = () => {
     // CONFIGURATION
     // --------------------------------------------------------------------------
     // IMPORTANT: Replace this with your actual Web App URL for the LIVE sheet
-    const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbwXH97EssxkFt4E_v26uBdO-tYoVi4OrROQn8LKGT-BRmYst_qQQpTodQHpGkRrK-k/exec";
+    const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbwYvRj8HoUzqrOcteCiqRQFGAKsrU4unmv5WZm4OujxmncI5epkO32FjtVFvG2XNLw/exec";
 
     // We assume the live sheet ID is the one from WomenDashboard or Public
     // For now, let's hardcode the ID if known or ask user to provide it.

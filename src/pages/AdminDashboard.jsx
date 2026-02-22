@@ -10,7 +10,7 @@ const AdminDashboard = () => {
 
     // Setup state
     const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/edit?usp=sharing');
-    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbzXzCDHLFUb2jZlBwrgsxaN_4Q_IAnPaFcGL9rEtL5pLScKxwPpyaV2Xo2Yn-iOoUYB/exec');
+    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbwYvRj8HoUzqrOcteCiqRQFGAKsrU4unmv5WZm4OujxmncI5epkO32FjtVFvG2XNLw/exec');
     const [sheetName, setSheetName] = useState('גיליון1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);

@@ -12,7 +12,7 @@ import TrainerEditModal from '../components/TrainerEditModal'; // Import the Mod
 const parseScheduleContent = parseCellContent;
 
 // This URL should be the LIVE sheet's Web App URL
-const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbwXH97EssxkFt4E_v26uBdO-tYoVi4OrROQn8LKGT-BRmYst_qQQpTodQHpGkRrK-k/exec";
+const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbwYvRj8HoUzqrOcteCiqRQFGAKsrU4unmv5WZm4OujxmncI5epkO32FjtVFvG2XNLw/exec";
 const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
 
 function PublicSchedule() {

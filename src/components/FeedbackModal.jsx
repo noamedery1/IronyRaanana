@@ -6,12 +6,13 @@ const FeedbackModal = ({
     onSuccess
 }) => {
     const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
 
     // This URL should be the LIVE sheet's Web App URL
     // Ideally this comes from ENV or a config file
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbwXH97EssxkFt4E_v26uBdO-tYoVi4OrROQn8LKGT-BRmYst_qQQpTodQHpGkRrK-k/exec";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbwYvRj8HoUzqrOcteCiqRQFGAKsrU4unmv5WZm4OujxmncI5epkO32FjtVFvG2XNLw/exec";
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,6 +24,7 @@ const FeedbackModal = ({
             const payload = {
                 action: 'sendFeedback',
                 name: name,
+                email: email,
                 message: message
             };
 
@@ -36,6 +38,7 @@ const FeedbackModal = ({
             // Since no-cors returns opaque response, we assume success if no network error
             alert('תודה על המשוב! נשלח בהצלחה.');
             setName('');
+            setEmail('');
             setMessage('');
             onSuccess?.();
             onClose();
@@ -95,6 +98,17 @@ const FeedbackModal = ({
                             onChange={(e) => setName(e.target.value)}
                             style={{ width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid #ddd' }}
                             placeholder="ישראל ישראלי"
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>אימייל לחזרה (אופציונלי)</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            style={{ width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                            placeholder="email@example.com"
                         />
                     </div>
 
