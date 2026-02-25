@@ -231,11 +231,45 @@ const AdminDashboard = () => {
                             }
                         });
 
+                        // Extract Unique Halls & Assign Colors
+                        const locationsSet = new Set();
+                        dataRows.forEach(row => {
+                            for (let i = dayStartIndex; i < dayStartIndex + 7; i++) {
+                                const cell = row[i];
+                                if (!cell) continue;
+                                const nums = cell.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
+                                if (nums) {
+                                    let loc = cell.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
+                                    loc = loc.replace(/משחק|ב-|🏀|🏃/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
+                                    if (loc) locationsSet.add(loc);
+                                }
+                            }
+                        });
+
+                        const locationPalette = [
+                            '#fecaca', '#fde68a', '#d9f99d', '#a7f3d0', '#99f6e4',
+                            '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8', '#fecdd3',
+                            '#bbf7d0', '#e9d5ff', '#a5f3fc', '#bfdbfe', '#fef08a'
+                        ];
+
+                        const hallColorsMap = {};
+                        // Process 'משחק' or 'Games' specially if needed, but here we just map found locations
+                        let colorIdx = 0;
+                        Array.from(locationsSet).sort().forEach(loc => {
+                            if (loc === 'משחק' || loc.includes('משחק')) {
+                                hallColorsMap[loc] = '#ffedd5'; // orange for games
+                            } else {
+                                hallColorsMap[loc] = locationPalette[colorIdx % locationPalette.length];
+                                colorIdx++;
+                            }
+                        });
+
 
                         setSheetData({
                             headers: headerRow,
                             teams: uniqueTeams, // Now an array of objects
                             rawRows: dataRows,
+                            hallColors: hallColorsMap,
                             indices: {
                                 team: teamIndex,
                                 coach: coachIndex,
@@ -375,6 +409,7 @@ const AdminDashboard = () => {
                             teamConfig={teamConfig}
                             setTeamConfig={setTeamConfig}
                             onTeamUpdate={handleTeamUpdate}
+                            hallColors={sheetData?.hallColors || {}}
                         />
                     </div>
                 );
@@ -390,6 +425,7 @@ const AdminDashboard = () => {
                         indices={sheetData?.indices}
                         currentSchedule={currentSchedule}
                         setCurrentSchedule={setCurrentSchedule}
+                        hallColors={sheetData?.hallColors || {}}
                     />
                 );
             default:

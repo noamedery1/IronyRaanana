@@ -91,12 +91,16 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
         if (hallColors && hallColors[loc]) {
             return hallColors[loc];
         }
+        const palette = [
+            '#fecaca', '#fde68a', '#d9f99d', '#a7f3d0', '#99f6e4',
+            '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8', '#fecdd3',
+            '#bbf7d0', '#e9d5ff', '#a5f3fc', '#bfdbfe', '#fef08a'
+        ];
         let hash = 0;
         for (let i = 0; i < loc.length; i++) {
             hash = loc.charCodeAt(i) + ((hash << 5) - hash);
         }
-        const hue = Math.abs(hash % 360);
-        return `hsl(${hue}, 65%, 45%)`; // Distinct colors
+        return palette[Math.abs(hash) % palette.length];
     };
 
     const addConstraint = () => {
@@ -299,10 +303,11 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                                     background: c.type === 'OFF' ? '#EF476F' :
                                         c.type === 'MATCH' ? '#FCA311' :
                                             getLocationColor(c.location),
-                                    color: 'white',
+                                    color: (c.type === 'OFF' || c.type === 'MATCH') ? 'white' : '#1f2937',
                                     padding: '0.2rem 0.6rem',
                                     borderRadius: '12px',
                                     fontSize: '0.8rem',
+                                    fontWeight: '500',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '5px',

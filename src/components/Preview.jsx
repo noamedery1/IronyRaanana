@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indices, currentSchedule, setCurrentSchedule }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indices, currentSchedule, setCurrentSchedule, hallColors }) => {
     // const [generatedSchedule, setGeneratedSchedule] = useState(null); // Lifted up
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -488,8 +488,35 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                     const colIndex = dayStart + colMapIndex;
                                     const cellData = rowData ? rowData[colIndex] : '';
                                     const isConflict = conflicts.has(`${rowIndex}_${colIndex}`);
-
                                     const isHovered = hoveredCell && hoveredCell.r === rowIndex && hoveredCell.c === colIndex;
+
+                                    let bgColor = 'transparent';
+                                    if (isConflict) {
+                                        bgColor = '#fee2e2';
+                                    } else if (cellData && hallColors) {
+                                        const cleanLoc = cellData.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').replace(/משחק|ב-|🏀|🏃/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
+                                        const matchedLoc = Object.keys(hallColors).find(l =>
+                                            (l === 'משחק' && cellData.includes('משחק')) ||
+                                            cleanLoc.includes(l)
+                                        );
+                                        if (matchedLoc) {
+                                            bgColor = hallColors[matchedLoc];
+                                        } else if (cellData.includes('משחק')) {
+                                            bgColor = '#ffedd5';
+                                        } else if (cleanLoc) {
+                                            // Fallback dynamic pastel color
+                                            const palette = [
+                                                '#fecaca', '#fde68a', '#d9f99d', '#a7f3d0', '#99f6e4',
+                                                '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8', '#fecdd3',
+                                                '#bbf7d0', '#e9d5ff', '#a5f3fc', '#bfdbfe', '#fef08a'
+                                            ];
+                                            let hash = 0;
+                                            for (let i = 0; i < cleanLoc.length; i++) {
+                                                hash = cleanLoc.charCodeAt(i) + ((hash << 5) - hash);
+                                            }
+                                            bgColor = palette[Math.abs(hash) % palette.length];
+                                        }
+                                    }
 
                                     return (
                                         <td
@@ -497,7 +524,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
                                             style={{
                                                 padding: 0,
                                                 border: isConflict ? '2px solid #ef4444' : '1px solid #eee',
-                                                backgroundColor: isConflict ? '#fee2e2' : 'transparent',
+                                                backgroundColor: bgColor,
                                                 cursor: cellData ? 'grab' : 'default',
                                                 position: 'relative'
                                             }}

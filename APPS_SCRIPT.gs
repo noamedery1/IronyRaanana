@@ -339,12 +339,7 @@ function notifySubscribers(team, message) {
   }
   
   if (bccEmails.length > 0) {
-      // Force sending to Admin to avoid "no valid recipient" errors, BCC to subscribers
-      MailApp.sendEmail({
-          to: "Dani.tankel@gmail.com",
-          bcc: bccEmails.join(","),
-          subject: "מערכת רעננה כדורסל: עדכון לו\"ז לקבוצת " + normalizedTeam,
-          htmlBody: `
+      const htmlBodyContent = `
             <!DOCTYPE html>
             <html dir="rtl" lang="he">
             <head>
@@ -438,7 +433,15 @@ function notifySubscribers(team, message) {
               </div>
             </body>
             </html>
-          `
+          `;
+
+      // Loop through and send email individually to each registered user
+      bccEmails.forEach(userEmail => {
+          MailApp.sendEmail({
+              to: userEmail,
+              subject: "מערכת רעננה כדורסל: עדכון לו\"ז לקבוצת " + normalizedTeam,
+              htmlBody: htmlBodyContent
+          });
       });
   }
 }

@@ -12,7 +12,7 @@ const FeedbackModal = ({
 
     // This URL should be the LIVE sheet's Web App URL
     // Ideally this comes from ENV or a config file
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbyUzPGUSE7SQb6_jLO9P3OQER1wPAP6jaDq4B7P0zBTuwLvSTZQjPOZcnR6M7ts7b0/exec";
+    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxGQADUyjdb9khg5Txi8EmZCT-RsIhVSbf1j_XGMpTYbvnkJak-BUv6UV0a5K9a-Yg/exec";
 
     const handleSubmit = async (e) => {
         e.preventDefault();

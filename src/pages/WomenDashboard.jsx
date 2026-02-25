@@ -141,21 +141,20 @@ const WomenDashboard = () => {
                         });
 
                         const locationPalette = [
-                            '#e11d48', // rose-600
-                            '#059669', // emerald-600
-                            '#0284c7', // sky-600
-                            '#7c3aed', // violet-600
-                            '#db2777', // pink-600
-                            '#d97706', // amber-600
-                            '#4f46e5', // indigo-600
-                            '#dc2626', // red-600
-                            '#16a34a', // green-600
-                            '#2563eb', // blue-600
+                            '#fecaca', '#fde68a', '#d9f99d', '#a7f3d0', '#99f6e4',
+                            '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8', '#fecdd3',
+                            '#bbf7d0', '#e9d5ff', '#a5f3fc', '#bfdbfe', '#fef08a'
                         ];
 
                         const hallColorsMap = {};
-                        Array.from(locationsSet).sort().forEach((loc, idx) => {
-                            hallColorsMap[loc] = locationPalette[idx % locationPalette.length];
+                        let colorIdx = 0;
+                        Array.from(locationsSet).sort().forEach(loc => {
+                            if (loc === 'משחק' || loc.includes('משחק')) {
+                                hallColorsMap[loc] = '#ffedd5'; // orange for games
+                            } else {
+                                hallColorsMap[loc] = locationPalette[colorIdx % locationPalette.length];
+                                colorIdx++;
+                            }
                         });
                         // Also store this somewhere if needed, for potentially passing to other components
                         setSheetData(prev => ({ ...prev, hallColors: hallColorsMap }));
@@ -391,6 +390,7 @@ const WomenDashboard = () => {
                             saveUrl={saveUrl}
                             sheetName={sheetName}
                             indices={sheetData.indices}
+                            hallColors={sheetData.hallColors}
                         />
                     )}
                 </main>

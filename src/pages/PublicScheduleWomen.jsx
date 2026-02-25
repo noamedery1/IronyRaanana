@@ -12,7 +12,7 @@ import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 const parseScheduleContent = parseCellContent;
 
 // This URL should be the LIVE sheet's Web App URL
-const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbyUzPGUSE7SQb6_jLO9P3OQER1wPAP6jaDq4B7P0zBTuwLvSTZQjPOZcnR6M7ts7b0/exec";
+const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbxGQADUyjdb9khg5Txi8EmZCT-RsIhVSbf1j_XGMpTYbvnkJak-BUv6UV0a5K9a-Yg/exec";
 // Merged Data Source (Same as Men's)
 const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
 
