@@ -389,6 +389,7 @@ const WomenDashboard = () => {
                             teamConfig={teamConfig}
                             saveUrl={saveUrl}
                             sheetName={sheetName}
+                            sheetId={extractSheetId(sheetUrl)}
                             indices={sheetData.indices}
                             hallColors={sheetData.hallColors}
                         />

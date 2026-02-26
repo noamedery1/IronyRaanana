@@ -19,7 +19,17 @@ function doPost(e) {
 
 // 1. SAVE SCHEDULE
 function handleSaveSchedule(data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let ss;
+  if (data.sheetId) {
+    try {
+      ss = SpreadsheetApp.openById(data.sheetId);
+    } catch (e) {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    }
+  } else {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+  }
+  
   let sheet = ss.getSheetByName(data.sheetName || "Sheet1");
   if (!sheet) sheet = ss.insertSheet(data.sheetName || "Sheet1");
   

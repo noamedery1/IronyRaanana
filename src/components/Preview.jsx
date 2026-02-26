@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indices, currentSchedule, setCurrentSchedule, hallColors }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors }) => {
     // const [generatedSchedule, setGeneratedSchedule] = useState(null); // Lifted up
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -370,7 +370,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, indi
 
                 const payload = {
                     rows: [currentHeaders, ...safeData],
-                    sheetName: sheetName || 'Sheet1'
+                    sheetName: sheetName || 'Sheet1',
+                    sheetId: sheetId
                 };
 
                 console.log("Saving to URL:", saveUrl);

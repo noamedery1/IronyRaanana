@@ -106,7 +106,8 @@ const AdminDashboard = () => {
 
         const payload = {
             sheetName: 'SavedRules',
-            rows: rows
+            rows: rows,
+            sheetId: extractSheetId(sheetUrl)
         };
 
         try {
@@ -422,6 +423,7 @@ const AdminDashboard = () => {
                         teamConfig={teamConfig}
                         saveUrl={saveUrl}
                         sheetName={sheetName}
+                        sheetId={extractSheetId(sheetUrl)}
                         indices={sheetData?.indices}
                         currentSchedule={currentSchedule}
                         setCurrentSchedule={setCurrentSchedule}
