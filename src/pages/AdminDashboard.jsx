@@ -4,13 +4,16 @@ import Papa from 'papaparse';
 import WeekBuilder from '../components/WeekBuilder';
 import Preview from '../components/Preview';
 
+const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
+const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID}/edit?gid=0#gid=0`;
+
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('setup');
 
     // Setup state
-    const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/edit?usp=sharing');
-    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbwYvRj8HoUzqrOcteCiqRQFGAKsrU4unmv5WZm4OujxmncI5epkO32FjtVFvG2XNLw/exec');
+    const [sheetUrl] = useState(ADMIN_SHEET_URL);
+    const [saveUrl, setSaveUrl] = useState('');
     const [sheetName, setSheetName] = useState('גיליון1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -147,6 +150,11 @@ const AdminDashboard = () => {
         const id = extractSheetId(sheetUrl);
         if (!id) {
             setError('Invalid Google Sheet URL. Could not find Sheet ID.');
+            setLoading(false);
+            return;
+        }
+        if (id !== ADMIN_SHEET_ID) {
+            setError('Admin dashboard is locked to the dedicated Admin sheet only.');
             setLoading(false);
             return;
         }
@@ -377,9 +385,9 @@ const AdminDashboard = () => {
                             <input
                                 type="text"
                                 value={sheetUrl}
-                                onChange={(e) => setSheetUrl(e.target.value)}
                                 placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv..."
-                                style={{ flex: 1, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                                disabled
+                                style={{ flex: 1, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', background: '#f8fafc', color: '#374151' }}
                             />
                             <button
                                 onClick={handleConnect}
@@ -391,6 +399,48 @@ const AdminDashboard = () => {
                         </div>
 
                         {error && <div style={{ color: '#ef4444', marginTop: '1rem', background: '#fee2e2', padding: '1rem', borderRadius: '4px' }}>{error}</div>}
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
+                            Admin is locked to: <code>{ADMIN_SHEET_URL}</code>
+                        </div>
+
+                        <div style={{ marginTop: '2rem' }}>
+                            <h4 style={{ marginBottom: '0.5rem' }}>הגדרות שמירה (Admin)</h4>
+                            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: 0 }}>
+                                כדי למנוע שמירה לקובץ שגוי, יש להגדיר כתובת Web App ייעודית של Apps Script עבור גיליון ה-Admin.
+                            </p>
+
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                כתובת ה-API לשמירה (Web App URL)
+                            </label>
+                            <input
+                                type="text"
+                                value={saveUrl}
+                                onChange={(e) => setSaveUrl(e.target.value)}
+                                placeholder="https://script.google.com/macros/s/.../exec"
+                                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', direction: 'ltr' }}
+                            />
+
+                            {saveUrl && saveUrl.includes('/library/') && (
+                                <div style={{ color: '#E11D48', fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: 500 }}>
+                                    🛑 זו כתובת Library. יש להשתמש ב-Web App URL שמסתיים ב-<code>/exec</code>.
+                                </div>
+                            )}
+                            {saveUrl && !saveUrl.includes('/library/') && !saveUrl.includes('macros/s/') && !saveUrl.includes('script.google.com') && (
+                                <div style={{ color: '#F59E0B', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                                    ⚠️ הכתובת לא נראית כמו כתובת Google Apps Script תקינה.
+                                </div>
+                            )}
+
+                            <div style={{ marginTop: '1rem' }}>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>שם הגיליון (Tab) לשמירה</label>
+                                <input
+                                    type="text"
+                                    value={sheetName}
+                                    onChange={(e) => setSheetName(e.target.value)}
+                                    style={{ width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 );
             case 'weekBuilder':
