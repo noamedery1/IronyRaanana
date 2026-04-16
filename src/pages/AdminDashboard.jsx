@@ -13,7 +13,7 @@ const AdminDashboard = () => {
 
     // Setup state
     const [sheetUrl] = useState(ADMIN_SHEET_URL);
-    const [saveUrl, setSaveUrl] = useState('');
+    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbzXzCDHLFUb2jZlBwrgsxaN_4Q_IAnPaFcGL9rEtL5pLScKxwPpyaV2Xo2Yn-iOoUYB/exec');
     const [sheetName, setSheetName] = useState('גיליון1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);

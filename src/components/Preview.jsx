@@ -7,6 +7,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const [isSaving, setIsSaving] = useState(false);
     const [dragStart, setDragStart] = useState(null);
     const [hoveredCell, setHoveredCell] = useState(null);
+    const [isHallPickerOpen, setIsHallPickerOpen] = useState(false);
+    const [hallPickerTarget, setHallPickerTarget] = useState(null);
+    const [hallStartTime, setHallStartTime] = useState('16:00');
+    const [hallEndTime, setHallEndTime] = useState('17:30');
 
     // Manage headers locally
     const [currentHeaders, setCurrentHeaders] = useState(headers || []);
@@ -143,6 +147,174 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         }
         setCurrentHeaders(newHeaders);
     };
+
+    const normalizeTimeToken = (timeValue) => {
+        if (!timeValue) return null;
+        const cleaned = String(timeValue).trim().replace(':', '');
+        if (!/^\d{3,4}$/.test(cleaned)) return null;
+        const padded = cleaned.padStart(4, '0');
+        const h = Number(padded.slice(0, 2));
+        const m = Number(padded.slice(2, 4));
+        if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+        return `${String(h).padStart(2, '0')}${String(m).padStart(2, '0')}`;
+    };
+
+    const formatTimeToken = (timeToken) => {
+        const normalized = normalizeTimeToken(timeToken);
+        if (!normalized) return '';
+        return `${normalized.slice(0, 2)}:${normalized.slice(2, 4)}`;
+    };
+
+    const toMinutes = (timeToken) => {
+        const normalized = normalizeTimeToken(timeToken);
+        if (!normalized) return null;
+        return Number(normalized.slice(0, 2)) * 60 + Number(normalized.slice(2, 4));
+    };
+
+    const parseTimeRangeFromText = (text) => {
+        if (!text) return null;
+        const nums = String(text).replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
+        if (!nums) return null;
+        return { start: nums[1], end: nums[2] };
+    };
+
+    const extractLocation = (line) => {
+        if (!line) return '';
+        let location = String(line).replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
+        location = location
+            .replace(/משחק|ב-|🏀|🏃/g, '')
+            .replace('אתלטיקה', '')
+            .replace('בית', '')
+            .replace('חוץ', '')
+            .trim();
+        return location;
+    };
+
+    const isOverlap = (startA, endA, startB, endB) => {
+        return Math.max(startA, startB) < Math.min(endA, endB);
+    };
+
+    const getAllKnownHalls = () => {
+        const halls = new Set();
+        LOCATIONS.forEach((loc) => halls.add(loc));
+        Object.keys(hallColors || {}).forEach((loc) => halls.add(loc));
+
+        dataToShow.forEach((row) => {
+            for (let d = 0; d < 7; d++) {
+                const colIdx = dayStart + d;
+                const cell = row?.[colIdx];
+                if (!cell || typeof cell !== 'string') continue;
+                const lines = cell.split('\n');
+                lines.forEach((line) => {
+                    const location = extractLocation(line);
+                    if (location) halls.add(location);
+                });
+            }
+        });
+
+        return Array.from(halls).filter(Boolean).sort((a, b) => a.localeCompare(b, 'he'));
+    };
+
+    const getHallAvailability = () => {
+        if (!hallPickerTarget) return { available: [], unavailable: [] };
+
+        const startToken = normalizeTimeToken(hallStartTime);
+        const endToken = normalizeTimeToken(hallEndTime);
+        const startMin = toMinutes(startToken);
+        const endMin = toMinutes(endToken);
+
+        if (!startToken || !endToken || startMin === null || endMin === null || endMin <= startMin) {
+            return { available: [], unavailable: [] };
+        }
+
+        const occupied = new Map();
+        const allHalls = getAllKnownHalls();
+
+        dataToShow.forEach((row, rIdx) => {
+            const cell = row?.[hallPickerTarget.colIndex];
+            if (!cell || typeof cell !== 'string') return;
+
+            const lines = cell.split('\n');
+            lines.forEach((line) => {
+                const nums = String(line).replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
+                if (!nums) return;
+
+                // Ignore current slot so user can reassign the same cell
+                if (rIdx === hallPickerTarget.rowIndex) return;
+
+                const lineStart = toMinutes(nums[1]);
+                const lineEnd = toMinutes(nums[2]);
+                if (lineStart === null || lineEnd === null) return;
+                if (!isOverlap(startMin, endMin, lineStart, lineEnd)) return;
+
+                const location = extractLocation(line);
+                if (!location) return;
+
+                if (!occupied.has(location)) {
+                    occupied.set(location, {
+                        teamName: row?.[0] || 'Team',
+                        range: `${nums[1]}-${nums[2]}`
+                    });
+                }
+            });
+        });
+
+        const available = [];
+        const unavailable = [];
+
+        allHalls.forEach((hall) => {
+            if (occupied.has(hall)) {
+                const info = occupied.get(hall);
+                unavailable.push({
+                    hall,
+                    reason: `תפוס ע"י ${info.teamName} (${info.range})`
+                });
+            } else {
+                available.push({ hall });
+            }
+        });
+
+        return { available, unavailable };
+    };
+
+    const openHallPicker = (rowIndex, colIndex, dayLabel, teamName, currentValue) => {
+        if (rowIndex === undefined || rowIndex < 0) return;
+        const parsedRange = parseTimeRangeFromText(currentValue);
+        setHallStartTime(parsedRange ? formatTimeToken(parsedRange.start) : '16:00');
+        setHallEndTime(parsedRange ? formatTimeToken(parsedRange.end) : '17:30');
+        setHallPickerTarget({
+            rowIndex,
+            colIndex,
+            dayLabel,
+            teamName
+        });
+        setIsHallPickerOpen(true);
+    };
+
+    const applyHallToTargetCell = (hallName) => {
+        if (!hallPickerTarget) return;
+        const startToken = normalizeTimeToken(hallStartTime);
+        const endToken = normalizeTimeToken(hallEndTime);
+        const startMin = toMinutes(startToken);
+        const endMin = toMinutes(endToken);
+
+        if (!startToken || !endToken || startMin === null || endMin === null || endMin <= startMin) {
+            alert('טווח השעות לא תקין. אנא הזן שעה התחלה וסיום תקינות.');
+            return;
+        }
+
+        const newValue = `${hallName} ${startToken}-${endToken}`;
+        handleCellChange(hallPickerTarget.rowIndex, hallPickerTarget.colIndex, newValue);
+        setIsHallPickerOpen(false);
+        setHallPickerTarget(null);
+    };
+
+    const closeHallPicker = () => {
+        setIsHallPickerOpen(false);
+        setHallPickerTarget(null);
+    };
+
+    const hallAvailability = getHallAvailability();
 
 
 
@@ -585,6 +757,30 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                                     ✕
                                                 </button>
                                             )}
+                                            {isHovered && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openHallPicker(rowIndex, colIndex, dayHeaders[colMapIndex], teamName, cellData || '');
+                                                    }}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        bottom: '2px',
+                                                        left: '2px',
+                                                        background: '#2563eb',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '4px',
+                                                        fontSize: '10px',
+                                                        padding: '2px 6px',
+                                                        cursor: 'pointer',
+                                                        zIndex: 10
+                                                    }}
+                                                    title="מצא אולם פנוי לפי שעה"
+                                                >
+                                                    + אולם
+                                                </button>
+                                            )}
                                         </td>
                                     );
                                 })}
@@ -593,6 +789,119 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     })}
                 </tbody>
             </table>
+
+            {isHallPickerOpen && hallPickerTarget && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    right: 0,
+                    left: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2000
+                }}>
+                    <div style={{
+                        width: 'min(760px, 94vw)',
+                        maxHeight: '85vh',
+                        overflowY: 'auto',
+                        background: 'white',
+                        borderRadius: '10px',
+                        padding: '1rem 1.25rem',
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.2)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h4 style={{ margin: 0 }}>בחירת אולם פנוי</h4>
+                            <button
+                                onClick={closeHallPicker}
+                                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1rem' }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div style={{ marginTop: '0.6rem', color: '#374151', fontSize: '0.9rem' }}>
+                            <strong>קבוצה:</strong> {hallPickerTarget.teamName} | <strong>יום:</strong> {hallPickerTarget.dayLabel}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.9rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <label style={{ fontSize: '0.9rem' }}>משעה:</label>
+                            <input
+                                type="time"
+                                value={hallStartTime}
+                                onChange={(e) => setHallStartTime(e.target.value)}
+                                style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                            />
+                            <label style={{ fontSize: '0.9rem' }}>עד שעה:</label>
+                            <input
+                                type="time"
+                                value={hallEndTime}
+                                onChange={(e) => setHallEndTime(e.target.value)}
+                                style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
+                            />
+                        </div>
+
+                        <div style={{ marginTop: '1rem' }}>
+                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#065f46' }}>
+                                אולמות פנויים ({hallAvailability.available.length})
+                            </h5>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {hallAvailability.available.map((item) => (
+                                    <button
+                                        key={item.hall}
+                                        onClick={() => applyHallToTargetCell(item.hall)}
+                                        style={{
+                                            border: '1px solid #10b981',
+                                            background: '#ecfdf5',
+                                            color: '#065f46',
+                                            borderRadius: '999px',
+                                            padding: '0.35rem 0.75rem',
+                                            cursor: 'pointer',
+                                            fontWeight: 600
+                                        }}
+                                    >
+                                        {item.hall}
+                                    </button>
+                                ))}
+                                {hallAvailability.available.length === 0 && (
+                                    <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                                        אין אולמות פנויים בטווח השעות שנבחר.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '1rem' }}>
+                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#92400e' }}>
+                                אולמות תפוסים ({hallAvailability.unavailable.length})
+                            </h5>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                                {hallAvailability.unavailable.map((item) => (
+                                    <div
+                                        key={item.hall}
+                                        style={{
+                                            background: '#fffbeb',
+                                            border: '1px solid #fcd34d',
+                                            borderRadius: '6px',
+                                            padding: '0.45rem 0.6rem',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        <strong>{item.hall}</strong> - {item.reason}
+                                    </div>
+                                ))}
+                                {hallAvailability.unavailable.length === 0 && (
+                                    <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                                        אין התנגשויות ידועות בטווח.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
