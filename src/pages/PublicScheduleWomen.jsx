@@ -28,7 +28,7 @@ function PublicScheduleWomen() {
 
     const [viewMode, setViewMode] = useState('team');
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-    const { t, localizeDay } = useI18n();
+    const { t, localizeDay, localizeHall } = useI18n();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -333,7 +333,7 @@ function PublicScheduleWomen() {
                                     <div className="hero-time">{next ? (next.time || '—') : t('no_next')}</div>
                                     <div className="hero-meta">
                                         <div className="m"><b>{next ? localizeDay(next.dayName) : '—'}</b><span>{next ? (next.isToday ? t('today') : next.dateText) : ''}</span></div>
-                                        <div className="m"><b>{next?.location || '—'}</b><span>{next?.isMatch ? `🏀 ${t('match')}` : t('training')}</span></div>
+                                        <div className="m"><b>{next?.location ? localizeHall(next.location) : '—'}</b><span>{next?.isMatch ? `🏀 ${t('match')}` : t('training')}</span></div>
                                         <div className="m"><b>{teamObj?.coach || '—'}</b><span>{t('coach')}</span></div>
                                     </div>
                                     <div className="hero-actions">
@@ -356,7 +356,7 @@ function PublicScheduleWomen() {
                                 <div className="hero-card map-card">
                                     <div className="map-info">
                                         <div className="hero-label">📍 {t('location')}</div>
-                                        <h4>{next?.location || t('venue_default')}</h4>
+                                        <h4>{next?.location ? localizeHall(next.location) : t('venue_default')}</h4>
                                         <p>{next ? `${localizeDay(next.dayName)} ${next.isToday ? `(${t('today')})` : next.dateText} · ${next.time || ''}` : t('pick_team_location')}</p>
                                         {next?.location && <NavButton location={next.location} label={`${t('navigate')} ‹`} navWith={t('nav_with')} />}
                                     </div>
@@ -404,7 +404,7 @@ function PublicScheduleWomen() {
                                                             {isCancelled && <span className="status-tag cancelled">❌ {t('cancelled')}</span>}
                                                             {isChanged && <span className="status-tag changed">⚠️ {t('changed')}</span>}
                                                             <div className="event-time">{time}</div>
-                                                            <div className="event-location">{location}</div>
+                                                            <div className="event-location">{localizeHall(location)}</div>
                                                             {isMatch && <div className="match-badge">🏀 {t('match')}</div>}
                                                         </div>
                                                     );

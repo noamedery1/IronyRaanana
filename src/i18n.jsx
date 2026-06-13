@@ -19,6 +19,26 @@ const DAYS = {
     en: { 'ראשון': 'Sunday', 'שני': 'Monday', 'שלישי': 'Tuesday', 'רביעי': 'Wednesday', 'חמישי': 'Thursday', 'שישי': 'Friday', 'שבת': 'Saturday' },
 };
 
+// Hall/venue core-name translations (proper nouns transliterated). Foreign languages show
+// "Translated (original Hebrew)"; Hebrew stays as-is. Team names are NOT translated.
+const HALLS = {
+    'מטרו': { ar: 'مترو', ru: 'Метро', en: 'Metro' },
+    'השרון': { ar: 'هشارون', ru: 'ХаШарон', en: 'HaSharon' },
+    'שרון': { ar: 'شارون', ru: 'Шарон', en: 'Sharon' },
+    'דקל': { ar: 'دكيل', ru: 'Декель', en: 'Dekel' },
+    'תלי': { ar: 'تالي', ru: 'Тали', en: 'Tali' },
+    'זמר': { ar: 'زمر', ru: 'Земер', en: 'Zemer' },
+    'פארק': { ar: 'بارك', ru: 'Парк', en: 'Park' },
+    'יונתן': { ar: 'يوناتان', ru: 'Йонатан', en: 'Yonatan' },
+    'אוסטרו': { ar: 'أوسترو', ru: 'Островски', en: 'Ostrovsky' },
+    'יחדיו': { ar: 'يحديف', ru: 'Яхдав', en: 'Yahdav' },
+    'אביב': { ar: 'أبيب', ru: 'Авив', en: 'Aviv' },
+    'יובל': { ar: 'يوفال', ru: 'Юваль', en: 'Yuval' },
+    'מור': { ar: 'مور', ru: 'Мор', en: 'Mor' },
+    'אסייג': { ar: 'أسياج', ru: 'Асаяг', en: 'Assayag' },
+    'רימון': { ar: 'ريمون', ru: 'Римон', en: 'Rimon' },
+};
+
 const DICT = {
     he: {
         brand_sub: 'מחלקת הכדורסל · לו"ז שבועי', men: 'גברים', women: 'נשים', admin: 'ניהול',
@@ -73,11 +93,19 @@ export function I18nProvider({ children }) {
     }, [lang]);
     const t = (key) => (DICT[lang] && DICT[lang][key]) || DICT.he[key] || key;
     const localizeDay = (heDay) => (DAYS[lang] && DAYS[lang][heDay]) || heDay;
+    const localizeHall = (loc) => {
+        if (!loc || lang === 'he') return loc;
+        const keys = Object.keys(HALLS).sort((a, b) => b.length - a.length);
+        for (const k of keys) {
+            if (loc.includes(k) && HALLS[k][lang]) return `${HALLS[k][lang]} (${loc})`;
+        }
+        return loc;
+    };
     const dir = RTL.includes(lang) ? 'rtl' : 'ltr';
-    return <I18nCtx.Provider value={{ lang, setLang, t, localizeDay, dir }}>{children}</I18nCtx.Provider>;
+    return <I18nCtx.Provider value={{ lang, setLang, t, localizeDay, localizeHall, dir }}>{children}</I18nCtx.Provider>;
 }
 
-export const useI18n = () => useContext(I18nCtx) || { lang: 'he', t: (k) => DICT.he[k] || k, localizeDay: (d) => d, dir: 'rtl', setLang: () => {} };
+export const useI18n = () => useContext(I18nCtx) || { lang: 'he', t: (k) => DICT.he[k] || k, localizeDay: (d) => d, localizeHall: (l) => l, dir: 'rtl', setLang: () => {} };
 
 export function LanguageSwitcher() {
     const { lang, setLang } = useI18n();
