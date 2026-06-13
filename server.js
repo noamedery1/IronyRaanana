@@ -11,6 +11,11 @@ const PORT = process.env.PORT || 3000;
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// Standalone sales landing page (clean URL without .html)
+app.get('/sales-landing', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'sales-landing.html'));
+});
+
 // Handle React routing, return all requests to React app
 app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
