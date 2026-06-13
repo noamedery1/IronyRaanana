@@ -49,7 +49,7 @@ const DICT = {
         share_whatsapp: 'שיתוף בוואטסאפ', cal_live: 'יומן מתעדכן', cal_save: 'שמור ליומן', updates: 'עדכונים',
         cal_live_title: 'הירשם ליומן שמתעדכן אוטומטית בכל שינוי', cal_save_title: 'הורדה חד-פעמית ליומן',
         full_week: 'לו"ז שבועי מלא', cancelled: 'בוטל', changed: 'שינוי', coach_edit_title: 'כניסת מאמן לעריכה', suggest: 'הצעה לשיפור',
-        cal_choose: 'הוסף ליומן:', cal_apple: 'אייפון (Apple)', cal_google: 'Google Calendar', cal_copy: 'העתק קישור', cal_copied: '✓ הועתק',
+        cal_choose: 'הוסף ליומן:', cal_apple: 'אייפון (Apple)', cal_android: 'יומן המכשיר (אנדרואיד)', cal_google: 'Google Calendar', cal_copy: 'העתק קישור', cal_copied: '✓ הועתק',
     },
     ar: {
         brand_sub: 'قسم كرة السلة · الجدول الأسبوعي', men: 'رجال', women: 'نساء', admin: 'الإدارة',
@@ -60,7 +60,7 @@ const DICT = {
         share_whatsapp: 'مشاركة عبر واتساب', cal_live: 'تقويم محدّث', cal_save: 'حفظ في التقويم', updates: 'تحديثات',
         cal_live_title: 'اشترك في تقويم يتحدّث تلقائياً عند كل تغيير', cal_save_title: 'تنزيل لمرة واحدة',
         full_week: 'الجدول الأسبوعي الكامل', cancelled: 'أُلغي', changed: 'تغيير', coach_edit_title: 'دخول المدرب للتعديل', suggest: 'اقتراح للتحسين',
-        cal_choose: 'أضف إلى التقويم:', cal_apple: 'آيفون (Apple)', cal_google: 'Google Calendar', cal_copy: 'نسخ الرابط', cal_copied: '✓ تم النسخ',
+        cal_choose: 'أضف إلى التقويم:', cal_apple: 'آيفون (Apple)', cal_android: 'تقويم الجهاز (أندرويد)', cal_google: 'Google Calendar', cal_copy: 'نسخ الرابط', cal_copied: '✓ تم النسخ',
     },
     ru: {
         brand_sub: 'Баскетбол · Недельное расписание', men: 'Мужчины', women: 'Женщины', admin: 'Админ',
@@ -71,7 +71,7 @@ const DICT = {
         share_whatsapp: 'Поделиться в WhatsApp', cal_live: 'Авто-календарь', cal_save: 'В календарь', updates: 'Обновления',
         cal_live_title: 'Подписка на авто-обновляемый календарь', cal_save_title: 'Разовая загрузка',
         full_week: 'Полное недельное расписание', cancelled: 'Отменено', changed: 'Изменение', coach_edit_title: 'Вход тренера', suggest: 'Предложение',
-        cal_choose: 'Добавить в календарь:', cal_apple: 'iPhone (Apple)', cal_google: 'Google Calendar', cal_copy: 'Копировать ссылку', cal_copied: '✓ Скопировано',
+        cal_choose: 'Добавить в календарь:', cal_apple: 'iPhone (Apple)', cal_android: 'Календарь устройства (Android)', cal_google: 'Google Calendar', cal_copy: 'Копировать ссылку', cal_copied: '✓ Скопировано',
     },
     en: {
         brand_sub: 'Basketball Dept · Weekly Schedule', men: 'Men', women: 'Women', admin: 'Admin',
@@ -82,7 +82,7 @@ const DICT = {
         share_whatsapp: 'Share on WhatsApp', cal_live: 'Auto calendar', cal_save: 'Save to calendar', updates: 'Updates',
         cal_live_title: 'Subscribe to an auto-updating calendar', cal_save_title: 'One-time download',
         full_week: 'Full weekly schedule', cancelled: 'Cancelled', changed: 'Changed', coach_edit_title: 'Coach edit access', suggest: 'Suggest improvement',
-        cal_choose: 'Add to calendar:', cal_apple: 'iPhone (Apple)', cal_google: 'Google Calendar', cal_copy: 'Copy link', cal_copied: '✓ Copied',
+        cal_choose: 'Add to calendar:', cal_apple: 'iPhone (Apple)', cal_android: 'Device calendar (Android)', cal_google: 'Google Calendar', cal_copy: 'Copy link', cal_copied: '✓ Copied',
     },
 };
 

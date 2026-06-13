@@ -1,20 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useI18n } from '../i18n.jsx';
 
-// "Auto calendar" subscribe button with a cross-platform chooser:
-// Apple (webcal), Google Calendar (add-by-url), and copy-link fallback.
+// "Auto calendar" subscribe button + a centered chooser modal (not clipped by the hero card),
+// with cross-platform options: Apple (webcal), Android device (.ics), Google Calendar, copy link.
 export default function CalendarSubscribe({ teamLabel }) {
     const { t } = useI18n();
     const [open, setOpen] = useState(false);
     const [copied, setCopied] = useState(false);
-    const ref = useRef(null);
-
-    useEffect(() => {
-        if (!open) return;
-        const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-        document.addEventListener('mousedown', onClick);
-        return () => document.removeEventListener('mousedown', onClick);
-    }, [open]);
 
     if (!teamLabel) return null;
 
@@ -22,9 +14,10 @@ export default function CalendarSubscribe({ teamLabel }) {
     const q = encodeURIComponent(teamLabel);
     const httpsUrl = `${window.location.protocol}//${host}/calendar.ics?team=${q}`;
     const webcalUrl = `webcal://${host}/calendar.ics?team=${q}`;
-    const googleUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(httpsUrl)}`;
+    const googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(httpsUrl)}`;
 
     const apple = () => { window.location.href = webcalUrl; setOpen(false); };
+    const android = () => { window.location.href = httpsUrl; setOpen(false); };
     const google = () => { window.open(googleUrl, '_blank', 'noreferrer'); setOpen(false); };
     const copy = async () => {
         try { await navigator.clipboard.writeText(httpsUrl); setCopied(true); setTimeout(() => setCopied(false), 1800); }
@@ -32,30 +25,33 @@ export default function CalendarSubscribe({ teamLabel }) {
     };
 
     return (
-        <span ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-            <button onClick={() => setOpen(o => !o)} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title={t('cal_live_title')}>
+        <>
+            <button onClick={() => setOpen(true)} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title={t('cal_live_title')}>
                 <span>{t('cal_live')}</span><span>📲</span>
             </button>
             {open && (
-                <div style={{
-                    position: 'absolute', bottom: '115%', insetInlineStart: 0, zIndex: 40,
-                    background: 'var(--ink2)', border: '1px solid var(--bd2)', borderRadius: '14px',
-                    padding: '0.5rem', minWidth: '210px', boxShadow: '0 18px 44px -16px rgba(0,0,0,.85)',
-                    display: 'flex', flexDirection: 'column', gap: '0.35rem'
-                }}>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-dim)', padding: '0.1rem 0.4rem 0.2rem' }}>{t('cal_choose')}</div>
-                    <button onClick={apple} style={item('#e5e7eb')}>🍎 {t('cal_apple')}</button>
-                    <button onClick={google} style={item('#34d058')}>📅 {t('cal_google')}</button>
-                    <button onClick={copy} style={item('#38bdf8')}>{copied ? t('cal_copied') : `🔗 ${t('cal_copy')}`}</button>
+                <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--ink2)', border: '1px solid var(--bd2)', borderRadius: '18px', padding: '1.2rem', width: 'min(360px, 92vw)', boxShadow: '0 30px 80px -20px rgba(0,0,0,.9)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
+                            <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>📲 {t('cal_choose')}</span>
+                            <button onClick={() => setOpen(false)} style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', color: 'var(--text)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <button onClick={apple} style={item('#e5e7eb')}>🍎 {t('cal_apple')}</button>
+                            <button onClick={android} style={item('#3ddc84')}>🤖 {t('cal_android')}</button>
+                            <button onClick={google} style={item('#4285f4')}>📅 {t('cal_google')}</button>
+                            <button onClick={copy} style={item('#38bdf8')}>{copied ? t('cal_copied') : `🔗 ${t('cal_copy')}`}</button>
+                        </div>
+                    </div>
                 </div>
             )}
-        </span>
+        </>
     );
 }
 
 const item = (accent) => ({
-    display: 'flex', alignItems: 'center', gap: '0.5rem', textAlign: 'start',
+    display: 'flex', alignItems: 'center', gap: '0.6rem', textAlign: 'start',
     background: 'var(--glass-2)', color: 'var(--text)', border: '1px solid var(--glass-border)',
-    borderRadius: '10px', padding: '0.6rem 0.7rem', cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
-    fontWeight: 700, fontSize: '0.86rem', borderInlineStart: `3px solid ${accent}`, width: '100%'
+    borderRadius: '12px', padding: '0.85rem 0.9rem', cursor: 'pointer', fontFamily: 'Rubik, sans-serif',
+    fontWeight: 700, fontSize: '0.95rem', borderInlineStart: `4px solid ${accent}`, width: '100%'
 });
