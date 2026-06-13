@@ -275,6 +275,15 @@ function PublicSchedule() {
         }
     };
 
+    // ---- Subscribe to a live, auto-updating calendar feed for this team ----
+    const subscribeCalendar = () => {
+        const teamLabel = getSelectedTeamName();
+        if (!teamLabel) return;
+        const host = window.location.host;
+        const url = `webcal://${host}/calendar.ics?team=${encodeURIComponent(teamLabel)}`;
+        window.open(url, '_blank');
+    };
+
     // ---- Compute the nearest upcoming session for the hero card ----
     const getNextTraining = () => {
         const teamObj = getTeamObj();
@@ -387,7 +396,10 @@ function PublicSchedule() {
                                         <button onClick={shareWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                             <span>שיתוף בוואטסאפ</span><span>💬</span>
                                         </button>
-                                        <button onClick={saveToCalendar} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }}>
+                                        <button onClick={subscribeCalendar} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title="הירשם ליומן שמתעדכן אוטומטית בכל שינוי">
+                                            <span>יומן מתעדכן</span><span>📲</span>
+                                        </button>
+                                        <button onClick={saveToCalendar} className="action-btn ghost" title="הורדה חד-פעמית ליומן">
                                             <span>שמור ליומן</span><span>📅</span>
                                         </button>
                                         <button onClick={() => setIsRegisterModalOpen(true)} className="action-btn ghost">
