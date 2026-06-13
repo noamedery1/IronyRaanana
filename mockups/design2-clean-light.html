@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>עיצוב 2 – Clean & Light</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f7fa;
+    --white: #ffffff;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --orange-mid: #fed7aa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --gray: #64748b;
+    --gray-light: #f8fafc;
+    --text: #0f172a;
+    --text-mid: #475569;
+    --text-soft: #94a3b8;
+    --radius: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow: 0 4px 16px rgba(0,0,0,0.08);
+    --shadow-hover: 0 8px 28px rgba(0,0,0,0.12);
+  }
+
+  body {
+    font-family: 'Rubik', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  /* HEADER */
+  .site-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .header-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    gap: 20px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    text-decoration: none; color: inherit;
+  }
+  .brand-logo {
+    width: 38px; height: 38px;
+    background: var(--orange);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 8px rgba(234,88,12,0.3);
+  }
+  .brand-name { font-size: 1rem; font-weight: 700; }
+  .brand-tagline { font-size: 0.7rem; color: var(--text-soft); }
+
+  .header-nav { display: flex; gap: 4px; }
+  .hnav-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-mid);
+    font-family: 'Rubik', sans-serif;
+    transition: all 0.15s;
+  }
+  .hnav-btn.active { background: var(--orange-light); color: var(--orange); }
+  .hnav-btn:hover:not(.active) { background: var(--gray-light); color: var(--text); }
+
+  /* BANNER */
+  .announcement {
+    background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #1e3a8a 100%);
+    padding: 8px 0;
+    overflow: hidden;
+  }
+  .announcement-scroll {
+    display: inline-block;
+    animation: scroll 32s linear infinite;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    color: #bfdbfe;
+  }
+  @keyframes scroll { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+  /* PAGE BODY */
+  .page-body {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 24px 48px;
+  }
+
+  /* TEAM SELECTOR PANEL */
+  .selector-panel {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .selector-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-label { font-size: 0.72rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.06em; }
+  .styled-select {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 8px 36px 8px 12px;
+    font-size: 0.88rem;
+    font-family: 'Rubik', sans-serif;
+    color: var(--text);
+    cursor: pointer;
+    appearance: none;
+    outline: none;
+    transition: border-color 0.2s;
+    min-width: 180px;
+  }
+  .styled-select:focus { border-color: var(--orange); }
+
+  .view-toggle { display: flex; gap: 4px; }
+  .vtab {
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    color: var(--text-mid);
+    font-family: 'Rubik', sans-serif;
+    transition: all 0.15s;
+  }
+  .vtab.active { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .vtab:hover:not(.active) { border-color: var(--orange); color: var(--orange); }
+
+  .selector-right { display: flex; gap: 8px; flex-wrap: wrap; }
+  .action-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Rubik', sans-serif;
+    transition: all 0.2s;
+    text-decoration: none;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    color: var(--text-mid);
+  }
+  .action-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-light); }
+  .action-btn.primary { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .action-btn.primary:hover { background: #c2410c; border-color: #c2410c; }
+
+  /* WEEK HEADING */
+  .week-heading {
+    display: flex; align-items: baseline; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .week-title { font-size: 1.05rem; font-weight: 700; }
+  .week-sub { font-size: 0.8rem; color: var(--text-soft); }
+
+  /* DAYS GRID */
+  .days-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+  }
+
+  /* DAY CARD */
+  .day-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+    box-shadow: var(--shadow-sm);
+  }
+  .day-card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+    border-color: var(--orange);
+  }
+  .day-card.today { border-color: var(--orange); }
+  .day-card.match-day { border-color: var(--red); }
+  .day-card.cancelled-day { opacity: 0.6; }
+
+  .day-head {
+    padding: 11px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .day-head-name { font-weight: 700; font-size: 0.88rem; }
+  .day-head-date { font-size: 0.7rem; color: var(--text-soft); margin-top: 1px; }
+
+  .day-pill {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .pill-today { background: var(--orange); color: #fff; }
+  .pill-match { background: var(--red-light); color: var(--red); }
+  .pill-normal { background: var(--border-light); color: var(--text-soft); }
+
+  .day-body { padding: 10px 14px 12px; }
+  .no-session {
+    font-size: 0.76rem;
+    color: var(--text-soft);
+    text-align: center;
+    padding: 18px 0 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+  .no-session-icon { font-size: 1.2rem; opacity: 0.35; }
+
+  /* SESSION */
+  .session-item { padding: 6px 0; }
+  .session-item + .session-item { border-top: 1px solid var(--border-light); }
+
+  .session-time {
+    font-size: 1.0rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .session-item.match .session-time { color: var(--red); }
+  .session-item.cancelled .session-time { text-decoration: line-through; color: var(--text-soft); }
+
+  .session-place {
+    font-size: 0.75rem;
+    color: var(--text-mid);
+    margin-top: 2px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .session-place svg { flex-shrink: 0; }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 5px;
+  }
+  .tag-match { background: var(--red-light); color: var(--red); }
+  .tag-changed { background: var(--yellow-light); color: var(--yellow); }
+  .tag-cancelled { background: var(--border-light); color: var(--gray); }
+
+  /* DESIGN LABEL */
+  .design-label {
+    position: fixed;
+    bottom: 16px; left: 16px;
+    background: var(--orange);
+    color: #fff;
+    font-size: 0.73rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(234,88,12,0.35);
+  }
+
+  @media (max-width: 960px) { .days-row { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 600px) {
+    .days-row { grid-template-columns: repeat(2, 1fr); }
+    .page-body { padding: 16px 14px 32px; }
+    .selector-panel { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="#">
+      <div class="brand-logo">🏀</div>
+      <div>
+        <div class="brand-name">הפועל רעננה</div>
+        <div class="brand-tagline">לוח אימונים שבועי</div>
+      </div>
+    </a>
+    <nav class="header-nav">
+      <button class="hnav-btn active">👨 גברים</button>
+      <button class="hnav-btn">👩 נשים</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ANNOUNCEMENT BANNER -->
+<div class="announcement">
+  <div class="announcement-scroll">
+    🏀 משחק ליגה | ראשון 4.5 | מכבי תל אביב נ׳ הפועל רעננה | 19:30 | אולם בלומפילד &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    📅 אימון מבוטל | שישי 9.5 | צוות עש׳׳ב | עקב חג &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    🏀 משחק ליגה | ראשון 4.5 | מכבי תל אביב נ׳ הפועל רעננה | 19:30 | אולם בלומפילד &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    📅 אימון מבוטל | שישי 9.5 | צוות עש׳׳ב | עקב חג &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  </div>
+</div>
+
+<!-- PAGE BODY -->
+<div class="page-body">
+
+  <!-- SELECTOR PANEL -->
+  <div class="selector-panel">
+    <div class="selector-left">
+      <div class="field-group">
+        <span class="field-label">קבוצה</span>
+        <select class="styled-select">
+          <option>עש׳׳ב – דני כהן</option>
+          <option>עש׳׳א – אבי לוי</option>
+          <option>נוער א׳ – מוטי שפירא</option>
+          <option>נוער ב׳ – ג׳ורג׳ זכריה</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <span class="field-label">תצוגה</span>
+        <div class="view-toggle">
+          <button class="vtab active">שבועי</button>
+          <button class="vtab">לפי אולם</button>
+          <button class="vtab">יומי</button>
+        </div>
+      </div>
+    </div>
+    <div class="selector-right">
+      <a class="action-btn" href="#">📤 שתף</a>
+      <a class="action-btn" href="#">📅 יומן</a>
+      <a class="action-btn primary" href="#">🔔 עדכונים</a>
+    </div>
+  </div>
+
+  <!-- WEEK -->
+  <div class="week-heading">
+    <span class="week-title">שבוע 4–10 במאי 2025</span>
+    <span class="week-sub">7 ימים · 2 משחקי ליגה</span>
+  </div>
+
+  <div class="days-row">
+
+    <!-- ראשון -->
+    <div class="day-card match-day">
+      <div class="day-head">
+        <div>
+          <div class="day-head-name">ראשון</div>
+          <div class="day-head-date">4.5.2025</div>
+        </div>
+        <div class="day-pill pill-match">🏀</div>
+      </div>
+      <div class="day-body">
+        <div class="session-item match">
+          <div class="session-time">19:30</div>
+          <div class="session-place">📍 בלומפילד</div>
+          <span class="tag tag-match">משחק ליגה</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- שני -->
+    <div class="day-card today">
+      <div class="day-head">
+        <div>
+          <div class="day-head-name">שני</div>
+          <div class="day-head-date">5.5.2025</div>
+        </div>
+        <div class="day-pill pill-today">היום</div>
+      </div>
+      <div class="day-body">
+        <div class="session-item">
+          <div class="session-time">17:00–18:30</div>
+          <div class="session-place">📍 אולם א׳ רעננה</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- שלישי -->
+    <div class="day-card">
+      <div class="day-head">
+        <div>
+          <div class="day-head-name">שלישי</div>
+          <div class="day-head-date">6.5.2025</div>
+        </div>
+        <div class="day-pill pill-normal">ג׳</div>
+      </div>
+      <div class="day-body">
+        <div class="session-item">
+          <div class="session-time">18:00–19:30</div>
+          <div class="session-place">📍 אולם ב׳ רעננה</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- רביעי -->
+    <div class="day-card">
+      <div class="day-head">
+        <div>
+          <div class="day-head-name">רביעי</div>
+          <div class="day-head-date">7.5.2025</div>
+        </div>
+        <div class="day-pill pill-normal">ד׳</div>
+      </div>
+      <div class="day-body">
+        <div class="session-item">
+          <div class="session-time">17:30–19:00</div>
+          <div class="session-place">📍 אולם א׳ רעננה</div>
+          <span class="tag tag-changed">⚠️ שינוי שעה</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- חמישי -->
+    <div class="day-card">
+      <div class="day-head">
+        <div>
+          <div class="day-head-name">חמישי</div>
+          <div class="day-head-date">8.5.2025</div>
+        </div>
+        <div class="day-pill pill-normal">ה׳</div>
+      </div>
+      <div class="day-body">
+        <div class="session-item">
+          <div class="session-time">17:00–18:30</div>
+          <div class="session-place">📍 אולם ב׳ רעננה</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- שישי -->
+    <div class="day-card cancelled-day">
+      <div class="day-head">
+        <div>
+          <div class="day-head-name">שישי</div>
+          <div class="day-head-date">9.5.2025</div>
+        </div>
+        <div class="day-pill pill-normal">ו׳</div>
+      </div>
+      <div class="day-body">
+        <div class="session-item cancelled">
+          <div class="session-time">17:00–18:30</div>
+          <div class="session-place">📍 אולם א׳</div>
+          <span class="tag tag-cancelled">❌ בוטל</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- שבת -->
+    <div class="day-card">
+      <div class="day-head">
+        <div>
+          <div class="day-head-name">שבת</div>
+          <div class="day-head-date">10.5.2025</div>
+        </div>
+        <div class="day-pill pill-normal">ש׳</div>
+      </div>
+      <div class="day-body">
+        <div class="no-session">
+          <div class="no-session-icon">😴</div>
+          <span>אין אימון</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="design-label">עיצוג 2 — Clean & Light</div>
+</body>
+</html>

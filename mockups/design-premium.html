@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>הפועל רעננה – לוח אימונים</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --orange:      #f97316;
+  --orange-deep: #c2410c;
+  --amber:       #f59e0b;
+  --red:         #ef4444;
+  --sky:         #0ea5e9;
+  --white:       #ffffff;
+  --ink:         #0c111d;
+  --ink2:        #161d2e;
+  --ink3:        #1e2840;
+  --glass:       rgba(255,255,255,0.07);
+  --glass-border:rgba(255,255,255,0.13);
+  --glow-orange: rgba(249,115,22,0.45);
+  --glow-red:    rgba(239,68,68,0.40);
+  --text:        #f1f5f9;
+  --text-dim:    rgba(241,245,249,0.55);
+  --text-muted:  rgba(241,245,249,0.28);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Rubik', sans-serif;
+  background: var(--ink);
+  color: var(--text);
+  min-height: 100vh;
+  direction: rtl;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════════
+   BACKGROUND — animated mesh
+═══════════════════════════════════════════════ */
+.bg-canvas {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% -10%, rgba(249,115,22,.22) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 10%,  rgba(194,65,12,.18)  0%, transparent 55%),
+    radial-gradient(ellipse 70% 70% at 50% 110%, rgba(15,23,42,.95)   0%, transparent 70%),
+    linear-gradient(160deg, #0c111d 0%, #0f172a 40%, #1a0a00 100%);
+  animation: bgPulse 12s ease-in-out infinite alternate;
+}
+@keyframes bgPulse {
+  0%  { filter: brightness(1); }
+  100%{ filter: brightness(1.06); }
+}
+
+/* grain overlay */
+.bg-canvas::after {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size: 180px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════
+   ANNOUNCEMENT BANNER
+═══════════════════════════════════════════════ */
+.banner-wrap {
+  position: relative; z-index: 10;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(90deg, rgba(30,58,138,0.7), rgba(37,99,235,0.5), rgba(30,58,138,0.7));
+  backdrop-filter: blur(12px);
+  overflow: hidden; padding: 9px 0;
+}
+.banner-track {
+  display: inline-flex; gap: 80px;
+  white-space: nowrap;
+  animation: ticker 28s linear infinite;
+}
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.banner-item {
+  font-size: .78rem; font-weight: 500;
+  color: #bfdbfe; letter-spacing: .025em;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.banner-dot { width: 4px; height: 4px; border-radius: 50%; background: #60a5fa; }
+.banner-sep { width: 1px; height: 14px; background: rgba(255,255,255,.15); }
+
+/* ═══════════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════════ */
+.nav {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(12,17,29,0.6);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border-bottom: 1px solid var(--glass-border);
+}
+.nav-brand { display: flex; align-items: center; gap: 14px; }
+.nav-orb {
+  width: 42px; height: 42px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--orange), var(--orange-deep));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 24px var(--glow-orange), inset 0 1px 1px rgba(255,255,255,.2);
+}
+.nav-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; }
+.nav-sub  { font-size: .67rem; color: var(--text-dim); letter-spacing: .05em; text-transform: uppercase; margin-top: 1px; }
+
+.nav-tabs { display: flex; gap: 4px; background: var(--glass); padding: 4px; border-radius: 12px; border: 1px solid var(--glass-border); }
+.ntab {
+  padding: 7px 18px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+  cursor: pointer; border: none; background: none; color: var(--text-dim);
+  font-family: 'Rubik', sans-serif; transition: all .2s; letter-spacing: .01em;
+}
+.ntab.active {
+  background: linear-gradient(135deg, var(--orange), var(--orange-deep));
+  color: #fff;
+  box-shadow: 0 4px 12px var(--glow-orange);
+}
+.ntab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,.06); }
+
+/* ═══════════════════════════════════════════════
+   HERO
+═══════════════════════════════════════════════ */
+.hero {
+  position: relative; z-index: 5;
+  padding: 48px 32px 36px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  flex-wrap: wrap;
+}
+.hero-left { display: flex; flex-direction: column; gap: 6px; }
+.hero-eyebrow {
+  font-size: .72rem; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--orange);
+  display: flex; align-items: center; gap: 8px;
+}
+.hero-eyebrow::before {
+  content: ''; display: inline-block;
+  width: 24px; height: 2px; background: var(--orange);
+  border-radius: 2px;
+}
+.hero-title {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 900; letter-spacing: -.03em; line-height: 1.05;
+  background: linear-gradient(130deg, #ffffff 30%, rgba(249,115,22,.85) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-sub { font-size: .92rem; color: var(--text-dim); font-weight: 400; margin-top: 4px; }
+
+.hero-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ═══════════════════════════════════════════════
+   CONTROLS BAR
+═══════════════════════════════════════════════ */
+.controls {
+  position: relative; z-index: 5;
+  margin: 0 32px 28px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  padding: 14px 20px;
+  backdrop-filter: blur(16px);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 14px;
+}
+.ctrl-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ctrl-label { font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
+
+.team-select {
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--glass-border);
+  color: var(--text); padding: 9px 42px 9px 16px;
+  border-radius: 10px; font-size: .9rem;
+  font-family: 'Rubik', sans-serif; cursor: pointer;
+  appearance: none; outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 14px center;
+  transition: border-color .2s, box-shadow .2s;
+  min-width: 200px;
+}
+.team-select:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(249,115,22,.18); }
+.team-select option { background: #1a2236; }
+
+.view-group { display: flex; gap: 4px; background: rgba(0,0,0,.2); padding: 3px; border-radius: 10px; }
+.vbtn {
+  padding: 6px 14px; border-radius: 7px; font-size: .78rem; font-weight: 600;
+  cursor: pointer; border: none; background: none; color: var(--text-dim);
+  font-family: 'Rubik', sans-serif; transition: all .2s; letter-spacing: .01em;
+}
+.vbtn.active { background: var(--orange); color: #fff; box-shadow: 0 3px 10px rgba(249,115,22,.4); }
+.vbtn:hover:not(.active) { color: var(--text); background: rgba(255,255,255,.07); }
+
+.ctrl-right { display: flex; gap: 8px; }
+.act-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 10px; font-size: .8rem; font-weight: 600;
+  cursor: pointer; font-family: 'Rubik', sans-serif; transition: all .22s;
+  border: 1px solid var(--glass-border); background: rgba(255,255,255,.05);
+  color: var(--text-dim); letter-spacing: .01em;
+}
+.act-btn:hover { border-color: rgba(249,115,22,.5); color: var(--orange); background: rgba(249,115,22,.08); transform: translateY(-1px); }
+.act-btn-primary {
+  background: linear-gradient(135deg, var(--orange), var(--orange-deep));
+  border-color: transparent; color: #fff;
+  box-shadow: 0 4px 14px var(--glow-orange);
+}
+.act-btn-primary:hover { box-shadow: 0 6px 20px var(--glow-orange); transform: translateY(-2px); color: #fff; border-color: transparent; background: linear-gradient(135deg, #fb923c, var(--orange)); }
+
+/* ═══════════════════════════════════════════════
+   WEEK LABEL
+═══════════════════════════════════════════════ */
+.week-row {
+  position: relative; z-index: 5;
+  margin: 0 32px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.week-dates { font-size: .8rem; font-weight: 600; color: var(--text-dim); letter-spacing: .04em; }
+.week-stat {
+  font-size: .72rem; color: var(--text-muted);
+  background: var(--glass); border: 1px solid var(--glass-border);
+  padding: 4px 12px; border-radius: 20px;
+  display: flex; gap: 14px;
+}
+.wstat-item { display: flex; align-items: center; gap: 5px; }
+.wstat-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* ═══════════════════════════════════════════════
+   SCHEDULE GRID
+═══════════════════════════════════════════════ */
+.grid-wrap {
+  position: relative; z-index: 5;
+  margin: 0 32px 48px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+/* ─── DAY CARD ─── */
+.day-card {
+  background: rgba(255,255,255,.042);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  overflow: hidden;
+  backdrop-filter: blur(14px);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, border-color .3s ease;
+  display: flex; flex-direction: column;
+  cursor: default;
+  animation: cardIn .6s cubic-bezier(.34,1.2,.64,1) both;
+}
+.day-card:nth-child(1) { animation-delay: .05s; }
+.day-card:nth-child(2) { animation-delay: .10s; }
+.day-card:nth-child(3) { animation-delay: .15s; }
+.day-card:nth-child(4) { animation-delay: .20s; }
+.day-card:nth-child(5) { animation-delay: .25s; }
+.day-card:nth-child(6) { animation-delay: .30s; }
+.day-card:nth-child(7) { animation-delay: .35s; }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.day-card:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 24px 48px rgba(0,0,0,.35), 0 0 0 1px rgba(249,115,22,.25);
+  border-color: rgba(249,115,22,.3);
+}
+
+/* Today highlight */
+.day-card.is-today {
+  border-color: rgba(249,115,22,.45);
+  background: rgba(249,115,22,.06);
+  box-shadow: 0 0 0 1px rgba(249,115,22,.2), inset 0 0 40px rgba(249,115,22,.04);
+}
+.day-card.is-today:hover { box-shadow: 0 24px 48px rgba(249,115,22,.2), 0 0 0 1px rgba(249,115,22,.45); }
+
+/* Match card */
+.day-card.is-match {
+  border-color: rgba(239,68,68,.35);
+  background: rgba(239,68,68,.05);
+}
+.day-card.is-match:hover { box-shadow: 0 24px 48px rgba(239,68,68,.2), 0 0 0 1px rgba(239,68,68,.4); border-color: rgba(239,68,68,.55); }
+
+/* Cancelled */
+.day-card.is-cancelled { opacity: .45; filter: grayscale(.4); }
+.day-card.is-cancelled:hover { transform: none; box-shadow: none; border-color: var(--glass-border); }
+
+/* ─── CARD HEADER ─── */
+.card-head {
+  padding: 14px 16px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: relative;
+}
+.card-head::after {
+  content: '';
+  position: absolute; bottom: 0; right: 16px; left: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+}
+
+.head-day { font-size: 1rem; font-weight: 800; color: var(--text); letter-spacing: -.01em; }
+.is-today  .head-day { color: var(--orange); }
+.is-match  .head-day { color: #fca5a5; }
+
+.head-date {
+  font-size: .68rem; font-weight: 600; color: var(--text-muted);
+  background: rgba(255,255,255,.07); padding: 3px 8px; border-radius: 20px;
+}
+.is-today .head-date { background: rgba(249,115,22,.2); color: var(--orange); }
+.is-match .head-date { background: rgba(239,68,68,.2); color: #fca5a5; }
+
+/* ─── CARD BODY ─── */
+.card-body { padding: 12px 16px 16px; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+/* ─── SESSION ─── */
+.session {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  transition: background .2s;
+  position: relative; overflow: hidden;
+}
+.session::before {
+  content: '';
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 3px;
+  background: var(--orange);
+  border-radius: 0 3px 3px 0;
+  opacity: .7;
+}
+.session.s-match::before { background: var(--red); }
+.session.s-changed::before { background: var(--amber); }
+.session.s-cancelled::before { background: var(--text-muted); }
+
+.session:hover { background: rgba(255,255,255,.07); }
+
+.s-time {
+  font-size: 1.05rem; font-weight: 800; letter-spacing: -.025em;
+  color: var(--text); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.s-match .s-time  { color: #fca5a5; }
+.s-cancelled .s-time { text-decoration: line-through; color: var(--text-muted); }
+
+.s-loc {
+  font-size: .72rem; color: var(--text-dim);
+  display: flex; align-items: center; gap: 4px; margin-top: 1px;
+}
+
+.s-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.chip {
+  font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  padding: 2px 8px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.chip-match    { background: rgba(239,68,68,.18);  color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+.chip-changed  { background: rgba(245,158,11,.15); color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
+.chip-cancelled{ background: rgba(100,116,139,.12);color: #94a3b8; border: 1px solid rgba(100,116,139,.2); }
+
+/* empty day */
+.no-session {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 20px 8px; color: var(--text-muted); font-size: .76rem;
+}
+.no-session-icon { font-size: 1.6rem; opacity: .2; }
+
+/* ─── MATCH GLOW EFFECT ─── */
+.day-card.is-match .card-head { background: linear-gradient(180deg, rgba(239,68,68,.08) 0%, transparent 100%); }
+
+/* ─── TODAY INDICATOR ─── */
+.today-badge {
+  font-size: .58rem; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--orange);
+  background: rgba(249,115,22,.15); border: 1px solid rgba(249,115,22,.3);
+  padding: 2px 7px; border-radius: 20px; margin-top: 2px; align-self: flex-start;
+}
+
+/* ═══════════════════════════════════════════════
+   BOTTOM GLOW LINE
+═══════════════════════════════════════════════ */
+.glow-line {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 1px; z-index: 20;
+  background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,.5) 50%, transparent 100%);
+}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(249,115,22,.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--orange); }
+
+/* ═══════════════════════════════════════════════
+   DESIGN WATERMARK
+═══════════════════════════════════════════════ */
+.wm {
+  position: fixed; bottom: 18px; left: 18px; z-index: 30;
+  background: linear-gradient(135deg, var(--orange), var(--orange-deep));
+  color: #fff; font-size: .7rem; font-weight: 800;
+  padding: 5px 14px; border-radius: 20px; letter-spacing: .05em;
+  box-shadow: 0 4px 14px var(--glow-orange);
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media (max-width: 1080px) { .grid-wrap { grid-template-columns: repeat(4,1fr); } }
+@media (max-width: 700px) {
+  .grid-wrap, .controls, .week-row { margin-right: 14px; margin-left: 14px; }
+  .hero { padding: 28px 14px 20px; }
+  .nav  { padding: 12px 16px; }
+  .grid-wrap { grid-template-columns: repeat(2,1fr); }
+  .hero-title { font-size: 1.8rem; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- BG -->
+<div class="bg-canvas"></div>
+
+<!-- BANNER -->
+<div class="banner-wrap">
+  <div class="banner-track">
+    <span class="banner-item"><span class="banner-dot"></span>🏀 משחק ליגה &nbsp;·&nbsp; ראשון 4.5 &nbsp;·&nbsp; מכבי תל אביב נ׳ הפועל רעננה &nbsp;·&nbsp; 19:30 &nbsp;·&nbsp; אולם בלומפילד</span>
+    <span class="banner-sep"></span>
+    <span class="banner-item"><span class="banner-dot"></span>📋 אימון מבוטל &nbsp;·&nbsp; שישי 9.5 &nbsp;·&nbsp; עש׳׳ב &nbsp;·&nbsp; עקב חג עצמאות</span>
+    <span class="banner-sep"></span>
+    <span class="banner-item"><span class="banner-dot"></span>🏀 משחק ליגה &nbsp;·&nbsp; ראשון 4.5 &nbsp;·&nbsp; מכבי תל אביב נ׳ הפועל רעננה &nbsp;·&nbsp; 19:30 &nbsp;·&nbsp; אולם בלומפילד</span>
+    <span class="banner-sep"></span>
+    <span class="banner-item"><span class="banner-dot"></span>📋 אימון מבוטל &nbsp;·&nbsp; שישי 9.5 &nbsp;·&nbsp; עש׳׳ב &nbsp;·&nbsp; עקב חג עצמאות</span>
+    <span class="banner-sep"></span>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="nav-orb">🏀</div>
+    <div>
+      <div class="nav-name">הפועל רעננה</div>
+      <div class="nav-sub">לוח אימונים שבועי</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="ntab active">👨 גברים</button>
+    <button class="ntab">👩 נשים</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">לוח שבועי עדכני</div>
+    <h1 class="hero-title">לוח אימונים<br>שבוע 4–10 מאי</h1>
+    <p class="hero-sub">עש׳׳ב &nbsp;·&nbsp; מאמן: דני כהן &nbsp;·&nbsp; 7 ימי פעילות</p>
+  </div>
+  <div class="hero-right">
+    <button class="act-btn">📤 שתף בוואטסאפ</button>
+    <button class="act-btn">📅 שמור ביומן</button>
+    <button class="act-btn act-btn-primary">🔔 קבל עדכונים</button>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="ctrl-left">
+    <span class="ctrl-label">קבוצה</span>
+    <select class="team-select">
+      <option>עש׳׳ב – דני כהן</option>
+      <option>עש׳׳א – אבי לוי</option>
+      <option>נוער א׳ – מוטי שפירא</option>
+      <option>נוער ב׳ – ג׳ורג׳ זכריה</option>
+      <option>קדטים א׳ – יוסי מזרחי</option>
+    </select>
+    <div class="view-group">
+      <button class="vbtn active">שבועי</button>
+      <button class="vbtn">לפי אולם</button>
+      <button class="vbtn">יומי</button>
+    </div>
+  </div>
+  <div class="ctrl-right"></div>
+</div>
+
+<!-- WEEK META -->
+<div class="week-row">
+  <span class="week-dates">4 – 10 במאי 2025</span>
+  <div class="week-stat">
+    <span class="wstat-item"><span class="wstat-dot" style="background:var(--orange)"></span>7 אימונים</span>
+    <span class="wstat-item"><span class="wstat-dot" style="background:var(--red)"></span>2 משחקים</span>
+    <span class="wstat-item"><span class="wstat-dot" style="background:#475569"></span>1 ביטול</span>
+  </div>
+</div>
+
+<!-- GRID -->
+<div class="grid-wrap">
+
+  <!-- ראשון – MATCH -->
+  <div class="day-card is-match">
+    <div class="card-head">
+      <div>
+        <div class="head-day">ראשון</div>
+      </div>
+      <div class="head-date">4.5</div>
+    </div>
+    <div class="card-body">
+      <div class="session s-match">
+        <div class="s-time">19:30</div>
+        <div class="s-loc">📍 אולם בלומפילד</div>
+        <div class="s-chips"><span class="chip chip-match">🏀 משחק ליגה</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- שני – TODAY -->
+  <div class="day-card is-today">
+    <div class="card-head">
+      <div>
+        <div class="head-day">שני</div>
+        <div class="today-badge">היום</div>
+      </div>
+      <div class="head-date">5.5</div>
+    </div>
+    <div class="card-body">
+      <div class="session">
+        <div class="s-time">17:00 – 18:30</div>
+        <div class="s-loc">📍 אולם א׳ רעננה</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- שלישי -->
+  <div class="day-card">
+    <div class="card-head">
+      <div><div class="head-day">שלישי</div></div>
+      <div class="head-date">6.5</div>
+    </div>
+    <div class="card-body">
+      <div class="session">
+        <div class="s-time">18:00 – 19:30</div>
+        <div class="s-loc">📍 אולם ב׳ רעננה</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- רביעי – CHANGED -->
+  <div class="day-card">
+    <div class="card-head">
+      <div><div class="head-day">רביעי</div></div>
+      <div class="head-date">7.5</div>
+    </div>
+    <div class="card-body">
+      <div class="session s-changed">
+        <div class="s-time">17:30 – 19:00</div>
+        <div class="s-loc">📍 אולם א׳ רעננה</div>
+        <div class="s-chips"><span class="chip chip-changed">⚠️ שינוי שעה</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- חמישי -->
+  <div class="day-card">
+    <div class="card-head">
+      <div><div class="head-day">חמישי</div></div>
+      <div class="head-date">8.5</div>
+    </div>
+    <div class="card-body">
+      <div class="session">
+        <div class="s-time">17:00 – 18:30</div>
+        <div class="s-loc">📍 אולם ב׳ רעננה</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- שישי – CANCELLED -->
+  <div class="day-card is-cancelled">
+    <div class="card-head">
+      <div><div class="head-day">שישי</div></div>
+      <div class="head-date">9.5</div>
+    </div>
+    <div class="card-body">
+      <div class="session s-cancelled">
+        <div class="s-time">17:00 – 18:30</div>
+        <div class="s-loc">📍 אולם א׳</div>
+        <div class="s-chips"><span class="chip chip-cancelled">❌ בוטל – חג</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- שבת – EMPTY -->
+  <div class="day-card">
+    <div class="card-head">
+      <div><div class="head-day">שבת</div></div>
+      <div class="head-date">10.5</div>
+    </div>
+    <div class="card-body">
+      <div class="no-session">
+        <div class="no-session-icon">🌙</div>
+        <span>אין אימון</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM GLOW -->
+<div class="glow-line"></div>
+<div class="wm">PREMIUM MOCKUP</div>
+
+</body>
+</html>

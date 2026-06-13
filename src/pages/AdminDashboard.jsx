@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 import WeekBuilder from '../components/WeekBuilder';
 import Preview from '../components/Preview';
+import HallsConfig from '../components/HallsConfig';
+import ClubMessages from '../components/ClubMessages';
 
 const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
 const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID}/edit?gid=0#gid=0`;
@@ -10,6 +12,7 @@ const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('setup');
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
     // Setup state
     const [sheetUrl] = useState(ADMIN_SHEET_URL);
@@ -25,6 +28,7 @@ const AdminDashboard = () => {
     });
     const [teamConfig, setTeamConfig] = useState([]);
     const [currentSchedule, setCurrentSchedule] = useState(null);
+    const [hallConfig, setHallConfig] = useState({});
 
     // Load saved rules on mount
     useEffect(() => {
@@ -47,6 +51,19 @@ const AdminDashboard = () => {
             localStorage.setItem('teamRulesConfig', JSON.stringify(teamConfig));
         }
     }, [teamConfig]);
+
+    // Load hall config on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('raananaHallConfig');
+        if (saved) {
+            try { setHallConfig(JSON.parse(saved) || {}); } catch (e) { /* ignore */ }
+        }
+    }, []);
+
+    // Save hall config on change
+    useEffect(() => {
+        localStorage.setItem('raananaHallConfig', JSON.stringify(hallConfig));
+    }, [hallConfig]);
 
     const handleLogout = () => {
         localStorage.removeItem('isAdmin');
@@ -377,7 +394,7 @@ const AdminDashboard = () => {
         switch (activeTab) {
             case 'setup':
                 return (
-                    <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <div className="report-panel" style={{ marginTop: 0, color: '#0f1b33' }}>
                         <h3 style={{ marginTop: 0 }}>הגדרות חיבור לגיליון</h3>
                         <p style={{ color: '#666' }}>הדבק את כתובת ה-Google Sheet שפורסמה כ-CSV (קובץ - שתף - פרסם באינטרנט - CSV).</p>
 
@@ -445,7 +462,7 @@ const AdminDashboard = () => {
                 );
             case 'weekBuilder':
                 return (
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div className="report-panel" style={{ display: 'flex', flexDirection: 'column', color: '#0f1b33', marginTop: 0 }}>
                         <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                             <button
                                 onClick={() => saveRulesToCloud(teamConfig)}
@@ -478,6 +495,29 @@ const AdminDashboard = () => {
                         currentSchedule={currentSchedule}
                         setCurrentSchedule={setCurrentSchedule}
                         hallColors={sheetData?.hallColors || {}}
+                        hallConfig={hallConfig}
+                    />
+                );
+            case 'halls':
+                return (
+                    <HallsConfig
+                        rawRows={sheetData?.rawRows || []}
+                        indices={sheetData?.indices}
+                        hallConfig={hallConfig}
+                        setHallConfig={setHallConfig}
+                    />
+                );
+            case 'messages':
+                return (
+                    <ClubMessages
+                        rawRows={sheetData?.rawRows || []}
+                        currentSchedule={currentSchedule}
+                        setCurrentSchedule={setCurrentSchedule}
+                        headers={sheetData?.headers || []}
+                        indices={sheetData?.indices}
+                        saveUrl={saveUrl}
+                        sheetName={sheetName}
+                        sheetId={extractSheetId(sheetUrl)}
                     />
                 );
             default:
@@ -486,26 +526,31 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f5f7fa', fontFamily: 'Rubik, sans-serif' }}>
+        <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent', fontFamily: 'Rubik, sans-serif', color: 'var(--text)' }}>
             {/* Header */}
-            <header style={{ background: 'white', padding: '1rem 2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            <header style={{ background: 'rgba(7,11,22,0.62)', backdropFilter: 'blur(20px) saturate(1.4)', padding: '0.9rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                    <button
+                        onClick={() => setSidebarOpen(o => !o)}
+                        title={sidebarOpen ? 'הסתר תפריט (הגדל טבלה)' : 'הצג תפריט'}
+                        style={{ background: 'var(--glass-2)', color: 'var(--text)', border: '1px solid var(--glass-border)', width: '40px', height: '40px', borderRadius: '11px', cursor: 'pointer', fontSize: '1.1rem' }}
+                    >☰</button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <img src="/men_logo.png" alt="Logo" style={{ height: '60px', width: 'auto' }} />
+                        <img src="/men_logo.png" alt="Logo" style={{ height: '48px', width: 'auto', borderRadius: '12px', background: '#fff', padding: '3px' }} />
                         <div>
-                            <h2 style={{ margin: 0, color: '#14213D' }}>מערכת ניהול - פורטל ראשי</h2>
-                            <span style={{ fontSize: '0.9rem', color: '#666' }}>ניהול גברים ונשים (משותף)</span>
+                            <h2 style={{ margin: 0, color: 'var(--text)', fontSize: '1.2rem' }}>מערכת ניהול · פורטל ראשי</h2>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>ניהול גברים ונשים (משותף)</span>
                         </div>
                     </div>
                 </div>
 
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <a href="/" target="_blank" style={{ textDecoration: 'none', color: '#3b82f6', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>
-                    <span style={{ fontSize: '0.9rem', color: '#666' }}>שלום, Admin</span>
+                    <a href="/" target="_blank" style={{ textDecoration: 'none', color: 'var(--sky)', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>שלום, Admin</span>
                     <button
                         onClick={handleLogout}
-                        style={{ background: 'none', border: '1px solid #ccc', padding: '0.5rem 1rem', borderRadius: '6px', cursor: 'pointer' }}
+                        style={{ background: 'var(--glass-bg)', color: 'var(--text)', border: '1px solid var(--glass-border)', padding: '0.5rem 1rem', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}
                     >
                         התנתק
                     </button>
@@ -514,7 +559,7 @@ const AdminDashboard = () => {
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 {/* Sidebar */}
-                <aside style={{ width: '250px', background: 'white', borderLeft: '1px solid #eee', padding: '2rem 0' }}>
+                {sidebarOpen && <aside style={{ width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
                         <button
                             style={menuButtonStyle(activeTab === 'setup')}
@@ -537,11 +582,27 @@ const AdminDashboard = () => {
                         >
                             👁️ תצוגה מקדימה
                         </button>
+                        <button
+                            style={menuButtonStyle(activeTab === 'halls')}
+                            onClick={() => setActiveTab('halls')}
+                            disabled={!isConnected}
+                            title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
+                        >
+                            🏟️ הגדרת אולמות
+                        </button>
+                        <button
+                            style={menuButtonStyle(activeTab === 'messages')}
+                            onClick={() => setActiveTab('messages')}
+                            disabled={!isConnected}
+                            title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
+                        >
+                            📣 הודעות צפות
+                        </button>
                     </nav>
-                </aside>
+                </aside>}
 
                 {/* Content Area */}
-                <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+                <main style={{ flex: 1, minWidth: 0, padding: '1rem', overflowY: 'auto' }}>
                     {renderContent()}
                 </main>
             </div>
@@ -550,19 +611,20 @@ const AdminDashboard = () => {
 };
 
 const menuButtonStyle = (isActive) => ({
-    background: isActive ? '#f0f9ff' : 'transparent',
-    color: isActive ? '#0369a1' : '#4b5563',
+    background: isActive ? 'rgba(255,122,24,0.14)' : 'transparent',
+    color: isActive ? '#ff9d3c' : 'rgba(238,242,251,0.7)',
     border: 'none',
-    borderRight: isActive ? '4px solid #0369a1' : '4px solid transparent', // Adjusted for RTL
+    borderRight: isActive ? '4px solid #ff7a18' : '4px solid transparent', // Adjusted for RTL
     padding: '1rem 1.5rem',
     textAlign: 'right', // Adjusted for RTL
     cursor: 'pointer',
     fontSize: '1rem',
-    fontWeight: isActive ? 600 : 400,
+    fontWeight: isActive ? 700 : 500,
     display: 'flex',
     alignItems: 'center',
     gap: '0.8rem',
-    marginBottom: '0.2rem'
+    marginBottom: '0.2rem',
+    fontFamily: 'Rubik, sans-serif'
 });
 
 export default AdminDashboard;

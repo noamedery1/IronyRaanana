@@ -22,15 +22,19 @@ const AdminLogin = () => {
     return (
         <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div className="login-card" style={{
-                background: 'white',
-                padding: '2rem',
-                borderRadius: '16px',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                background: 'var(--glass-bg)',
+                border: '1px solid var(--glass-border)',
+                backdropFilter: 'blur(18px) saturate(1.3)',
+                padding: '2.5rem 2rem',
+                borderRadius: '22px',
+                boxShadow: 'var(--shadow)',
                 width: '100%',
                 maxWidth: '400px',
                 textAlign: 'center'
             }}>
-                <h1 className="title" style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>Admin Login</h1>
+                <div style={{ fontSize: '2.4rem', marginBottom: '0.4rem' }}>🏀</div>
+                <h1 className="title" style={{ fontSize: '1.9rem', marginBottom: '0.3rem' }}>כניסת מנהל</h1>
+                <p className="subtitle" style={{ fontSize: '0.9rem', marginBottom: '1.6rem' }}>מערכת ניהול הלו"ז · הפועל רעננה</p>
 
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div>
@@ -41,10 +45,13 @@ const AdminLogin = () => {
                             onChange={(e) => setUsername(e.target.value)}
                             style={{
                                 width: '100%',
-                                padding: '0.8rem',
-                                borderRadius: '8px',
-                                border: '1px solid #ddd',
-                                fontSize: '1rem'
+                                padding: '0.85rem 1rem',
+                                borderRadius: '12px',
+                                border: '1px solid var(--bd2)',
+                                background: 'var(--ink2)',
+                                color: 'var(--text)',
+                                fontSize: '1rem',
+                                fontFamily: 'Rubik, sans-serif'
                             }}
                         />
                     </div>
@@ -56,10 +63,13 @@ const AdminLogin = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             style={{
                                 width: '100%',
-                                padding: '0.8rem',
-                                borderRadius: '8px',
-                                border: '1px solid #ddd',
-                                fontSize: '1rem'
+                                padding: '0.85rem 1rem',
+                                borderRadius: '12px',
+                                border: '1px solid var(--bd2)',
+                                background: 'var(--ink2)',
+                                color: 'var(--text)',
+                                fontSize: '1rem',
+                                fontFamily: 'Rubik, sans-serif'
                             }}
                         />
                     </div>
@@ -67,13 +77,13 @@ const AdminLogin = () => {
                     {error && <p style={{ color: 'red', margin: 0 }}>{error}</p>}
 
                     <button type="submit" className="action-btn" style={{
-                        background: '#FCA311',
+                        background: 'linear-gradient(135deg,var(--primary),var(--deep))',
                         color: 'white',
                         width: '100%',
                         justifyContent: 'center',
-                        marginTop: '1rem'
+                        marginTop: '0.5rem'
                     }}>
-                        Login
+                        כניסה
                     </button>
                 </form>
             </div>

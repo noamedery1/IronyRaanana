@@ -12,7 +12,6 @@ const TrainerEditModal = ({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    // Edit Form State
     const [editType, setEditType] = useState('CHANGE'); // 'CHANGE', 'CANCEL', 'MOVE'
     const [newTime, setNewTime] = useState('');
     const [newLocation, setNewLocation] = useState('');
@@ -20,7 +19,6 @@ const TrainerEditModal = ({
     const [isCustomLocation, setIsCustomLocation] = useState(false);
     const [reason, setReason] = useState('');
 
-    // Initialize state with current values when switching to EDIT
     useEffect(() => {
         if (step === 'EDIT' && sessionData) {
             setNewTime(sessionData.time || '');
@@ -32,13 +30,12 @@ const TrainerEditModal = ({
 
     if (!isOpen || !sessionData) return null;
 
-    // Check if changes were made
     const time = sessionData.time || '';
     const loc = sessionData.location || '';
 
     const hasChanges = editType === 'CHANGE'
         ? (newTime !== time || newLocation !== loc)
-        : (editType === 'MOVE' ? (newDay && newTime && newLocation) : true); // CANCEL is always a change
+        : (editType === 'MOVE' ? (newDay && newTime && newLocation) : true);
 
     const handleAuth = async (e) => {
         e.preventDefault();
@@ -46,13 +43,12 @@ const TrainerEditModal = ({
         setError('');
 
         try {
-            // Validate against Apps Script
             const response = await fetch(sheetUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
                     action: 'trainerLogin',
-                    name: sessionData.coach, // We use the coach name from the cell/team
+                    name: sessionData.coach,
                     code: password
                 })
             });
@@ -117,149 +113,97 @@ const TrainerEditModal = ({
     };
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.5)', zIndex: 1100,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-            <div style={{
-                background: 'white', borderRadius: '12px', padding: '1.5rem',
-                width: '90%', maxWidth: '400px', position: 'relative'
-            }}>
-                <button
-                    onClick={onClose}
-                    style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}
-                >✕</button>
+        <div className="tmodal-overlay" onClick={onClose}>
+            <div className="tmodal" onClick={(e) => e.stopPropagation()}>
+                <button onClick={onClose} className="tmodal-close">✕</button>
 
-                <h3 style={{ marginTop: 0, color: '#BE185D', textAlign: 'center' }}>
-                    {step === 'AUTH' ? 'הזדהות מאמן' : 'עריכת אימון'}
-                </h3>
+                <h3 className="tmodal-title">{step === 'AUTH' ? 'הזדהות מאמן' : 'עריכת אימון'}</h3>
 
-                <div style={{ background: '#f8fafc', padding: '0.8rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.9rem', textAlign: 'center' }}>
+                <div className="tmodal-info">
                     <strong>{sessionData.team}</strong><br />
                     {sessionData.day} | {sessionData.time}
                 </div>
 
                 {step === 'AUTH' && (
-                    <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>שם מאמן (מזוהה אוטומטית)</label>
-                            <input
-                                type="text"
-                                value={sessionData.coach || 'לא מוגדר מאמן'}
-                                disabled
-                                style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', background: '#f1f5f9' }}
-                            />
-                            {!sessionData.coach && <div style={{ color: 'red', fontSize: '0.8rem' }}>לא ניתן לערוך: לא משויך מאמן לקבוצה זו</div>}
+                    <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                        <div className="tmodal-field">
+                            <label>שם מאמן (מזוהה אוטומטית)</label>
+                            <input type="text" value={sessionData.coach || 'לא מוגדר מאמן'} disabled className="tmodal-input" />
+                            {!sessionData.coach && <div className="tmodal-err" style={{ marginTop: '0.4rem' }}>לא ניתן לערוך: לא משויך מאמן לקבוצה זו</div>}
                         </div>
 
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>סיסמה / קוד אישי</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }}
-                                disabled={!sessionData.coach}
-                            />
+                        <div className="tmodal-field">
+                            <label>סיסמה / קוד אישי</label>
+                            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="tmodal-input" disabled={!sessionData.coach} />
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading || !sessionData.coach}
-                            style={{ background: '#BE185D', color: 'white', border: 'none', padding: '0.8rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
-                        >
-                            {loading ? 'מאמת...' : 'המשך'}
+                        <button type="submit" disabled={loading || !sessionData.coach} className="tmodal-btn">
+                            {loading ? 'מאמת…' : 'המשך'}
                         </button>
-                        {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
+                        {error && <div className="tmodal-err">{error}</div>}
                     </form>
                 )}
 
                 {step === 'EDIT' && (
                     <div>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                            <button
-                                onClick={() => setEditType('CHANGE')}
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #BE185D' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fdf2f8' : 'white', color: editType === 'CHANGE' ? '#BE185D' : '#64748b' }}
-                            >שינוי פרטים</button>
-                            <button
-                                onClick={() => setEditType('MOVE')}
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: editType === 'MOVE' ? '2px solid #7C3AED' : '1px solid #ddd', background: editType === 'MOVE' ? '#f5f3ff' : 'white', color: editType === 'MOVE' ? '#7C3AED' : '#64748b' }}
-                            >החלפת יום</button>
-                            <button
-                                onClick={() => setEditType('CANCEL')}
-                                style={{ flex: 1, padding: '0.5rem', borderRadius: '6px', border: editType === 'CANCEL' ? '2px solid #ef4444' : '1px solid #ddd', background: editType === 'CANCEL' ? '#fef2f2' : 'white', color: editType === 'CANCEL' ? '#ef4444' : '#64748b' }}
-                            >ביטול</button>
+                        <div className="tmodal-types">
+                            <button onClick={() => setEditType('CHANGE')} className={`tmodal-type ${editType === 'CHANGE' ? 'on' : ''}`}>שינוי פרטים</button>
+                            <button onClick={() => setEditType('MOVE')} className={`tmodal-type ${editType === 'MOVE' ? 'on' : ''}`}>החלפת יום</button>
+                            <button onClick={() => setEditType('CANCEL')} className={`tmodal-type ${editType === 'CANCEL' ? 'on' : ''}`}>ביטול</button>
                         </div>
 
                         {(editType === 'CHANGE' || editType === 'MOVE') && (
                             <>
                                 {editType === 'MOVE' && (
-                                    <>
-                                        <label style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', display: 'block' }}>יום חדש</label>
-                                        <select
-                                            value={newDay}
-                                            onChange={(e) => setNewDay(e.target.value)}
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }}
-                                        >
-                                            <option value="">בחר יום...</option>
-                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map(d => (
-                                                <option key={d} value={d}>{d}</option>
-                                            ))}
+                                    <div className="tmodal-field">
+                                        <label>יום חדש</label>
+                                        <select value={newDay} onChange={(e) => setNewDay(e.target.value)} className="tmodal-input">
+                                            <option value="">בחר יום…</option>
+                                            {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map(d => (<option key={d} value={d}>{d}</option>))}
                                         </select>
-                                    </>
+                                    </div>
                                 )}
 
-                                <label style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', display: 'block' }}>שעה</label>
-                                <input type="text" value={newTime} onChange={(e) => setNewTime(e.target.value)} placeholder="שעה" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }} />
+                                <div className="tmodal-field">
+                                    <label>שעה</label>
+                                    <input type="text" value={newTime} onChange={(e) => setNewTime(e.target.value)} placeholder="שעה" className="tmodal-input" />
+                                </div>
 
-                                <label style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.5rem', display: 'block' }}>מיקום / אולם</label>
-                                {availableLocations && availableLocations.length > 0 ? (
-                                    <>
-                                        <select
-                                            value={isCustomLocation ? 'OTHER' : newLocation}
-                                            onChange={(e) => {
-                                                if (e.target.value === 'OTHER') {
-                                                    setIsCustomLocation(true);
-                                                    setNewLocation('');
-                                                } else {
-                                                    setIsCustomLocation(false);
-                                                    setNewLocation(e.target.value);
-                                                }
-                                            }}
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }}
-                                        >
-                                            <option value="">בחר אולם...</option>
-                                            {availableLocations.map(loc => (
-                                                <option key={loc} value={loc}>{loc}</option>
-                                            ))}
-                                            <option value="OTHER">אחר / יצירת חדש...</option>
-                                        </select>
-                                        {isCustomLocation && (
-                                            <input
-                                                type="text"
-                                                value={newLocation}
-                                                onChange={(e) => setNewLocation(e.target.value)}
-                                                placeholder="הקלד שם אולם חדש..."
-                                                style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #BE185D', marginBottom: '0.8rem', background: '#fff1f2' }}
-                                                autoFocus
-                                            />
-                                        )}
-                                    </>
-                                ) : (
-                                    <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="מיקום" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '0.8rem' }} />
-                                )}
+                                <div className="tmodal-field">
+                                    <label>מיקום / אולם</label>
+                                    {availableLocations && availableLocations.length > 0 ? (
+                                        <>
+                                            <select
+                                                value={isCustomLocation ? 'OTHER' : newLocation}
+                                                onChange={(e) => {
+                                                    if (e.target.value === 'OTHER') { setIsCustomLocation(true); setNewLocation(''); }
+                                                    else { setIsCustomLocation(false); setNewLocation(e.target.value); }
+                                                }}
+                                                className="tmodal-input"
+                                            >
+                                                <option value="">בחר אולם…</option>
+                                                {availableLocations.map(l => (<option key={l} value={l}>{l}</option>))}
+                                                <option value="OTHER">אחר / יצירת חדש…</option>
+                                            </select>
+                                            {isCustomLocation && (
+                                                <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="הקלד שם אולם חדש…" className="tmodal-input" style={{ marginTop: '0.5rem' }} autoFocus />
+                                            )}
+                                        </>
+                                    ) : (
+                                        <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="מיקום" className="tmodal-input" />
+                                    )}
+                                </div>
                             </>
                         )}
 
-                        <label style={{ fontSize: '0.85rem', color: '#666', display: 'block' }}>סיבה / הערה</label>
-                        <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd', marginBottom: '1rem' }} placeholder="לדוגמה: הקדמנו אימון..." />
-
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button onClick={handleSubmit} disabled={loading || !hasChanges} style={{ flex: 1, padding: '0.8rem', borderRadius: '6px', border: 'none', background: !hasChanges ? '#cbd5e1' : '#BE185D', color: 'white', fontWeight: 'bold', cursor: !hasChanges ? 'not-allowed' : 'pointer' }}>
-                                {loading ? 'שולח...' : 'שלח לאישור'}
-                            </button>
+                        <div className="tmodal-field">
+                            <label>סיבה / הערה</label>
+                            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="tmodal-input" style={{ resize: 'vertical' }} placeholder="לדוגמה: הקדמנו אימון…" />
                         </div>
+
+                        <button onClick={handleSubmit} disabled={loading || !hasChanges} className="tmodal-btn">
+                            {loading ? 'שולח…' : 'שלח לאישור'}
+                        </button>
                     </div>
                 )}
             </div>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>עיצוב 3 – Timeline</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f4f8;
+    --white: #ffffff;
+    --orange: #ea580c;
+    --orange-pale: #fff4ee;
+    --red: #dc2626;
+    --red-pale: #fef2f2;
+    --amber: #d97706;
+    --amber-pale: #fffbeb;
+    --slate: #64748b;
+    --border: #dde3ec;
+    --text: #1e293b;
+    --text-mid: #475569;
+    --text-muted: #94a3b8;
+    --today-accent: #0ea5e9;
+    --today-pale: #f0f9ff;
+  }
+
+  body {
+    font-family: 'Rubik', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  /* ─── TOP BAR ─── */
+  .topbar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-ball {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--orange);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(234,88,12,.3);
+  }
+  .brand-text { font-weight: 700; font-size: .95rem; line-height: 1.2; }
+  .brand-sub { font-size: .68rem; color: var(--text-muted); }
+
+  .topbar-center { display: flex; gap: 3px; }
+  .gender-btn {
+    padding: 6px 16px; border-radius: 8px;
+    font-size: .8rem; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border);
+    background: var(--white); color: var(--text-mid);
+    font-family: 'Rubik', sans-serif; transition: all .15s;
+  }
+  .gender-btn.active { background: var(--orange); color: #fff; border-color: var(--orange); }
+
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .team-pick {
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 9px; padding: 7px 32px 7px 12px;
+    font-size: .85rem; font-family: 'Rubik', sans-serif;
+    color: var(--text); cursor: pointer; appearance: none; outline: none;
+    transition: border-color .2s; min-width: 170px;
+  }
+  .team-pick:focus { border-color: var(--orange); }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 9px;
+    border: 1.5px solid var(--border); background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; cursor: pointer; transition: all .15s;
+    color: var(--text-mid);
+  }
+  .icon-btn:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-pale); }
+  .notif-btn {
+    padding: 7px 14px; border-radius: 9px;
+    background: var(--orange); color: #fff; border: none;
+    font-size: .8rem; font-weight: 600; cursor: pointer;
+    font-family: 'Rubik', sans-serif; display: flex; align-items: center; gap: 5px;
+    transition: background .2s;
+  }
+  .notif-btn:hover { background: #c2410c; }
+
+  /* ─── BANNER ─── */
+  .banner {
+    background: linear-gradient(90deg, #1e3a8a, #1d4ed8 50%, #1e3a8a);
+    padding: 7px 0; overflow: hidden; white-space: nowrap;
+  }
+  .banner-inner {
+    display: inline-block; animation: scroll 30s linear infinite;
+    font-size: .78rem; color: #bfdbfe; letter-spacing: .02em;
+  }
+  @keyframes scroll { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+  /* ─── CONTENT ─── */
+  .content { padding: 20px 20px 40px; }
+
+  /* ─── WEEK HEADER ─── */
+  .week-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+  }
+  .week-label-big { font-size: 1rem; font-weight: 700; }
+  .week-label-sub { font-size: .75rem; color: var(--text-muted); margin-top: 1px; }
+  .view-pills { display: flex; gap: 4px; }
+  .vpill {
+    padding: 5px 13px; border-radius: 20px; font-size: .76rem; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border); background: var(--white);
+    color: var(--text-mid); font-family: 'Rubik', sans-serif; transition: all .15s;
+  }
+  .vpill.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  /* ─── COLUMNS GRID ─── */
+  .cols-wrap {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    align-items: start;
+  }
+
+  /* ─── DAY COLUMN ─── */
+  .day-col { display: flex; flex-direction: column; gap: 6px; }
+
+  .col-header {
+    border-radius: 12px;
+    padding: 10px 10px 8px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .col-header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--white);
+    z-index: -1;
+    border-radius: 12px;
+  }
+  .col-header.is-today { background: var(--today-pale); border: 2px solid var(--today-accent); }
+  .col-header.is-match { background: var(--red-pale); border: 2px solid var(--red); }
+  .col-header.is-normal { background: var(--white); border: 1.5px solid var(--border); }
+
+  .col-day-name {
+    font-size: .84rem; font-weight: 700;
+    color: var(--text);
+  }
+  .col-header.is-today .col-day-name { color: var(--today-accent); }
+  .col-header.is-match .col-day-name { color: var(--red); }
+  .col-date {
+    font-size: .68rem; color: var(--text-muted); margin-top: 2px;
+  }
+  .col-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    margin: 6px auto 0;
+    background: var(--border);
+  }
+  .col-header.is-today .col-dot { background: var(--today-accent); box-shadow: 0 0 5px var(--today-accent); }
+  .col-header.is-match .col-dot { background: var(--red); box-shadow: 0 0 5px var(--red); }
+
+  /* ─── EVENT CARD ─── */
+  .event-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 11px;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow .2s, transform .2s, border-color .2s;
+    cursor: default;
+  }
+  .event-card::before {
+    content: ''; position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 3px;
+  }
+  .event-card.ev-normal::before { background: var(--orange); }
+  .event-card.ev-match::before { background: var(--red); border-color: #fca5a5; }
+  .event-card.ev-changed::before { background: var(--amber); }
+  .event-card.ev-cancelled::before { background: var(--text-muted); }
+
+  .event-card.ev-match { border-color: #fca5a5; background: var(--red-pale); }
+  .event-card.ev-changed { border-color: #fde68a; background: var(--amber-pale); }
+  .event-card.ev-cancelled { opacity: .55; }
+
+  .event-card:hover:not(.ev-cancelled) {
+    box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    transform: translateY(-1px);
+    border-color: var(--orange);
+  }
+  .event-card.ev-match:hover { border-color: var(--red); box-shadow: 0 4px 16px rgba(220,38,38,.15); }
+
+  .ev-time {
+    font-size: .95rem; font-weight: 700; letter-spacing: -.02em;
+    color: var(--text);
+    line-height: 1.15;
+  }
+  .event-card.ev-match .ev-time { color: var(--red); }
+  .event-card.ev-cancelled .ev-time { text-decoration: line-through; color: var(--text-muted); }
+
+  .ev-loc {
+    font-size: .71rem; color: var(--text-mid); margin-top: 3px;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .ev-chip {
+    display: inline-block; margin-top: 5px;
+    font-size: .62rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 20px;
+  }
+  .chip-match { background: #fee2e2; color: var(--red); }
+  .chip-changed { background: #fef3c7; color: var(--amber); }
+  .chip-cancelled { background: #f1f5f9; color: var(--slate); }
+
+  .empty-col {
+    background: var(--white);
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 18px 8px;
+    text-align: center;
+    font-size: .7rem;
+    color: var(--text-muted);
+  }
+
+  /* ─── DESIGN LABEL ─── */
+  .design-label {
+    position: fixed; bottom: 16px; left: 16px;
+    background: var(--orange); color: #fff;
+    font-size: .73rem; font-weight: 700;
+    padding: 6px 14px; border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(234,88,12,.35);
+  }
+
+  @media (max-width: 1000px) { .cols-wrap { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 640px) {
+    .cols-wrap { grid-template-columns: repeat(2, 1fr); }
+    .content { padding: 12px 12px 32px; }
+    .topbar { padding: 0 12px; }
+    .topbar-center { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-ball">🏀</div>
+    <div>
+      <div class="brand-text">הפועל רעננה</div>
+      <div class="brand-sub">לוח אימונים שבועי</div>
+    </div>
+  </div>
+
+  <div class="topbar-center">
+    <button class="gender-btn active">👨 גברים</button>
+    <button class="gender-btn">👩 נשים</button>
+  </div>
+
+  <div class="topbar-right">
+    <select class="team-pick">
+      <option>עש׳׳ב – דני כהן</option>
+      <option>עש׳׳א – אבי לוי</option>
+      <option>נוער א׳ – מוטי שפירא</option>
+      <option>נוער ב׳ – ג׳ורג׳ זכריה</option>
+    </select>
+    <button class="icon-btn" title="שתף בוואטסאפ">📤</button>
+    <button class="icon-btn" title="שמור ביומן">📅</button>
+    <button class="notif-btn">🔔 עדכונים</button>
+  </div>
+</div>
+
+<!-- BANNER -->
+<div class="banner">
+  <div class="banner-inner">
+    🏀 משחק ליגה | ראשון 4.5 | מכבי תל אביב נ׳ הפועל רעננה | 19:30 | אולם בלומפילד &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    📅 אימון מבוטל | שישי 9.5 | צוות עש׳׳ב | עקב חג &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    🏀 משחק ליגה | ראשון 4.5 | מכבי תל אביב נ׳ הפועל רעננה | 19:30 | אולם בלומפילד &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    📅 אימון מבוטל | שישי 9.5 | צוות עש׳׳ב | עקב חג &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="week-bar">
+    <div>
+      <div class="week-label-big">שבוע 4–10 במאי 2025</div>
+      <div class="week-label-sub">עש׳׳ב · דני כהן · 7 אימונים מתוכננים</div>
+    </div>
+    <div class="view-pills">
+      <button class="vpill active">שבועי</button>
+      <button class="vpill">לפי אולם</button>
+      <button class="vpill">יומי</button>
+    </div>
+  </div>
+
+  <!-- 7-DAY COLUMNS -->
+  <div class="cols-wrap">
+
+    <!-- ראשון – MATCH -->
+    <div class="day-col">
+      <div class="col-header is-match">
+        <div class="col-day-name">ראשון</div>
+        <div class="col-date">4.5</div>
+        <div class="col-dot"></div>
+      </div>
+      <div class="event-card ev-match">
+        <div class="ev-time">19:30</div>
+        <div class="ev-loc">📍 בלומפילד</div>
+        <span class="ev-chip chip-match">🏀 משחק</span>
+      </div>
+    </div>
+
+    <!-- שני – TODAY -->
+    <div class="day-col">
+      <div class="col-header is-today">
+        <div class="col-day-name">שני</div>
+        <div class="col-date">5.5 · היום</div>
+        <div class="col-dot"></div>
+      </div>
+      <div class="event-card ev-normal">
+        <div class="ev-time">17:00–18:30</div>
+        <div class="ev-loc">📍 אולם א׳ רעננה</div>
+      </div>
+    </div>
+
+    <!-- שלישי -->
+    <div class="day-col">
+      <div class="col-header is-normal">
+        <div class="col-day-name">שלישי</div>
+        <div class="col-date">6.5</div>
+        <div class="col-dot"></div>
+      </div>
+      <div class="event-card ev-normal">
+        <div class="ev-time">18:00–19:30</div>
+        <div class="ev-loc">📍 אולם ב׳ רעננה</div>
+      </div>
+    </div>
+
+    <!-- רביעי -->
+    <div class="day-col">
+      <div class="col-header is-normal">
+        <div class="col-day-name">רביעי</div>
+        <div class="col-date">7.5</div>
+        <div class="col-dot"></div>
+      </div>
+      <div class="event-card ev-changed">
+        <div class="ev-time">17:30–19:00</div>
+        <div class="ev-loc">📍 אולם א׳ רעננה</div>
+        <span class="ev-chip chip-changed">⚠️ שינוי שעה</span>
+      </div>
+    </div>
+
+    <!-- חמישי -->
+    <div class="day-col">
+      <div class="col-header is-normal">
+        <div class="col-day-name">חמישי</div>
+        <div class="col-date">8.5</div>
+        <div class="col-dot"></div>
+      </div>
+      <div class="event-card ev-normal">
+        <div class="ev-time">17:00–18:30</div>
+        <div class="ev-loc">📍 אולם ב׳ רעננה</div>
+      </div>
+    </div>
+
+    <!-- שישי – CANCELLED -->
+    <div class="day-col">
+      <div class="col-header is-normal">
+        <div class="col-day-name">שישי</div>
+        <div class="col-date">9.5</div>
+        <div class="col-dot"></div>
+      </div>
+      <div class="event-card ev-cancelled">
+        <div class="ev-time">17:00–18:30</div>
+        <div class="ev-loc">📍 אולם א׳</div>
+        <span class="ev-chip chip-cancelled">❌ בוטל</span>
+      </div>
+    </div>
+
+    <!-- שבת – EMPTY -->
+    <div class="day-col">
+      <div class="col-header is-normal">
+        <div class="col-day-name">שבת</div>
+        <div class="col-date">10.5</div>
+        <div class="col-dot"></div>
+      </div>
+      <div class="empty-col">אין<br>אימון</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="design-label">עיצוב 3 — Timeline Columns</div>
+</body>
+</html>

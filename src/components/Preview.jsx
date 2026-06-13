@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors }) => {
-    // const [generatedSchedule, setGeneratedSchedule] = useState(null); // Lifted up
+const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {} }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [dragStart, setDragStart] = useState(null);
-    const [hoveredCell, setHoveredCell] = useState(null);
     const [isHallPickerOpen, setIsHallPickerOpen] = useState(false);
     const [hallPickerTarget, setHallPickerTarget] = useState(null);
     const [hallStartTime, setHallStartTime] = useState('16:00');
@@ -15,6 +15,37 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     // Manage headers locally
     const [currentHeaders, setCurrentHeaders] = useState(headers || []);
     const [selectedDate, setSelectedDate] = useState('');
+
+    // Inspector (side panel) state
+    const [selectedCell, setSelectedCell] = useState(null); // { rowIndex, colIndex, teamName, dayLabel }
+    const [inspStart, setInspStart] = useState('17:00');
+    const [inspEnd, setInspEnd] = useState('18:30');
+    const [inspHall, setInspHall] = useState('');
+    const [inspType, setInspType] = useState('TRAIN'); // TRAIN | MATCH | ATHLETICS
+
+    const [suggestion, setSuggestion] = useState(null); // { text, row, col, newContent }
+
+    // Resizable / collapsible inspector (splitter)
+    const [inspWidth, setInspWidth] = useState(340);
+    const [inspOpen, setInspOpen] = useState(true);
+    const startResize = (e) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startW = inspWidth;
+        const onMove = (ev) => {
+            // Splitter is at the inspector's right edge: drag right → wider, drag left → narrower.
+            const w = Math.max(210, Math.min(720, startW + (ev.clientX - startX)));
+            setInspWidth(w);
+        };
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.userSelect = '';
+        };
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    };
 
     // Update local headers when props change
     if (currentHeaders.length === 0 && headers && headers.length > 0) {
@@ -27,14 +58,44 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     // Helper to get data to show
     const dataToShow = currentSchedule || rawRows;
 
-    // Calculate conflicts
-    const conflicts = (() => {
+    // ---- Calculate conflicts (set for cell highlight + detailed list for the alerts banner) ----
+    const computeConflicts = () => {
         const conflictSet = new Set();
+        const detailsMap = new Map();
         const data = dataToShow;
-        if (!data) return conflictSet;
+        if (!data) return { set: conflictSet, details: [] };
+
+        const addDetail = (row, col, dayIdx, reason, resource) => {
+            const k = `${row}_${col}_${reason}`;
+            if (detailsMap.has(k)) return;
+            detailsMap.set(k, {
+                key: `${row}_${col}`,
+                rowIndex: row,
+                colIndex: col,
+                dayIndex: dayIdx,
+                team: (data[row] && data[row][0]) || '',
+                reason,        // 'אולם' | 'מאמן'
+                resource       // hall name or coach name
+            });
+        };
 
         const coachMap = {};
         const hallMap = {};
+
+        // capacity per hall (FULL=1, HALF=2, MULTI=courts); loose name match
+        const hallCapacity = (loc) => {
+            const keys = Object.keys(hallConfig || {});
+            for (const k of keys) {
+                if (!k) continue;
+                if (loc.includes(k) || k.includes(loc)) {
+                    const cfg = hallConfig[k];
+                    if (cfg.type === 'HALF') return 2;
+                    if (cfg.type === 'MULTI') return Math.max(2, cfg.courts || 2);
+                    return 1;
+                }
+            }
+            return 1;
+        };
 
         data.forEach((row, rIdx) => {
             let coachName = '';
@@ -56,18 +117,16 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     if (!line || !line.trim()) return;
 
                     const nums = line.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
-
                     if (nums) {
                         const start = parseInt(nums[1]);
                         const end = parseInt(nums[2]);
-
                         if (isNaN(start) || isNaN(end)) return;
 
                         let location = line.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
                         location = location.replace(/משחק|ב-/g, '').trim();
                         if (!location) location = "Unknown";
 
-                        // Coach Check
+                        // Coach Check — same coach can't be in two places at once
                         if (coachName) {
                             if (!coachMap[coachName]) coachMap[coachName] = {};
                             if (!coachMap[coachName][d]) coachMap[coachName][d] = [];
@@ -77,37 +136,63 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                 if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
                                     conflictSet.add(`${rIdx}_${cIdx}`);
                                     conflictSet.add(`${ev.row}_${ev.col}`);
+                                    addDetail(rIdx, cIdx, d, 'מאמן', coachName);
+                                    addDetail(ev.row, ev.col, d, 'מאמן', coachName);
                                 }
                             });
                             coachEvents.push({ start, end, row: rIdx, col: cIdx });
                         }
 
-                        // Hall Check
+                        // Hall — collect now; capacity-aware sweep happens after the loop
                         if (location) {
                             if (!hallMap[location]) hallMap[location] = {};
                             if (!hallMap[location][d]) hallMap[location][d] = [];
-
                             const isMatch = cellContent.includes('משחק');
-
-                            const hallEvents = hallMap[location][d];
-                            hallEvents.forEach(ev => {
-                                if (Math.max(start, ev.start) < Math.min(end, ev.end)) {
-                                    // Ignore conflict if both are games
-                                    if (isMatch && ev.isMatch) return;
-
-                                    conflictSet.add(`${rIdx}_${cIdx}`);
-                                    conflictSet.add(`${ev.row}_${ev.col}`);
-                                }
-                            });
-                            hallEvents.push({ start, end, row: rIdx, col: cIdx, isMatch });
+                            hallMap[location][d].push({ start, end, row: rIdx, col: cIdx, isMatch });
                         }
                     }
                 });
             }
         });
-        return conflictSet;
-    })();
 
+        // Hall conflicts: flag only when concurrent bookings exceed the hall's capacity.
+        Object.keys(hallMap).forEach(loc => {
+            const cap = hallCapacity(loc);
+            Object.keys(hallMap[loc]).forEach(dayKey => {
+                const evs = hallMap[loc][dayKey];
+                const pts = [];
+                evs.forEach((e, i) => {
+                    pts.push({ t: e.start, o: -1, i }); // start
+                    pts.push({ t: e.end, o: 1, i });     // end (process ends before starts at same time)
+                });
+                // at equal time, process ends (o:1) before starts (o:-1) so touching slots don't conflict
+                pts.sort((a, b) => a.t - b.t || b.o - a.o);
+                const active = new Set();
+                pts.forEach(p => {
+                    if (p.o === -1) {
+                        active.add(p.i);
+                        if (active.size > cap) {
+                            const arr = [...active];
+                            const allMatches = arr.every(idx => evs[idx].isMatch);
+                            if (!allMatches) {
+                                arr.forEach(idx => {
+                                    const e = evs[idx];
+                                    conflictSet.add(`${e.row}_${e.col}`);
+                                    addDetail(e.row, e.col, Number(dayKey), 'אולם', loc);
+                                });
+                            }
+                        }
+                    } else {
+                        active.delete(p.i);
+                    }
+                });
+            });
+        });
+
+        return { set: conflictSet, details: [...detailsMap.values()] };
+    };
+
+    const { set: conflictSet, details: conflictDetails } = computeConflicts();
 
     const LOCATIONS = ['מטרו', 'השרון', 'רימון', 'אביב', 'תיכון חדש'];
     const TIME_SLOTS = [
@@ -119,7 +204,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     if (!teams || teams.length === 0) {
         return (
-            <div style={{ textAlign: 'center', color: '#666', marginTop: '2rem' }}>
+            <div style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '2rem' }}>
                 <p>אין נתונים לתצוגה. אנא התחבר לגיליון בלשונית ההגדרות.</p>
             </div>
         );
@@ -238,8 +323,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             lines.forEach((line) => {
                 const nums = String(line).replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
                 if (!nums) return;
-
-                // Ignore current slot so user can reassign the same cell
                 if (rIdx === hallPickerTarget.rowIndex) return;
 
                 const lineStart = toMinutes(nums[1]);
@@ -265,10 +348,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         allHalls.forEach((hall) => {
             if (occupied.has(hall)) {
                 const info = occupied.get(hall);
-                unavailable.push({
-                    hall,
-                    reason: `תפוס ע"י ${info.teamName} (${info.range})`
-                });
+                unavailable.push({ hall, reason: `תפוס ע"י ${info.teamName} (${info.range})` });
             } else {
                 available.push({ hall });
             }
@@ -282,12 +362,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         const parsedRange = parseTimeRangeFromText(currentValue);
         setHallStartTime(parsedRange ? formatTimeToken(parsedRange.start) : '16:00');
         setHallEndTime(parsedRange ? formatTimeToken(parsedRange.end) : '17:30');
-        setHallPickerTarget({
-            rowIndex,
-            colIndex,
-            dayLabel,
-            teamName
-        });
+        setHallPickerTarget({ rowIndex, colIndex, dayLabel, teamName });
         setIsHallPickerOpen(true);
     };
 
@@ -305,6 +380,12 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
         const newValue = `${hallName} ${startToken}-${endToken}`;
         handleCellChange(hallPickerTarget.rowIndex, hallPickerTarget.colIndex, newValue);
+        // keep the inspector in sync if it targets the same cell
+        if (selectedCell && selectedCell.rowIndex === hallPickerTarget.rowIndex && selectedCell.colIndex === hallPickerTarget.colIndex) {
+            setInspHall(hallName);
+            setInspStart(formatTimeToken(startToken));
+            setInspEnd(formatTimeToken(endToken));
+        }
         setIsHallPickerOpen(false);
         setHallPickerTarget(null);
     };
@@ -316,31 +397,17 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     const hallAvailability = getHallAvailability();
 
-
-
     const handleGenerate = () => {
         setIsGenerating(true);
         setTimeout(() => {
-            // Deep copy rawRows to start fresh or use current
-            // We'll use rawRows as base to ensure we don't duplicate constraints if re-running
-            // tailored choice: Start from clean slate + constraints OR keep manual?
-            // "Automatic" usually implies full generation. let's respect manual edits if they exist in `generatedSchedule`? 
-            // Simpler: Start from `rawRows` (source) + Constraints.
-
             const newSchedule = JSON.parse(JSON.stringify(rawRows));
 
-            // Allow manual pre-fills from current view if user edited? 
-            // For now, let's assume "Generate" is a fresh calculation based on Rules.
-            // If user wants to keep manual, they should add it as a constraint (Fixed).
-
-            // Clear the schedule area first to ensure clean generation
             newSchedule.forEach(row => {
                 for (let i = dayStart; i < row.length; i++) {
                     row[i] = '';
                 }
             });
 
-            // Resource Tracker
             const bookedResources = {};
             const toMin = (t) => {
                 const s = String(t).padStart(4, '0');
@@ -357,12 +424,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 const key = `${resourceType}_${resourceName}`;
                 if (!bookedResources[key]) bookedResources[key] = {};
                 if (!bookedResources[key][day]) bookedResources[key][day] = [];
-
                 const intervals = bookedResources[key][day];
                 for (const iv of intervals) {
-                    if (Math.max(startMin, iv.start) < Math.min(endMin, iv.end)) {
-                        return false;
-                    }
+                    if (Math.max(startMin, iv.start) < Math.min(endMin, iv.end)) return false;
                 }
                 return true;
             };
@@ -383,18 +447,13 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 if (teamRowIndex === -1) return;
 
                 team.constraints.forEach(c => {
-                    if (c.type === 'OFF') {
-                        // Mark somewhere? We will just check this later
-                        return;
-                    }
+                    if (c.type === 'OFF') return;
 
-                    // Fixed or Match
-                    const dayIdx = c.day; // 0..6
+                    const dayIdx = c.day;
                     const startMin = toMin(c.startTime.replace(':', ''));
                     const endMin = toMin(c.endTime.replace(':', ''));
                     const loc = c.location.trim();
 
-                    // Place in schedule
                     let content = `${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
                     if (c.type === 'MATCH') {
                         const where = c.subType === 'AWAY' ? 'חוץ' : (c.subType === 'HOME' ? 'בית' : '');
@@ -403,10 +462,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                         content = `🏃 אתלטיקה ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
                     }
 
-                    // Write
                     newSchedule[teamRowIndex][dayStart + dayIdx] = content;
 
-                    // Book Resources
                     if (loc) confirmBook('HALL', loc, dayIdx, startMin, endMin);
                     if (team.coach) confirmBook('COACH', team.coach, dayIdx, startMin, endMin);
                 });
@@ -420,7 +477,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             const END_LIMIT = 22 * 60;
             while (curr < END_LIMIT) {
                 CANDIDATE_STARTS.push(curr);
-                curr += 30; // 30 min jumps
+                curr += 30;
             }
 
             shuffledConfig.forEach(team => {
@@ -431,41 +488,31 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 const sessionsNeeded = team.sessionsPerWeek || 3;
                 let sessionsScheduled = 0;
 
-                // Count already scheduled (from constraints)
                 for (let d = 0; d < 7; d++) {
                     if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) sessionsScheduled++;
                 }
 
                 let sessionsToFill = sessionsNeeded - sessionsScheduled;
                 const duration = team.duration || 90;
-
-                // Blocked days (OFF)
                 const blockedDays = (team.constraints || []).filter(c => c.type === 'OFF').map(c => c.day);
 
                 for (let d = 0; d < 7 && sessionsToFill > 0; d++) {
                     if (blockedDays.includes(d)) continue;
-                    if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) continue; // Already booked
+                    if (teamRow[dayStart + d] && teamRow[dayStart + d].trim()) continue;
 
                     let foundSlot = false;
-                    // Try locations
                     for (const loc of LOCATIONS) {
                         if (foundSlot) break;
-
                         for (const startMin of CANDIDATE_STARTS) {
                             const endMin = startMin + duration;
-
-                            // Check Max End Time
                             if (team.maxEndTime) {
                                 const limit = toMin(team.maxEndTime.replace(':', ''));
                                 if (endMin > limit) continue;
                             }
                             if (endMin > END_LIMIT + 60) continue;
-
-                            // Check Resources
                             if (!tryBook('HALL', loc, d, startMin, endMin)) continue;
                             if (team.coach && !tryBook('COACH', team.coach, d, startMin, endMin)) continue;
 
-                            // Book
                             confirmBook('HALL', loc, d, startMin, endMin);
                             if (team.coach) confirmBook('COACH', team.coach, d, startMin, endMin);
 
@@ -485,38 +532,29 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     const handleCellChange = (rowIndex, colIndex, value) => {
         let currentData = currentSchedule || JSON.parse(JSON.stringify(rawRows));
-        // Ensure state copy
         currentData = [...currentData];
         currentData[rowIndex] = [...currentData[rowIndex]];
-
         currentData[rowIndex][colIndex] = value;
         setCurrentSchedule(currentData);
     };
 
     // Drag and Drop Logic
     const onDragStart = (e, rowIndex, colIndex, value) => {
-        if (!value) {
-            e.preventDefault();
-            return;
-        }
+        if (!value) { e.preventDefault(); return; }
         setDragStart({ rowIndex, colIndex, value });
         e.dataTransfer.effectAllowed = "move";
     };
 
-    const onDragOver = (e) => {
-        e.preventDefault(); // Allow drop
-    };
+    const onDragOver = (e) => { e.preventDefault(); };
 
     const onDrop = (e, targetRowIndex, targetColIndex) => {
         e.preventDefault();
         if (!dragStart) return;
 
-        // Clone current data
         let newData = currentSchedule
             ? JSON.parse(JSON.stringify(currentSchedule))
             : JSON.parse(JSON.stringify(rawRows));
 
-        // Swap values
         const valToMove = dragStart.value;
         const targetVal = newData[targetRowIndex][targetColIndex];
 
@@ -530,7 +568,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const handleCellClear = (rIdx, cIdx) => {
         handleCellChange(rIdx, cIdx, '');
     };
-
 
     const handleSave = async () => {
         if (saveUrl) {
@@ -553,16 +590,12 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     mode: 'no-cors',
                     cache: 'no-cache',
                     redirect: 'follow',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8',
-                    },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
 
-                // With no-cors, we can't read the response, but it means the request was sent.
                 console.log("Payload sent to script:", payload);
                 alert('הבקשה נשלחה! (בגלל מגבלות גישה, לא ניתן לקבל אישור סופי, אנא בדוק את הגיליון בעוד רגע)');
-
             } catch (err) {
                 console.error("Save Error:", err);
                 alert('שגיאה בשליחה לגיליון.');
@@ -576,12 +609,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     };
 
     const downloadCsv = () => {
-        const csv = Papa.unparse({
-            fields: currentHeaders,
-            data: dataToShow
-        });
+        const csv = Papa.unparse({ fields: currentHeaders, data: dataToShow });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const blobWithBOM = new Blob(["\ufeff", blob], { type: 'text/csv;charset=utf-8;' });
+        const blobWithBOM = new Blob(["﻿", blob], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blobWithBOM);
         link.setAttribute('href', url);
@@ -594,309 +624,394 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const handleClear = () => {
         if (window.confirm('האם אתה בטוח שברצונך לנקות את כל השינויים ולחזור למצב הגיליון המקורי?')) {
             setCurrentSchedule(null);
+            setSelectedCell(null);
         }
     };
 
+    // ---- Inspector helpers ----
+    const selectCell = (rowIndex, colIndex, teamName, dayLabel, cellData) => {
+        const range = parseTimeRangeFromText(cellData);
+        setInspStart(range ? formatTimeToken(range.start) : '17:00');
+        setInspEnd(range ? formatTimeToken(range.end) : '18:30');
+        setInspHall(extractLocation(cellData) || '');
+        setInspType(cellData && cellData.includes('משחק') ? 'MATCH' : (cellData && cellData.includes('אתלטיקה') ? 'ATHLETICS' : 'TRAIN'));
+        setSelectedCell({ rowIndex, colIndex, teamName, dayLabel });
+        setInspOpen(true); // make sure the editing panel is visible when a cell is chosen
+    };
+
+    const applyInspector = () => {
+        if (!selectedCell) return;
+        const s = normalizeTimeToken(inspStart);
+        const e = normalizeTimeToken(inspEnd);
+        if (!s || !e || toMinutes(e) <= toMinutes(s)) {
+            alert('טווח השעות לא תקין.');
+            return;
+        }
+        const hall = (inspHall || '').trim();
+        let content = `${hall} ${s}-${e}`.trim();
+        if (inspType === 'MATCH') content = `🏀 משחק ${content}`.trim();
+        else if (inspType === 'ATHLETICS') content = `🏃 אתלטיקה ${content}`.trim();
+        handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, content);
+    };
+
+    const clearSelected = () => {
+        if (!selectedCell) return;
+        handleCellClear(selectedCell.rowIndex, selectedCell.colIndex);
+        setInspHall('');
+        setSuggestion(null);
+    };
+
+    // ---- Conflict resolution helpers ----
+    const getHallCapacity = (loc) => {
+        const keys = Object.keys(hallConfig || {});
+        for (const k of keys) {
+            if (!k) continue;
+            if (loc.includes(k) || k.includes(loc)) {
+                const cfg = hallConfig[k];
+                if (cfg.type === 'HALF') return 2;
+                if (cfg.type === 'MULTI') return Math.max(2, cfg.courts || 2);
+                return 1;
+            }
+        }
+        return 1;
+    };
+
+    const minsToTok = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}${String(min % 60).padStart(2, '0')}`;
+
+    const findFreeHallAt = (colIndex, excludeRow, startMin, endMin) => {
+        const halls = getAllKnownHalls();
+        for (const hall of halls) {
+            let count = 0;
+            dataToShow.forEach((r, ri) => {
+                if (ri === excludeRow) return;
+                const cell = r?.[colIndex];
+                if (!cell || typeof cell !== 'string') return;
+                cell.split('\n').forEach(line => {
+                    const loc = extractLocation(line);
+                    if (!loc || !(loc.includes(hall) || hall.includes(loc))) return;
+                    const rg = parseTimeRangeFromText(line);
+                    if (rg && isOverlap(startMin, endMin, toMinutes(rg.start), toMinutes(rg.end))) count++;
+                });
+            });
+            if (count < getHallCapacity(hall)) return hall;
+        }
+        return null;
+    };
+
+    const coachBusyAt = (coachName, colIndex, excludeRow, startMin, endMin) => {
+        if (!coachName) return false;
+        let busy = false;
+        dataToShow.forEach((r, ri) => {
+            if (ri === excludeRow) return;
+            const cn = (coachIndex != null && coachIndex !== -1) ? (r[coachIndex] || '').trim() : '';
+            if (cn !== coachName) return;
+            const cell = r[colIndex];
+            if (!cell || typeof cell !== 'string') return;
+            cell.split('\n').forEach(line => {
+                const rg = parseTimeRangeFromText(line);
+                if (rg && isOverlap(startMin, endMin, toMinutes(rg.start), toMinutes(rg.end))) busy = true;
+            });
+        });
+        return busy;
+    };
+
+    const rebuildContent = (orig, hall, startTok, endTok) => {
+        const s = normalizeTimeToken(startTok);
+        const e = normalizeTimeToken(endTok);
+        let c = `${hall} ${s}-${e}`.trim();
+        if (orig.includes('משחק')) c = `🏀 משחק ${c}`;
+        else if (orig.includes('אתלטיקה')) c = `🏃 אתלטיקה ${c}`;
+        return c;
+    };
+
+    const resolveConflict = (detail) => {
+        const { rowIndex: row, colIndex: col, dayIndex } = detail;
+        const cell = dataToShow[row]?.[col] || '';
+        const range = parseTimeRangeFromText(cell);
+        selectCell(row, col, detail.team, dayNameForIndex(dayIndex), cell);
+        if (!range) { setSuggestion({ text: 'אין שעה תקינה במשבצת — פתור ידנית.', row, col, newContent: null }); return; }
+
+        const startMin = toMinutes(range.start);
+        const endMin = toMinutes(range.end);
+        const dur = endMin - startMin;
+
+        if (detail.reason === 'אולם') {
+            const hall = findFreeHallAt(col, row, startMin, endMin);
+            if (hall) {
+                setSuggestion({
+                    text: `להעביר את "${detail.team}" לאולם "${hall}" באותה שעה (${formatTimeToken(range.start)}–${formatTimeToken(range.end)})`,
+                    row, col, newContent: rebuildContent(cell, hall, range.start, range.end)
+                });
+                return;
+            }
+        } else { // coach
+            const coachName = (coachIndex != null && coachIndex !== -1) ? (dataToShow[row]?.[coachIndex] || '').trim() : '';
+            for (let s = 16 * 60; s + dur <= 22 * 60; s += 30) {
+                const e = s + dur;
+                if (coachBusyAt(coachName, col, row, s, e)) continue;
+                const hall = findFreeHallAt(col, row, s, e);
+                if (hall) {
+                    setSuggestion({
+                        text: `להעביר את "${detail.team}" לשעה ${formatTimeToken(minsToTok(s))}–${formatTimeToken(minsToTok(e))} באולם "${hall}"`,
+                        row, col, newContent: rebuildContent(cell, hall, minsToTok(s), minsToTok(e))
+                    });
+                    return;
+                }
+            }
+        }
+        setSuggestion({ text: 'לא נמצא פתרון אוטומטי פנוי — פתור ידנית בעזרת הפאנל.', row, col, newContent: null });
+    };
+
+    const applySuggestion = () => {
+        if (!suggestion || !suggestion.newContent) return;
+        handleCellChange(suggestion.row, suggestion.col, suggestion.newContent);
+        // keep inspector synced
+        const range = parseTimeRangeFromText(suggestion.newContent);
+        if (range) { setInspStart(formatTimeToken(range.start)); setInspEnd(formatTimeToken(range.end)); }
+        setInspHall(extractLocation(suggestion.newContent) || '');
+        setSuggestion(null);
+    };
+
+    const dayNameForIndex = (dayIdx) => {
+        const h = currentHeaders[dayStart + dayIdx];
+        return h ? h.split(' ')[0] : DAY_NAMES[dayIdx] || '';
+    };
+
+    const knownHalls = getAllKnownHalls();
+    const selectedConflicts = selectedCell
+        ? conflictDetails.filter(c => c.rowIndex === selectedCell.rowIndex && c.colIndex === selectedCell.colIndex)
+        : [];
+
     return (
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ margin: 0 }}>תצוגה מקדימה {currentSchedule && '(תוצאת חישוב)'}</h3>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button onClick={handleClear} style={{ background: '#EF476F', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600 }}>
-                        נקה הכל (חזור למקור)
+        <div className="cc">
+            {/* Toolbar */}
+            <div className="cc-toolbar">
+                <div className="cc-title">
+                    🏀 לוח שיבוץ שבועי {currentSchedule && <span className="cc-dirty">· שינויים לא שמורים</span>}
+                </div>
+                <div className="cc-actions">
+                    <label className="cc-date">📅 תאריך התחלה
+                        <input type="date" value={selectedDate} onChange={handleDateChange} />
+                    </label>
+                    <button className="cc-btn ghost" onClick={handleClear}>↺ נקה הכל</button>
+                    <button className="cc-btn amber" onClick={handleGenerate} disabled={isGenerating}>
+                        {isGenerating ? 'מחשב…' : '✨ צור לו"ז אוטומטי'}
                     </button>
-                    <button onClick={handleGenerate} disabled={isGenerating} style={{ background: '#FCA311', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, opacity: isGenerating ? 0.7 : 1 }}>
-                        {isGenerating ? 'מחשב...' : 'צור לו"ז אוטומטי'}
-                    </button>
-                    <button onClick={handleSave} disabled={isSaving} style={{ background: saveUrl ? '#10B981' : '#14213D', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, opacity: isSaving ? 0.7 : 1 }}>
-                        {isSaving ? 'שומר...' : (saveUrl ? 'שמור לגיליון (ענן)' : 'ייצא ל-CSV / שמור')}
+                    <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? 'שומר…' : (saveUrl ? '💾 שמור לגיליון' : '⬇ ייצא CSV')}
                     </button>
                 </div>
             </div>
 
-            <div style={{ padding: '1rem', background: '#f0f9ff', borderRadius: '4px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ fontWeight: '600', color: '#0369a1' }}>📅 עדכון תאריכים:</span>
-                <input type="date" value={selectedDate} onChange={handleDateChange} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ccc' }} />
-            </div>
-
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                    <tr style={{ background: '#f8f9fa' }}>
-                        <th style={{ padding: '1rem', border: '1px solid #eee', textAlign: 'right', minWidth: '150px' }}>קבוצה</th>
-                        {coachIndex !== undefined && coachIndex !== -1 && (
-                            <th style={{ padding: '1rem', border: '1px solid #eee', textAlign: 'right', minWidth: '100px' }}>מאמן</th>
-                        )}
-                        {dayHeaders.map((header, i) => (
-                            <th key={i} style={{ padding: '1rem', border: '1px solid #eee', textAlign: 'center', minWidth: '120px' }}>
-                                {header}
-                            </th>
+            {/* Conflict alerts banner */}
+            {conflictDetails.length > 0 ? (
+                <div className="cc-alerts">
+                    <div className="cc-alerts-head">⚠️ נמצאו {conflictDetails.length} התנגשויות — יש לטפל לפני שמירה</div>
+                    <div className="cc-alerts-list">
+                        {conflictDetails.map((c, i) => (
+                            <div key={i} className="cc-alert">
+                                <span className="cc-alert-info" onClick={() => selectCell(c.rowIndex, c.colIndex, c.team, dayNameForIndex(c.dayIndex), dataToShow[c.rowIndex]?.[c.colIndex] || '')}>
+                                    <b>{c.team}</b> · {dayNameForIndex(c.dayIndex)} — {c.reason === 'מאמן' ? `מאמן "${c.resource}" משובץ במקביל` : `אולם "${c.resource}" תפוס באותה שעה`}
+                                </span>
+                                <button className="cc-alert-fix" onClick={() => resolveConflict(c)}>🛠 פתור</button>
+                            </div>
                         ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {teams.map((teamObj, i) => {
-                        const teamName = teamObj.name || teamObj;
-                        let rowIndex = teamObj.rowIndex;
-                        if (rowIndex === undefined) {
-                            rowIndex = dataToShow.findIndex(r => r[0] === teamName);
-                        }
-                        const rowData = dataToShow[rowIndex];
+                    </div>
+                </div>
+            ) : (
+                dataToShow && <div className="cc-ok">✓ אין התנגשויות — הלו"ז תקין</div>
+            )}
 
-                        return (
-                            <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fcfcfc' }}>
-                                <td style={{ padding: '0.8rem', border: '1px solid #eee', fontWeight: '500' }}>
-                                    {teamName}
-                                    {teamObj.type && (
-                                        <span style={{ fontSize: '0.7rem', marginLeft: '5px', padding: '2px 6px', borderRadius: '10px', background: teamObj.type === 'W' ? '#BE185D' : '#3B82F6', color: 'white' }}>
-                                            {teamObj.type}
-                                        </span>
-                                    )}
-                                </td>
-                                {coachIndex !== undefined && coachIndex !== -1 && (
-                                    <td style={{ padding: '0.8rem', border: '1px solid #eee', color: '#666' }}>
-                                        {rowData ? rowData[coachIndex] : ''}
-                                    </td>
-                                )}
-                                {dayHeaders.map((_, colMapIndex) => {
-                                    const colIndex = dayStart + colMapIndex;
-                                    const cellData = rowData ? rowData[colIndex] : '';
-                                    const isConflict = conflicts.has(`${rowIndex}_${colIndex}`);
-                                    const isHovered = hoveredCell && hoveredCell.r === rowIndex && hoveredCell.c === colIndex;
+            <div className="cc-body">
+                {/* Board */}
+                <div className="cc-board">
+                    <table className="cc-table">
+                        <thead>
+                            <tr>
+                                <th className="cc-sticky-col">קבוצה</th>
+                                {coachIndex !== undefined && coachIndex !== -1 && <th>מאמן</th>}
+                                {dayHeaders.map((header, i) => (<th key={i}>{header}</th>))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {teams.map((teamObj, i) => {
+                                const teamName = teamObj.name || teamObj;
+                                let rowIndex = teamObj.rowIndex;
+                                if (rowIndex === undefined) {
+                                    rowIndex = dataToShow.findIndex(r => r[0] === teamName);
+                                }
+                                const rowData = dataToShow[rowIndex];
 
-                                    let bgColor = 'transparent';
-                                    if (isConflict) {
-                                        bgColor = '#fee2e2';
-                                    } else if (cellData && hallColors) {
-                                        const cleanLoc = cellData.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').replace(/משחק|ב-|🏀|🏃/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
-                                        const matchedLoc = Object.keys(hallColors).find(l =>
-                                            (l === 'משחק' && cellData.includes('משחק')) ||
-                                            cleanLoc.includes(l)
-                                        );
-                                        if (matchedLoc) {
-                                            bgColor = hallColors[matchedLoc];
-                                        } else if (cellData.includes('משחק')) {
-                                            bgColor = '#ffedd5';
-                                        } else if (cleanLoc) {
-                                            // Fallback dynamic pastel color
-                                            const palette = [
-                                                '#fecaca', '#fde68a', '#d9f99d', '#a7f3d0', '#99f6e4',
-                                                '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8', '#fecdd3',
-                                                '#bbf7d0', '#e9d5ff', '#a5f3fc', '#bfdbfe', '#fef08a'
-                                            ];
-                                            let hash = 0;
-                                            for (let i = 0; i < cleanLoc.length; i++) {
-                                                hash = cleanLoc.charCodeAt(i) + ((hash << 5) - hash);
-                                            }
-                                            bgColor = palette[Math.abs(hash) % palette.length];
-                                        }
-                                    }
-
-                                    return (
-                                        <td
-                                            key={colMapIndex}
-                                            style={{
-                                                padding: 0,
-                                                border: isConflict ? '2px solid #ef4444' : '1px solid #eee',
-                                                backgroundColor: bgColor,
-                                                cursor: cellData ? 'grab' : 'default',
-                                                position: 'relative'
-                                            }}
-                                            draggable={!!cellData}
-                                            onDragStart={(e) => onDragStart(e, rowIndex, colIndex, cellData)}
-                                            onDragOver={onDragOver}
-                                            onDrop={(e) => onDrop(e, rowIndex, colIndex)}
-                                            onMouseEnter={() => setHoveredCell({ r: rowIndex, c: colIndex })}
-                                            onMouseLeave={() => setHoveredCell(null)}
-                                        >
-                                            <textarea
-                                                value={cellData || ''}
-                                                onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                                                style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    border: 'none',
-                                                    padding: '0.4rem',
-                                                    textAlign: 'center',
-                                                    background: 'transparent',
-                                                    outline: 'none',
-                                                    cursor: 'inherit',
-                                                    color: isConflict ? '#b91c1c' : 'inherit',
-                                                    resize: 'none',
-                                                    fontFamily: 'inherit',
-                                                    fontSize: 'inherit',
-                                                    lineHeight: '1.4',
-                                                    whiteSpace: 'pre-wrap',
-                                                    overflow: 'hidden' // Or 'auto' if scrolling needed, but let's encourage concise content or expand row height? row heights are dynamic in table.
-                                                }}
-                                            />
-                                            {cellData && isHovered && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleCellClear(rowIndex, colIndex);
-                                                    }}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '2px',
-                                                        right: '2px',
-                                                        width: '18px',
-                                                        height: '18px',
-                                                        background: '#EF476F',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        borderRadius: '50%',
-                                                        fontSize: '10px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        cursor: 'pointer',
-                                                        zIndex: 10
-                                                    }}
-                                                    title="נקה משבצת"
-                                                >
-                                                    ✕
-                                                </button>
-                                            )}
-                                            {isHovered && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openHallPicker(rowIndex, colIndex, dayHeaders[colMapIndex], teamName, cellData || '');
-                                                    }}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        bottom: '2px',
-                                                        left: '2px',
-                                                        background: '#2563eb',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        borderRadius: '4px',
-                                                        fontSize: '10px',
-                                                        padding: '2px 6px',
-                                                        cursor: 'pointer',
-                                                        zIndex: 10
-                                                    }}
-                                                    title="מצא אולם פנוי לפי שעה"
-                                                >
-                                                    + אולם
-                                                </button>
+                                return (
+                                    <tr key={i}>
+                                        <td className="cc-sticky-col cc-team">
+                                            {teamName}
+                                            {teamObj.type && (
+                                                <span className="cc-gender" style={{ background: teamObj.type === 'W' ? '#be185d' : '#3b82f6' }}>{teamObj.type}</span>
                                             )}
                                         </td>
-                                    );
-                                })}
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </table>
+                                        {coachIndex !== undefined && coachIndex !== -1 && (
+                                            <td className="cc-coach">{rowData ? rowData[coachIndex] : ''}</td>
+                                        )}
+                                        {dayHeaders.map((_, colMapIndex) => {
+                                            const colIndex = dayStart + colMapIndex;
+                                            const cellData = rowData ? rowData[colIndex] : '';
+                                            const isConflict = conflictSet.has(`${rowIndex}_${colIndex}`);
+                                            const isSelected = selectedCell && selectedCell.rowIndex === rowIndex && selectedCell.colIndex === colIndex;
 
+                                            let bgColor = 'rgba(255,255,255,0.03)';
+                                            let textColor = 'var(--text)';
+                                            if (cellData) {
+                                                const cleanLoc = cellData.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').replace(/משחק|ב-|🏀|🏃/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
+                                                const matchedLoc = hallColors && Object.keys(hallColors).find(l => (l === 'משחק' && cellData.includes('משחק')) || cleanLoc.includes(l));
+                                                if (matchedLoc) bgColor = hallColors[matchedLoc];
+                                                else if (cellData.includes('משחק')) bgColor = '#ffedd5';
+                                                else if (cleanLoc) {
+                                                    const palette = ['#fecaca', '#fde68a', '#d9f99d', '#a7f3d0', '#99f6e4', '#bae6fd', '#c7d2fe', '#ddd6fe', '#fbcfe8', '#fecdd3', '#bbf7d0', '#e9d5ff', '#a5f3fc', '#bfdbfe', '#fef08a'];
+                                                    let hash = 0;
+                                                    for (let k = 0; k < cleanLoc.length; k++) hash = cleanLoc.charCodeAt(k) + ((hash << 5) - hash);
+                                                    bgColor = palette[Math.abs(hash) % palette.length];
+                                                }
+                                                textColor = '#15233f';
+                                            }
+                                            if (isConflict) { bgColor = '#fde2e4'; textColor = '#b91c1c'; }
+
+                                            return (
+                                                <td
+                                                    key={colMapIndex}
+                                                    className={`cc-cell ${isConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''}`}
+                                                    style={{ backgroundColor: bgColor, color: textColor }}
+                                                    draggable={!!cellData}
+                                                    onDragStart={(e) => onDragStart(e, rowIndex, colIndex, cellData)}
+                                                    onDragOver={onDragOver}
+                                                    onDrop={(e) => onDrop(e, rowIndex, colIndex)}
+                                                    onClick={() => selectCell(rowIndex, colIndex, teamName, dayHeaders[colMapIndex], cellData || '')}
+                                                >
+                                                    {isConflict && <span className="cc-cell-warn">⚠️</span>}
+                                                    {cellData
+                                                        ? <span className="cc-cell-text">{cellData}</span>
+                                                        : <span className="cc-cell-add">+</span>}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* collapsed: thin re-open strip so the table can use full width */}
+                {!inspOpen && (
+                    <button className="cc-insp-reopen" onClick={() => setInspOpen(true)} title="פתח פאנל עריכה">
+                        ‹ עריכה
+                    </button>
+                )}
+
+                {/* draggable splitter */}
+                {inspOpen && <div className="cc-splitter" onMouseDown={startResize} title="גרור לשינוי רוחב הפאנל">⋮</div>}
+
+                {/* Inspector side panel */}
+                {inspOpen && (
+                <aside className="cc-inspector" style={{ width: inspWidth }}>
+                    <button className="cc-insp-collapse" onClick={() => setInspOpen(false)} title="הסתר פאנל (הגדל טבלה)">⟩ הסתר</button>
+                    {!selectedCell ? (
+                        <div className="cc-insp-empty">
+                            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎯</div>
+                            לחץ על משבצת בלוח כדי להוסיף או לערוך אימון
+                        </div>
+                    ) : (
+                        <>
+                            <h3 className="cc-insp-title">{selectedCell.teamName}</h3>
+                            <div className="cc-insp-sub">יום {selectedCell.dayLabel}</div>
+
+                            {selectedConflicts.length > 0 && (
+                                <div className="cc-insp-warn">
+                                    ⚠️ {selectedConflicts.map(c => c.reason === 'מאמן' ? `המאמן "${c.resource}" משובץ במקביל` : `האולם "${c.resource}" תפוס באותה שעה`).join(' · ')}
+                                    <button className="cc-btn amber full" style={{ marginTop: '0.5rem' }} onClick={() => resolveConflict(selectedConflicts[0])}>🛠 פתור אוטומטית</button>
+                                </div>
+                            )}
+
+                            {suggestion && selectedCell && suggestion.row === selectedCell.rowIndex && suggestion.col === selectedCell.colIndex && (
+                                <div className="cc-suggest">
+                                    <div className="cc-suggest-text">💡 {suggestion.text}{suggestion.newContent ? '?' : ''}</div>
+                                    <div className="cc-suggest-actions">
+                                        {suggestion.newContent && <button className="cc-btn green" onClick={applySuggestion}>✓ אשר תיקון</button>}
+                                        <button className="cc-btn ghost" onClick={() => setSuggestion(null)}>פתור ידנית</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="cc-field">
+                                <label>סוג פעילות</label>
+                                <div className="cc-types">
+                                    <button className={`cc-type ${inspType === 'TRAIN' ? 'on' : ''}`} onClick={() => setInspType('TRAIN')}>אימון</button>
+                                    <button className={`cc-type match ${inspType === 'MATCH' ? 'on' : ''}`} onClick={() => setInspType('MATCH')}>🏀 משחק</button>
+                                    <button className={`cc-type ath ${inspType === 'ATHLETICS' ? 'on' : ''}`} onClick={() => setInspType('ATHLETICS')}>🏃 אתלטיקה</button>
+                                </div>
+                            </div>
+
+                            <div className="cc-field-row">
+                                <div className="cc-field"><label>משעה</label><input type="time" value={inspStart} onChange={e => setInspStart(e.target.value)} /></div>
+                                <div className="cc-field"><label>עד שעה</label><input type="time" value={inspEnd} onChange={e => setInspEnd(e.target.value)} /></div>
+                            </div>
+
+                            <div className="cc-field">
+                                <label>אולם</label>
+                                <input list="cc-halls" value={inspHall} onChange={e => setInspHall(e.target.value)} placeholder="שם אולם" />
+                                <datalist id="cc-halls">
+                                    {knownHalls.map(h => <option key={h} value={h} />)}
+                                </datalist>
+                            </div>
+
+                            <button className="cc-btn blue full" onClick={() => openHallPicker(selectedCell.rowIndex, selectedCell.colIndex, selectedCell.dayLabel, selectedCell.teamName, dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex] || '')}>
+                                🔍 מצא אולם פנוי בשעה זו
+                            </button>
+
+                            <div className="cc-insp-actions">
+                                <button className="cc-btn green full" onClick={applyInspector}>✓ החל</button>
+                                <button className="cc-btn danger" onClick={clearSelected}>נקה</button>
+                            </div>
+                            <p className="cc-insp-hint">טיפ: אפשר גם לגרור אימון ממשבצת למשבצת בלוח.</p>
+                        </>
+                    )}
+                </aside>
+                )}
+            </div>
+
+            {/* Hall picker modal (kept) */}
             {isHallPickerOpen && hallPickerTarget && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    right: 0,
-                    left: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.35)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 2000
-                }}>
-                    <div style={{
-                        width: 'min(760px, 94vw)',
-                        maxHeight: '85vh',
-                        overflowY: 'auto',
-                        background: 'white',
-                        borderRadius: '10px',
-                        padding: '1rem 1.25rem',
-                        boxShadow: '0 12px 30px rgba(0,0,0,0.2)'
-                    }}>
+                <div className="cc-modal-overlay">
+                    <div className="cc-modal">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h4 style={{ margin: 0 }}>בחירת אולם פנוי</h4>
-                            <button
-                                onClick={closeHallPicker}
-                                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1rem' }}
-                            >
-                                ✕
-                            </button>
+                            <button onClick={closeHallPicker} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text)' }}>✕</button>
                         </div>
-
-                        <div style={{ marginTop: '0.6rem', color: '#374151', fontSize: '0.9rem' }}>
+                        <div style={{ marginTop: '0.6rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
                             <strong>קבוצה:</strong> {hallPickerTarget.teamName} | <strong>יום:</strong> {hallPickerTarget.dayLabel}
                         </div>
-
                         <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.9rem', alignItems: 'center', flexWrap: 'wrap' }}>
                             <label style={{ fontSize: '0.9rem' }}>משעה:</label>
-                            <input
-                                type="time"
-                                value={hallStartTime}
-                                onChange={(e) => setHallStartTime(e.target.value)}
-                                style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                            />
+                            <input type="time" value={hallStartTime} onChange={(e) => setHallStartTime(e.target.value)} className="cc-time" />
                             <label style={{ fontSize: '0.9rem' }}>עד שעה:</label>
-                            <input
-                                type="time"
-                                value={hallEndTime}
-                                onChange={(e) => setHallEndTime(e.target.value)}
-                                style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                            />
+                            <input type="time" value={hallEndTime} onChange={(e) => setHallEndTime(e.target.value)} className="cc-time" />
                         </div>
-
                         <div style={{ marginTop: '1rem' }}>
-                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#065f46' }}>
-                                אולמות פנויים ({hallAvailability.available.length})
-                            </h5>
+                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#34d399' }}>אולמות פנויים ({hallAvailability.available.length})</h5>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 {hallAvailability.available.map((item) => (
-                                    <button
-                                        key={item.hall}
-                                        onClick={() => applyHallToTargetCell(item.hall)}
-                                        style={{
-                                            border: '1px solid #10b981',
-                                            background: '#ecfdf5',
-                                            color: '#065f46',
-                                            borderRadius: '999px',
-                                            padding: '0.35rem 0.75rem',
-                                            cursor: 'pointer',
-                                            fontWeight: 600
-                                        }}
-                                    >
-                                        {item.hall}
-                                    </button>
+                                    <button key={item.hall} onClick={() => applyHallToTargetCell(item.hall)} className="cc-hall-free">{item.hall}</button>
                                 ))}
-                                {hallAvailability.available.length === 0 && (
-                                    <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-                                        אין אולמות פנויים בטווח השעות שנבחר.
-                                    </div>
-                                )}
+                                {hallAvailability.available.length === 0 && <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>אין אולמות פנויים בטווח שנבחר.</div>}
                             </div>
                         </div>
-
                         <div style={{ marginTop: '1rem' }}>
-                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#92400e' }}>
-                                אולמות תפוסים ({hallAvailability.unavailable.length})
-                            </h5>
+                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#fbbf24' }}>אולמות תפוסים ({hallAvailability.unavailable.length})</h5>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                 {hallAvailability.unavailable.map((item) => (
-                                    <div
-                                        key={item.hall}
-                                        style={{
-                                            background: '#fffbeb',
-                                            border: '1px solid #fcd34d',
-                                            borderRadius: '6px',
-                                            padding: '0.45rem 0.6rem',
-                                            fontSize: '0.9rem'
-                                        }}
-                                    >
-                                        <strong>{item.hall}</strong> - {item.reason}
-                                    </div>
+                                    <div key={item.hall} className="cc-hall-busy"><strong>{item.hall}</strong> — {item.reason}</div>
                                 ))}
-                                {hallAvailability.unavailable.length === 0 && (
-                                    <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-                                        אין התנגשויות ידועות בטווח.
-                                    </div>
-                                )}
+                                {hallAvailability.unavailable.length === 0 && <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>אין התנגשויות ידועות בטווח.</div>}
                             </div>
                         </div>
                     </div>

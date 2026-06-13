@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>עיצוב 1 – Dark Stadium</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e2d47;
+    --orange: #f97316;
+    --orange-dim: rgba(249,115,22,0.15);
+    --orange-glow: rgba(249,115,22,0.4);
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --green: #22c55e;
+    --text: #f1f5f9;
+    --text-dim: #64748b;
+    --text-muted: #334155;
+  }
+
+  body {
+    font-family: 'Rubik', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    direction: rtl;
+  }
+
+  /* TOP NAV */
+  .topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: var(--orange);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text { font-size: 1.1rem; font-weight: 700; }
+  .logo-sub { font-size: 0.72rem; color: var(--text-dim); }
+  .nav-links { display: flex; gap: 8px; }
+  .nav-link {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    text-decoration: none;
+    color: var(--text-dim);
+  }
+  .nav-link.active {
+    background: var(--orange-dim);
+    border-color: var(--orange);
+    color: var(--orange);
+  }
+  .nav-link:hover { color: var(--text); border-color: var(--border); }
+
+  /* BANNER */
+  .banner {
+    background: linear-gradient(90deg, #1e3a8a, #1d4ed8, #1e3a8a);
+    padding: 10px 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .banner-inner {
+    display: inline-block;
+    animation: scroll 28s linear infinite;
+    font-size: 0.82rem;
+    color: #bfdbfe;
+    letter-spacing: 0.03em;
+  }
+  @keyframes scroll { from { transform: translateX(-50%); } to { transform: translateX(0%); } }
+
+  /* HEADER */
+  .page-header {
+    padding: 32px 28px 20px;
+    background: linear-gradient(180deg, var(--surface) 0%, transparent 100%);
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .team-selector-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .selector-label { font-size: 0.8rem; color: var(--text-dim); }
+  .team-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 40px 9px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-family: 'Rubik', sans-serif;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    transition: border-color 0.2s;
+  }
+  .team-select:focus { border-color: var(--orange); }
+
+  .action-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Rubik', sans-serif;
+    border: 1px solid transparent;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+  .btn-orange {
+    background: var(--orange);
+    color: #fff;
+    border-color: var(--orange);
+  }
+  .btn-orange:hover { background: #ea6900; }
+
+  /* VIEW TOGGLE */
+  .view-tabs {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .view-tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    font-family: 'Rubik', sans-serif;
+  }
+  .view-tab.active {
+    background: var(--orange);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* WEEK STRIP */
+  .week-strip {
+    padding: 0 28px 28px;
+  }
+  .week-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+  }
+
+  /* DAY CARD */
+  .day-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+  .day-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--orange);
+    box-shadow: 0 8px 24px rgba(249,115,22,0.2);
+  }
+  .day-card.today { border-color: var(--orange); box-shadow: 0 0 0 2px var(--orange-dim); }
+  .day-card.empty { opacity: 0.45; }
+  .day-card.match { border-color: var(--red); }
+  .day-card.match:hover { box-shadow: 0 8px 24px rgba(239,68,68,0.25); }
+
+  .day-header {
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .day-name { font-weight: 700; font-size: 0.9rem; }
+  .day-date { font-size: 0.72rem; color: var(--text-dim); margin-top: 1px; }
+  .day-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .day-card.today .day-dot { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+  .day-card.match .day-dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  .day-body { padding: 10px 12px; }
+  .no-training {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  /* SESSION ITEM */
+  .session {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(30,45,71,0.6);
+  }
+  .session:last-child { border-bottom: none; padding-bottom: 0; }
+  .session-time {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--orange);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .session.match-session .session-time { color: var(--red); }
+  .session-loc {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .session-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.68rem;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-top: 5px;
+    font-weight: 600;
+  }
+  .badge-match { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  .badge-changed { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+  .badge-cancelled { background: rgba(100,116,139,0.15); color: #64748b; border: 1px solid rgba(100,116,139,0.3); text-decoration: line-through; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 0 28px 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-value { font-size: 1.6rem; font-weight: 900; color: var(--orange); }
+  .stat-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 3px; }
+
+  /* LABEL */
+  .design-label {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    background: var(--orange);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 900px) {
+    .days-grid { grid-template-columns: repeat(4, 1fr); }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .days-grid { grid-template-columns: repeat(2, 1fr); }
+    .topnav { padding: 10px 14px; }
+    .page-header, .week-strip, .stats-row { padding-right: 14px; padding-left: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPNAV -->
+<nav class="topnav">
+  <div class="logo-area">
+    <div class="logo-icon">🏀</div>
+    <div>
+      <div class="logo-text">הפועל רעננה</div>
+      <div class="logo-sub">לוח אימונים שבועי</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-link active" href="#">גברים</a>
+    <a class="nav-link" href="#">נשים</a>
+  </div>
+</nav>
+
+<!-- BANNER -->
+<div class="banner">
+  <div class="banner-inner">
+    🏀 משחק ליגה | ראשון 4.5 | מכבי תל אביב נ׳ הפועל רעננה | 19:30 | אולם בלומפילד &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    📅 אימון מבוטל | שישי 9.5 | צוות עש׳׳ב | עקב חג &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    🏀 משחק ליגה | ראשון 4.5 | מכבי תל אביב נ׳ הפועל רעננה | 19:30 | אולם בלומפילד &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    📅 אימון מבוטל | שישי 9.5 | צוות עש׳׳ב | עקב חג &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row" style="padding-top:24px">
+  <div class="stat-card"><div class="stat-value">7</div><div class="stat-label">אימונים השבוע</div></div>
+  <div class="stat-card"><div class="stat-value">2</div><div class="stat-label">משחקי ליגה</div></div>
+  <div class="stat-card"><div class="stat-value">4</div><div class="stat-label">אולמות פעילים</div></div>
+  <div class="stat-card"><div class="stat-value">12</div><div class="stat-label">קבוצות</div></div>
+</div>
+
+<!-- PAGE HEADER -->
+<div class="page-header" style="padding-top:0">
+  <div class="header-row">
+    <div class="team-selector-wrap">
+      <span class="selector-label">קבוצה:</span>
+      <select class="team-select">
+        <option>עש׳׳ב – דני כהן</option>
+        <option>עש׳׳א – אבי לוי</option>
+        <option>נוער א – מוטי שפירא</option>
+        <option>נוער ב – ג׳ורג׳ זכריה</option>
+      </select>
+      <div class="view-tabs">
+        <button class="view-tab active">שבועי</button>
+        <button class="view-tab">לפי אולם</button>
+        <button class="view-tab">יומי</button>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-ghost">📤 שתף בוואטסאפ</button>
+      <button class="btn btn-ghost">📅 שמור יומן</button>
+      <button class="btn btn-orange">🔔 עדכונים</button>
+    </div>
+  </div>
+</div>
+
+<!-- WEEK STRIP -->
+<div class="week-strip">
+  <div class="week-label">שבוע 4–10 במאי 2025</div>
+  <div class="days-grid">
+
+    <!-- ראשון -->
+    <div class="day-card match">
+      <div class="day-header">
+        <div><div class="day-name">ראשון</div><div class="day-date">4.5</div></div>
+        <div class="day-dot"></div>
+      </div>
+      <div class="day-body">
+        <div class="session match-session">
+          <div class="session-time">19:30</div>
+          <div class="session-loc">📍 בלומפילד</div>
+          <div><span class="session-badge badge-match">🏀 משחק</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- שני -->
+    <div class="day-card today">
+      <div class="day-header">
+        <div><div class="day-name">שני</div><div class="day-date">5.5</div></div>
+        <div class="day-dot"></div>
+      </div>
+      <div class="day-body">
+        <div class="session">
+          <div class="session-time">17:00–18:30</div>
+          <div class="session-loc">📍 אולם א׳ רעננה</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- שלישי -->
+    <div class="day-card">
+      <div class="day-header">
+        <div><div class="day-name">שלישי</div><div class="day-date">6.5</div></div>
+        <div class="day-dot"></div>
+      </div>
+      <div class="day-body">
+        <div class="session">
+          <div class="session-time">18:00–19:30</div>
+          <div class="session-loc">📍 אולם ב׳ רעננה</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- רביעי -->
+    <div class="day-card">
+      <div class="day-header">
+        <div><div class="day-name">רביעי</div><div class="day-date">7.5</div></div>
+        <div class="day-dot"></div>
+      </div>
+      <div class="day-body">
+        <div class="session">
+          <div class="session-time">17:30–19:00</div>
+          <div class="session-loc">📍 אולם א׳ רעננה</div>
+          <div><span class="session-badge badge-changed">⚠️ שינוי</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- חמישי -->
+    <div class="day-card">
+      <div class="day-header">
+        <div><div class="day-name">חמישי</div><div class="day-date">8.5</div></div>
+        <div class="day-dot"></div>
+      </div>
+      <div class="day-body">
+        <div class="session">
+          <div class="session-time">17:00–18:30</div>
+          <div class="session-loc">📍 אולם ב׳ רעננה</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- שישי -->
+    <div class="day-card empty">
+      <div class="day-header">
+        <div><div class="day-name">שישי</div><div class="day-date">9.5</div></div>
+        <div class="day-dot"></div>
+      </div>
+      <div class="day-body">
+        <div class="session">
+          <div class="session-time" style="text-decoration:line-through;opacity:0.5">17:00–18:30</div>
+          <div class="session-loc" style="opacity:0.5">📍 אולם א׳</div>
+          <div><span class="session-badge badge-cancelled">❌ בוטל</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- שבת -->
+    <div class="day-card empty">
+      <div class="day-header">
+        <div><div class="day-name">שבת</div><div class="day-date">10.5</div></div>
+        <div class="day-dot"></div>
+      </div>
+      <div class="day-body">
+        <div class="no-training">אין אימון</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="design-label">עיצוב 1 — Dark Stadium</div>
+</body>
+</html>

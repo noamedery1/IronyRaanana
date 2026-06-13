@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro Scheduler — הפועל רעננה</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b1020; --bg2:#0f1730; --panel:#141d38; --panel2:#1a2545;
+  --bd:rgba(255,255,255,.09); --bd2:rgba(255,255,255,.15);
+  --text:#eaf0ff; --dim:rgba(234,240,255,.6); --mut:rgba(234,240,255,.34);
+  --orange:#ff7a18; --deep:#ea580c;
+  --sky:#22d3ee; --blue:#3b82f6; --purple:#a855f7; --green:#22c55e; --pink:#ec4899;
+  --red:#f4475b; --amber:#fbbf24;
+}
+body{font-family:'Rubik',sans-serif;direction:rtl;min-height:100vh;color:var(--text);
+  background:
+    radial-gradient(ellipse 60% 50% at 85% -5%,rgba(34,211,238,.16),transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 5%,rgba(255,122,24,.16),transparent 55%),
+    linear-gradient(180deg,var(--bg),var(--bg2));
+  background-attachment:fixed;-webkit-font-smoothing:antialiased}
+
+.nav{display:flex;align-items:center;justify-content:space-between;padding:15px 28px;background:rgba(11,16,32,.6);backdrop-filter:blur(18px);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:center;gap:12px}
+.orb{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,var(--orange),var(--deep));display:grid;place-items:center;font-size:23px;box-shadow:0 0 30px rgba(255,122,24,.4)}
+.bname{font-size:1.06rem;font-weight:800}.bsub{font-size:.66rem;color:var(--dim);letter-spacing:.05em;text-transform:uppercase}
+.modes{display:flex;gap:4px;background:rgba(255,255,255,.05);padding:4px;border-radius:13px;border:1px solid var(--bd)}
+.mode{padding:9px 18px;border:none;background:transparent;color:var(--dim);font-family:inherit;font-weight:700;font-size:.9rem;border-radius:10px;cursor:pointer;transition:.25s}
+.mode.on{background:linear-gradient(135deg,var(--orange),var(--deep));color:#fff;box-shadow:0 0 24px rgba(255,122,24,.4)}
+
+.view{display:none;animation:fade .4s ease}.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
+.section{max-width:1320px;margin:0 auto;padding:24px 24px}
+.chip{font-size:.72rem;font-weight:700;padding:4px 11px;border-radius:50px;display:inline-flex;align-items:center;gap:5px}
+.btn{border:none;font-family:inherit;font-weight:700;font-size:.9rem;padding:11px 19px;border-radius:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.22s;color:#fff}
+.btn:hover{transform:translateY(-2px)}
+.btn-org{background:linear-gradient(135deg,var(--orange),var(--deep));box-shadow:0 0 26px rgba(255,122,24,.35)}
+.btn-wa{background:linear-gradient(135deg,#25d366,#128c4b)}
+.btn-ghost{background:rgba(255,255,255,.07);border:1px solid var(--bd);color:var(--text)}
+.panel{background:var(--panel);border:1px solid var(--bd);border-radius:18px}
+
+/* ─── PUBLIC: clean timeline ─── */
+.phead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin:18px 0 6px}
+.phead h1{font-size:2rem;font-weight:900;letter-spacing:-.5px}
+.phead h1 small{display:block;font-size:.85rem;font-weight:500;color:var(--dim);margin-top:3px}
+.phead .actions{display:flex;gap:9px;flex-wrap:wrap}
+.sel{appearance:none;background:var(--panel2);border:1px solid var(--bd2);color:var(--text);font-family:inherit;font-weight:700;padding:11px 18px;border-radius:50px;cursor:pointer;font-size:.9rem}
+.tl{margin-top:16px;display:flex;flex-direction:column}
+.tl-day{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:16px 0;border-bottom:1px solid var(--bd)}
+.tl-day:last-child{border-bottom:none}
+.tl-date{position:relative}
+.tl-date .dn{font-size:1.05rem;font-weight:800}
+.tl-date .dd{font-size:.78rem;color:var(--mut)}
+.tl-date.today .dn{color:var(--sky)}
+.tl-date .badge{display:inline-block;margin-top:6px;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:50px;background:rgba(34,211,238,.16);color:#a5f3fc}
+.tl-events{display:flex;flex-direction:column;gap:8px}
+.te{display:grid;grid-template-columns:auto 4px 1fr auto;gap:14px;align-items:center;padding:13px 16px;border-radius:14px;background:var(--panel);border:1px solid var(--bd);transition:.2s}
+.te:hover{transform:translateX(-4px);border-color:var(--bd2)}
+.te .time{font-weight:800;font-size:.95rem;white-space:nowrap}
+.te .accent{width:4px;height:34px;border-radius:4px;background:var(--blue)}
+.te.match .accent{background:var(--red)}.te.chg .accent{background:var(--amber)}.te.ath .accent{background:var(--green)}
+.te .where{font-weight:700;font-size:.92rem}.te .where small{display:block;color:var(--dim);font-weight:400;font-size:.74rem;margin-top:1px}
+.te.cancel{opacity:.45}.te.cancel .where{text-decoration:line-through}
+.b-blue{background:rgba(59,130,246,.18);color:#bfdbfe}.b-match{background:rgba(244,71,91,.2);color:#ffb3bd}
+.b-chg{background:rgba(251,191,36,.18);color:#fde68a}.b-ath{background:rgba(34,197,94,.18);color:#bbf7d0}
+.tl-empty{font-size:.82rem;color:var(--mut);align-self:center}
+.mapmini{margin-top:8px;height:74px;border-radius:12px;background:linear-gradient(135deg,#16233e,#0e1830);position:relative;overflow:hidden;border:1px solid var(--bd)}
+.mapmini::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:18px 18px}
+.pin{position:absolute;top:44%;left:50%;width:15px;height:15px;border-radius:50% 50% 50% 0;background:var(--red);transform:translate(-50%,-50%) rotate(-45deg);box-shadow:0 0 14px var(--red)}
+
+/* ─── ADMIN: resource board ─── */
+.admin-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.kpis{display:flex;gap:10px;flex-wrap:wrap}
+.kpi{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:10px 16px;display:flex;align-items:center;gap:10px}
+.kpi .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px}
+.kpi b{font-size:1.2rem;font-weight:900;line-height:1}.kpi span{font-size:.7rem;color:var(--dim)}
+.k1 .ic{background:rgba(59,130,246,.22)}.k2 .ic{background:rgba(34,211,238,.22)}.k3 .ic{background:rgba(244,71,91,.22)}.k4 .ic{background:rgba(34,197,94,.22)}
+.admin-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.workspace{display:grid;grid-template-columns:230px 1fr 300px;gap:14px;align-items:start}
+
+/* unscheduled tray (left) */
+.tray{padding:15px}
+.tray h3{font-size:.92rem;font-weight:800;margin-bottom:4px}
+.tray .hint{font-size:.72rem;color:var(--dim);margin-bottom:13px}
+.tile{border-radius:12px;padding:11px 13px;margin-bottom:9px;cursor:grab;border:1px solid var(--bd2);font-size:.84rem;font-weight:700;display:flex;align-items:center;justify-content:space-between;transition:.18s}
+.tile:active{cursor:grabbing}
+.tile.dragging{opacity:.4}
+.tile small{font-weight:400;color:var(--dim);font-size:.72rem}
+.tile.t-blue{background:rgba(59,130,246,.18)}.tile.t-cyan{background:rgba(34,211,238,.16)}
+.tile.t-purple{background:rgba(168,85,247,.18)}.tile.t-pink{background:rgba(236,72,153,.16)}
+.tray .seg{display:flex;gap:3px;background:var(--bg2);padding:4px;border-radius:11px;margin-bottom:13px}
+.tray .seg button{flex:1;border:none;background:transparent;color:var(--dim);font-family:inherit;font-weight:700;font-size:.78rem;padding:7px;border-radius:8px;cursor:pointer}
+.tray .seg button.on{background:var(--panel2);color:var(--text)}
+
+/* board (center) */
+.board{padding:14px;overflow:auto}
+.board-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.board-head .seg{display:flex;gap:3px;background:var(--bg2);padding:4px;border-radius:11px;border:1px solid var(--bd)}
+.board-head .seg button{border:none;background:transparent;color:var(--dim);font-family:inherit;font-weight:700;font-size:.8rem;padding:7px 14px;border-radius:8px;cursor:pointer}
+.board-head .seg button.on{background:var(--panel2);color:var(--text)}
+.grid{display:grid;grid-template-columns:54px repeat(5,1fr);gap:6px;min-width:680px}
+.gh{font-size:.78rem;color:var(--dim);font-weight:800;text-align:center;padding:6px 0}
+.tcol{display:flex;flex-direction:column;gap:6px;padding-top:32px}
+.tlabel{height:70px;font-size:.7rem;color:var(--mut)}
+.col{display:flex;flex-direction:column;gap:6px}
+.slot{height:70px;border-radius:11px;border:1.5px dashed var(--bd);background:rgba(255,255,255,.02);padding:5px;transition:.15s}
+.slot.over{border-color:var(--orange);background:rgba(255,122,24,.12)}
+.block{border-radius:9px;padding:7px 9px;font-size:.76rem;height:100%;cursor:grab;border:1px solid transparent;display:flex;flex-direction:column;justify-content:center}
+.block b{font-weight:800}.block small{opacity:.82;font-size:.7rem}
+.block.dragging{opacity:.4}
+.bk-blue{background:rgba(59,130,246,.28);border-color:rgba(59,130,246,.5)}
+.bk-cyan{background:rgba(34,211,238,.24);border-color:rgba(34,211,238,.5)}
+.bk-purple{background:rgba(168,85,247,.26);border-color:rgba(168,85,247,.5)}
+.bk-pink{background:rgba(236,72,153,.24);border-color:rgba(236,72,153,.5)}
+.bk-match{background:rgba(244,71,91,.3);border-color:rgba(244,71,91,.6)}
+.bk-conflict{outline:2px solid var(--red);outline-offset:-1px;box-shadow:0 0 16px rgba(244,71,91,.5)}
+
+/* inspector (right) */
+.inspector{padding:18px;position:sticky;top:84px}
+.inspector h3{font-size:1rem;font-weight:800}.inspector .sub{font-size:.76rem;color:var(--dim);margin-bottom:15px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.73rem;color:var(--dim);margin-bottom:5px;font-weight:700}
+.field input,.field select{width:100%;background:var(--bg2);border:1px solid var(--bd);color:var(--text);font-family:inherit;padding:9px 11px;border-radius:10px;font-size:.84rem}
+.frow{display:flex;gap:8px}.frow .field{flex:1}
+.ctypes{display:flex;gap:6px;flex-wrap:wrap}
+.ct{padding:6px 11px;border-radius:50px;font-size:.73rem;font-weight:700;cursor:pointer;border:1px solid var(--bd)}
+.ct.fixed{background:rgba(59,130,246,.2);color:#bfdbfe}.ct.match{background:rgba(244,71,91,.2);color:#ffb3bd}
+.ct.ath{background:rgba(34,197,94,.18);color:#bbf7d0}.ct.off{background:rgba(148,163,184,.16);color:#cbd5e1}
+.halls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.hall{padding:6px 11px;border-radius:9px;font-size:.73rem;font-weight:700;cursor:pointer;background:rgba(34,197,94,.16);color:#bbf7d0;border:1px solid rgba(34,197,94,.3)}
+.hall.busy{background:rgba(251,191,36,.13);color:#fde68a;border-color:rgba(251,191,36,.3);cursor:not-allowed}
+.divide{height:1px;background:var(--bd);margin:15px 0}
+.note{font-size:.74rem;color:var(--dim);background:rgba(255,122,24,.1);border:1px solid rgba(255,122,24,.25);padding:10px 12px;border-radius:11px;margin-top:6px}
+
+@media(max-width:1080px){.workspace{grid-template-columns:1fr}.inspector{position:static}.tray .tiles{display:grid;grid-template-columns:1fr 1fr;gap:9px}}
+@media(max-width:640px){.tl-day{grid-template-columns:1fr}.phead h1{font-size:1.6rem}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand"><div class="orb">🏀</div><div><div class="bname">הפועל רעננה</div><div class="bsub">מחלקת הכדורסל · Pro Scheduler</div></div></div>
+  <div class="modes">
+    <button class="mode on" onclick="setView('public',this)">לו"ז ציבורי</button>
+    <button class="mode" onclick="setView('admin',this)">ניהול ⚙</button>
+  </div>
+</nav>
+
+<!-- ════ PUBLIC ════ -->
+<div class="view on" id="v-public">
+<div class="section">
+  <div class="phead">
+    <h1>לו"ז שבועי<small>נוער א' · מאמן דני · 15–21 ביוני</small></h1>
+    <div class="actions">
+      <select class="sel"><option>נוער א'</option><option>קדטים</option><option>ילדים ב'</option></select>
+      <button class="btn btn-wa">💬 שיתוף</button>
+      <button class="btn btn-ghost">📅 יומן</button>
+      <button class="btn btn-ghost">🔔 עדכונים</button>
+    </div>
+  </div>
+
+  <div class="tl">
+    <div class="tl-day">
+      <div class="tl-date today"><div class="dn">ראשון</div><div class="dd">15.6</div><span class="badge">היום</span></div>
+      <div class="tl-events">
+        <div class="te"><span class="time">17:00–18:30</span><span class="accent"></span><span class="where">אולם מטרו<small>רחוב אחוזה 120</small></span><span class="chip b-blue">אימון</span></div>
+      </div>
+    </div>
+    <div class="tl-day">
+      <div class="tl-date"><div class="dn">שלישי</div><div class="dd">17.6</div></div>
+      <div class="tl-events">
+        <div class="te chg"><span class="time">18:00–19:30</span><span class="accent"></span><span class="where">אולם רימון<small>שינוי מאולם השרון</small></span><span class="chip b-chg">⚠ שינוי</span></div>
+      </div>
+    </div>
+    <div class="tl-day">
+      <div class="tl-date"><div class="dn">חמישי</div><div class="dd">19.6</div></div>
+      <div class="tl-events">
+        <div class="te cancel"><span class="time">16:00–17:30</span><span class="accent"></span><span class="where">אולם אביב<small>האימון בוטל</small></span><span class="chip b-match">בוטל</span></div>
+      </div>
+    </div>
+    <div class="tl-day">
+      <div class="tl-date"><div class="dn">שבת</div><div class="dd">21.6</div></div>
+      <div class="tl-events">
+        <div class="te match"><span class="time">19:00–21:00</span><span class="accent"></span><span class="where">משחק מול הפועל ת"א<small>בית · אולם מטרו</small></span><span class="chip b-match">🏀 משחק</span></div>
+        <div class="mapmini"><div class="pin"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ════ ADMIN: drag board ════ -->
+<div class="view" id="v-admin">
+<div class="section">
+  <div class="admin-top">
+    <div class="kpis">
+      <div class="kpi k1"><div class="ic">🏀</div><div><b>12</b><span>קבוצות</span></div></div>
+      <div class="kpi k2"><div class="ic">📅</div><div><b>48</b><span>אימונים</span></div></div>
+      <div class="kpi k3"><div class="ic">⚠</div><div><b id="conflicts">1</b><span>קונפליקטים</span></div></div>
+      <div class="kpi k4"><div class="ic">✓</div><div><b>נשמר</b><span>לפני 4 דק'</span></div></div>
+    </div>
+    <div class="admin-actions">
+      <button class="btn btn-ghost">✨ צור לו"ז אוטומטי</button>
+      <button class="btn btn-org">💾 שמור לגיליון</button>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <!-- LEFT: unscheduled tray -->
+    <div class="panel tray">
+      <h3>אימונים לשיבוץ</h3>
+      <div class="hint">גרור בלוק אל הלוח →</div>
+      <div class="seg"><button class="on">גברים</button><button>נשים</button></div>
+      <div class="tiles">
+        <div class="tile t-blue" draggable="true"><span>נוער א'<br><small>90 דק' · 1 נותר</small></span><span>⠿</span></div>
+        <div class="tile t-cyan" draggable="true"><span>קדטים<br><small>90 דק' · 1 נותר</small></span><span>⠿</span></div>
+        <div class="tile t-purple" draggable="true"><span>ילדים ב'<br><small>60 דק' · 2 נותרו</small></span><span>⠿</span></div>
+        <div class="tile t-pink" draggable="true"><span>נערות א'<br><small>90 דק' · 3 נותרו</small></span><span>⠿</span></div>
+      </div>
+    </div>
+
+    <!-- CENTER: resource board -->
+    <div class="panel board">
+      <div class="board-head">
+        <strong style="font-size:.95rem">לוח שבועי · גרירה</strong>
+        <div class="seg"><button class="on">לפי יום</button><button>לפי אולם</button></div>
+      </div>
+      <div class="grid">
+        <div class="gh"></div><div class="gh">ראשון</div><div class="gh">שני</div><div class="gh">שלישי</div><div class="gh">רביעי</div><div class="gh">חמישי</div>
+      </div>
+      <div class="grid" style="margin-top:6px">
+        <div class="tcol"><div class="tlabel">16:00</div><div class="tlabel">17:30</div><div class="tlabel">19:00</div></div>
+        <!-- day columns -->
+        <div class="col" data-day="ראשון">
+          <div class="slot"></div>
+          <div class="slot"><div class="block bk-blue" draggable="true"><b>נוער א'</b><small>מטרו · 17:00</small></div></div>
+          <div class="slot"></div>
+        </div>
+        <div class="col" data-day="שני">
+          <div class="slot"><div class="block bk-purple" draggable="true"><b>ילדים ב'</b><small>אביב · 16:00</small></div></div>
+          <div class="slot"></div><div class="slot"></div>
+        </div>
+        <div class="col" data-day="שלישי">
+          <div class="slot"></div>
+          <div class="slot"><div class="block bk-purple" draggable="true"><b>נוער א'</b><small>רימון · 18:00</small></div></div>
+          <div class="slot"></div>
+        </div>
+        <div class="col" data-day="רביעי">
+          <div class="slot"></div>
+          <div class="slot"><div class="block bk-cyan bk-conflict" draggable="true"><b>קדטים ⚠</b><small>השרון · 18:30</small></div></div>
+          <div class="slot"></div>
+        </div>
+        <div class="col" data-day="חמישי">
+          <div class="slot"></div><div class="slot"></div>
+          <div class="slot"><div class="block bk-match" draggable="true"><b>🏀 משחק</b><small>מטרו · 19:00</small></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: inspector -->
+    <div class="panel inspector">
+      <h3>עריכת בלוק</h3>
+      <div class="sub">קדטים · יום רביעי</div>
+      <div class="note">⚠ קונפליקט: אולם השרון תפוס ע"י נוער א' באותה שעה.</div>
+      <div class="field" style="margin-top:13px"><label>סוג אילוץ</label>
+        <div class="ctypes"><span class="ct fixed">קבוע</span><span class="ct match">משחק</span><span class="ct ath">אתלטיקה</span><span class="ct off">חופש</span></div>
+      </div>
+      <div class="frow"><div class="field"><label>התחלה</label><input type="time" value="18:30"></div><div class="field"><label>סיום</label><input type="time" value="20:00"></div></div>
+      <div class="field"><label>בחירת אולם פנוי</label>
+        <div class="halls"><span class="hall">מטרו</span><span class="hall">רימון</span><span class="hall busy">השרון · תפוס</span><span class="hall">אביב</span><span class="hall busy">תיכון · תפוס</span></div>
+      </div>
+      <div class="divide"></div>
+      <div class="frow"><div class="field"><label>משך (דק')</label><select><option>90</option><option>60</option><option>120</option></select></div><div class="field"><label>אימונים/שבוע</label><select><option>3</option><option>2</option><option>4</option></select></div></div>
+      <button class="btn btn-org" style="width:100%;justify-content:center;margin-top:4px">פתור והחל</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function setView(v,el){document.querySelectorAll('.mode').forEach(b=>b.classList.remove('on'));el.classList.add('on');document.getElementById('v-public').classList.toggle('on',v==='public');document.getElementById('v-admin').classList.toggle('on',v==='admin');window.scrollTo({top:0,behavior:'smooth'})}
+
+/* working drag & drop demo */
+let dragged=null;
+function bind(){
+  document.querySelectorAll('.block[draggable], .tile[draggable]').forEach(b=>{
+    b.addEventListener('dragstart',e=>{dragged=b;b.classList.add('dragging');e.dataTransfer.effectAllowed='move'});
+    b.addEventListener('dragend',()=>{if(dragged)dragged.classList.remove('dragging');dragged=null});
+  });
+  document.querySelectorAll('.slot').forEach(s=>{
+    s.addEventListener('dragover',e=>{e.preventDefault();s.classList.add('over')});
+    s.addEventListener('dragleave',()=>s.classList.remove('over'));
+    s.addEventListener('drop',e=>{
+      e.preventDefault();s.classList.remove('over');
+      if(!dragged)return;
+      // if dragged from tray, clone as a board block
+      if(dragged.classList.contains('tile')){
+        const b=document.createElement('div');
+        b.className='block bk-blue';b.draggable=true;
+        b.innerHTML='<b>'+dragged.querySelector('span').childNodes[0].nodeValue+'</b><small>שובץ · גרור לעדכון</small>';
+        s.innerHTML='';s.appendChild(b);
+        b.addEventListener('dragstart',ev=>{dragged=b;b.classList.add('dragging')});
+        b.addEventListener('dragend',()=>b.classList.remove('dragging'));
+      }else{
+        s.innerHTML='';s.appendChild(dragged);
+      }
+    });
+  });
+}
+bind();
+</script>
+</body>
+</html>

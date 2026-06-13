@@ -78,12 +78,16 @@ const LeagueGamesBanner = ({ data, headers, targetGender }) => {
 
     return (
         <div style={{
-            background: 'linear-gradient(90deg, #1e3a8a 0%, #3b82f6 50%, #1e3a8a 100%)',
-            color: 'white',
-            padding: '12px 0',
+            background: 'linear-gradient(90deg, rgba(30,58,138,0.55), rgba(34,211,238,0.28), rgba(30,58,138,0.55))',
+            color: '#eaf6ff',
+            padding: '11px 0',
             position: 'relative',
             overflow: 'hidden',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '14px',
+            margin: '0.6rem 0',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 10px 30px -16px rgba(0,0,0,0.7)',
             direction: 'rtl'
         }}>
             <div className="banner-container" style={{
