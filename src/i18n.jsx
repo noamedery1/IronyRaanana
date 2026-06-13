@@ -1,0 +1,111 @@
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
+
+// Lightweight i18n: dictionary + provider + hook + language switcher.
+// Translates the UI chrome only; schedule data (team/hall names) stays in its source language.
+
+export const LANGS = [
+    { code: 'he', label: 'עברית', short: 'עב' },
+    { code: 'ar', label: 'العربية', short: 'ع' },
+    { code: 'ru', label: 'Русский', short: 'RU' },
+    { code: 'en', label: 'English', short: 'EN' },
+];
+const RTL = ['he', 'ar'];
+
+// Hebrew day name -> localized day name
+const DAYS = {
+    he: { 'ראשון': 'ראשון', 'שני': 'שני', 'שלישי': 'שלישי', 'רביעי': 'רביעי', 'חמישי': 'חמישי', 'שישי': 'שישי', 'שבת': 'שבת' },
+    ar: { 'ראשון': 'الأحد', 'שני': 'الاثنين', 'שלישי': 'الثلاثاء', 'רביעי': 'الأربعاء', 'חמישי': 'الخميس', 'שישי': 'الجمعة', 'שבת': 'السبت' },
+    ru: { 'ראשון': 'Воскресенье', 'שני': 'Понедельник', 'שלישי': 'Вторник', 'רביעי': 'Среда', 'חמישי': 'Четверг', 'שישי': 'Пятница', 'שבת': 'Суббота' },
+    en: { 'ראשון': 'Sunday', 'שני': 'Monday', 'שלישי': 'Tuesday', 'רביעי': 'Wednesday', 'חמישי': 'Thursday', 'שישי': 'Friday', 'שבת': 'Saturday' },
+};
+
+const DICT = {
+    he: {
+        brand_sub: 'מחלקת הכדורסל · לו"ז שבועי', men: 'גברים', women: 'נשים', admin: 'ניהול',
+        select_team: 'בחר קבוצה', tab_team: 'לו"ז קבוצה', tab_halls: 'אולמות', tab_daily: 'יומי מרוכז',
+        pick_team: 'נא לבחור קבוצה לצפייה בלו"ז', no_week: 'אין אימונים מתוכננים לשבוע זה',
+        next_training: 'האימון הקרוב', no_next: 'אין אימון קרוב', today: 'היום', match: 'משחק', training: 'אימון', coach: 'מאמן',
+        location: 'מיקום', venue_default: 'אולם האימון', pick_team_location: 'בחר קבוצה לצפייה במיקום', navigate: 'ניווט במפות', nav_with: 'נווט עם',
+        share_whatsapp: 'שיתוף בוואטסאפ', cal_live: 'יומן מתעדכן', cal_save: 'שמור ליומן', updates: 'עדכונים',
+        cal_live_title: 'הירשם ליומן שמתעדכן אוטומטית בכל שינוי', cal_save_title: 'הורדה חד-פעמית ליומן',
+        full_week: 'לו"ז שבועי מלא', cancelled: 'בוטל', changed: 'שינוי', coach_edit_title: 'כניסת מאמן לעריכה', suggest: 'הצעה לשיפור',
+    },
+    ar: {
+        brand_sub: 'قسم كرة السلة · الجدول الأسبوعي', men: 'رجال', women: 'نساء', admin: 'الإدارة',
+        select_team: 'اختر فريقاً', tab_team: 'جدول الفريق', tab_halls: 'القاعات', tab_daily: 'يومي',
+        pick_team: 'يرجى اختيار فريق لعرض الجدول', no_week: 'لا توجد تمارين مجدولة هذا الأسبوع',
+        next_training: 'التمرين القادم', no_next: 'لا يوجد تمرين قادم', today: 'اليوم', match: 'مباراة', training: 'تمرين', coach: 'مدرب',
+        location: 'الموقع', venue_default: 'قاعة التمرين', pick_team_location: 'اختر فريقاً لعرض الموقع', navigate: 'فتح في الخرائط', nav_with: 'التنقّل عبر',
+        share_whatsapp: 'مشاركة عبر واتساب', cal_live: 'تقويم محدّث', cal_save: 'حفظ في التقويم', updates: 'تحديثات',
+        cal_live_title: 'اشترك في تقويم يتحدّث تلقائياً عند كل تغيير', cal_save_title: 'تنزيل لمرة واحدة',
+        full_week: 'الجدول الأسبوعي الكامل', cancelled: 'أُلغي', changed: 'تغيير', coach_edit_title: 'دخول المدرب للتعديل', suggest: 'اقتراح للتحسين',
+    },
+    ru: {
+        brand_sub: 'Баскетбол · Недельное расписание', men: 'Мужчины', women: 'Женщины', admin: 'Админ',
+        select_team: 'Выберите команду', tab_team: 'Расписание', tab_halls: 'Залы', tab_daily: 'По дням',
+        pick_team: 'Выберите команду, чтобы увидеть расписание', no_week: 'На эту неделю тренировок нет',
+        next_training: 'Ближайшая тренировка', no_next: 'Нет ближайших тренировок', today: 'Сегодня', match: 'Игра', training: 'Тренировка', coach: 'Тренер',
+        location: 'Место', venue_default: 'Место тренировки', pick_team_location: 'Выберите команду', navigate: 'Открыть в картах', nav_with: 'Навигация через',
+        share_whatsapp: 'Поделиться в WhatsApp', cal_live: 'Авто-календарь', cal_save: 'В календарь', updates: 'Обновления',
+        cal_live_title: 'Подписка на авто-обновляемый календарь', cal_save_title: 'Разовая загрузка',
+        full_week: 'Полное недельное расписание', cancelled: 'Отменено', changed: 'Изменение', coach_edit_title: 'Вход тренера', suggest: 'Предложение',
+    },
+    en: {
+        brand_sub: 'Basketball Dept · Weekly Schedule', men: 'Men', women: 'Women', admin: 'Admin',
+        select_team: 'Select a team', tab_team: 'Team schedule', tab_halls: 'Venues', tab_daily: 'Daily',
+        pick_team: 'Select a team to view the schedule', no_week: 'No trainings scheduled this week',
+        next_training: 'Next training', no_next: 'No upcoming training', today: 'Today', match: 'Game', training: 'Training', coach: 'Coach',
+        location: 'Location', venue_default: 'Training venue', pick_team_location: 'Select a team to see location', navigate: 'Open in maps', nav_with: 'Navigate with',
+        share_whatsapp: 'Share on WhatsApp', cal_live: 'Auto calendar', cal_save: 'Save to calendar', updates: 'Updates',
+        cal_live_title: 'Subscribe to an auto-updating calendar', cal_save_title: 'One-time download',
+        full_week: 'Full weekly schedule', cancelled: 'Cancelled', changed: 'Changed', coach_edit_title: 'Coach edit access', suggest: 'Suggest improvement',
+    },
+};
+
+const I18nCtx = createContext(null);
+
+export function I18nProvider({ children }) {
+    const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'he');
+    useEffect(() => {
+        localStorage.setItem('lang', lang);
+        document.documentElement.lang = lang;
+        document.documentElement.dir = RTL.includes(lang) ? 'rtl' : 'ltr';
+    }, [lang]);
+    const t = (key) => (DICT[lang] && DICT[lang][key]) || DICT.he[key] || key;
+    const localizeDay = (heDay) => (DAYS[lang] && DAYS[lang][heDay]) || heDay;
+    const dir = RTL.includes(lang) ? 'rtl' : 'ltr';
+    return <I18nCtx.Provider value={{ lang, setLang, t, localizeDay, dir }}>{children}</I18nCtx.Provider>;
+}
+
+export const useI18n = () => useContext(I18nCtx) || { lang: 'he', t: (k) => DICT.he[k] || k, localizeDay: (d) => d, dir: 'rtl', setLang: () => {} };
+
+export function LanguageSwitcher() {
+    const { lang, setLang } = useI18n();
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        if (!open) return;
+        const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', onClick);
+        return () => document.removeEventListener('mousedown', onClick);
+    }, [open]);
+    const current = LANGS.find(l => l.code === lang) || LANGS[0];
+    return (
+        <span ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+            <button onClick={() => setOpen(o => !o)} title="Language / שפה"
+                style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'var(--text)', borderRadius: '10px', padding: '0.45rem 0.6rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                🌐 <span>{current.short}</span>
+            </button>
+            {open && (
+                <div style={{ position: 'absolute', top: '120%', insetInlineEnd: 0, zIndex: 80, background: 'var(--ink2)', border: '1px solid var(--bd2)', borderRadius: '12px', padding: '0.4rem', boxShadow: '0 16px 40px -16px rgba(0,0,0,.8)', minWidth: '140px' }}>
+                    {LANGS.map(l => (
+                        <button key={l.code} onClick={() => { setLang(l.code); setOpen(false); }}
+                            style={{ display: 'block', width: '100%', textAlign: 'start', background: l.code === lang ? 'var(--glass-2)' : 'transparent', border: 'none', color: 'var(--text)', borderRadius: '8px', padding: '0.5rem 0.7rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.9rem' }}>
+                            {l.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </span>
+    );
+}

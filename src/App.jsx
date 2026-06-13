@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import WomenDashboard from './pages/WomenDashboard';
 import TrainerPortal from './pages/TrainerPortal';
 import FeedbackModal from './components/FeedbackModal';
+import { useI18n } from './i18n.jsx';
 import './App.css';
 
 // Protected Route Component
@@ -20,6 +21,7 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const { t } = useI18n();
 
   return (
     <Router>
@@ -71,7 +73,7 @@ function App() {
         onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
         onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
       >
-        <span>💡</span> הצעה לשיפור
+        <span>💡</span> {t('suggest')}
       </button>
 
       <FeedbackModal

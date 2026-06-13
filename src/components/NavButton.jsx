@@ -6,7 +6,7 @@ import { googleMapsUrl, wazeUrl, isMobileDevice } from '../utils/hallLocations';
  * - On mobile: opens a small chooser (Waze / Google Maps).
  * - On desktop: opens Google Maps directly.
  */
-export default function NavButton({ location, label = 'ניווט במפות ‹', style, className }) {
+export default function NavButton({ location, label = 'ניווט במפות ‹', navWith = 'נווט עם:', style, className }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
 
@@ -41,7 +41,7 @@ export default function NavButton({ location, label = 'ניווט במפות ‹
                     padding: '0.5rem', boxShadow: '0 16px 40px -16px rgba(0,0,0,0.8)',
                     display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: '160px'
                 }}>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', padding: '0 0.3rem 0.2rem' }}>נווט עם:</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', padding: '0 0.3rem 0.2rem' }}>{navWith}</div>
                     <button onClick={() => openIn(wazeUrl(location))} style={navItemStyle('#33ccff')}>🧭 Waze</button>
                     <button onClick={() => openIn(googleMapsUrl(location))} style={navItemStyle('#34d058')}>📍 Google Maps</button>
                 </div>

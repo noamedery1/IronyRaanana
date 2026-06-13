@@ -8,6 +8,7 @@ import HallView from '../components/HallView';
 import DailyView from '../components/DailyView';
 import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 import NavButton from '../components/NavButton';
+import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 
 const parseScheduleContent = parseCellContent;
 
@@ -27,6 +28,7 @@ function PublicScheduleWomen() {
 
     const [viewMode, setViewMode] = useState('team');
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+    const { t, localizeDay } = useI18n();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -273,15 +275,16 @@ function PublicScheduleWomen() {
                     <img src="/women_logo.png" alt="מכבי רעננה" className="brand-logo" />
                     <div>
                         <div className="brand-name">מכבי רעננה · נשים</div>
-                        <div className="brand-sub">מחלקת הכדורסל · לו"ז שבועי</div>
+                        <div className="brand-sub">{t('brand_sub')}</div>
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <div className="gender-switch">
-                        <Link to="/" className="gender-btn men">גברים 👨</Link>
-                        <Link to="/women" className="gender-btn women on">נשים 👩</Link>
+                        <Link to="/" className="gender-btn men">{t('men')} 👨</Link>
+                        <Link to="/women" className="gender-btn women on">{t('women')} 👩</Link>
                     </div>
-                    <Link to="/admin" className="admin-gear" title="ניהול">⚙</Link>
+                    <LanguageSwitcher />
+                    <Link to="/admin" className="admin-gear" title={t('admin')}>⚙</Link>
                 </div>
             </nav>
 
@@ -302,16 +305,16 @@ function PublicScheduleWomen() {
                             value={selectedTeamId}
                             onChange={(e) => { setSelectedTeamId(e.target.value); setViewMode('team'); }}
                         >
-                            <option value="" disabled>בחר קבוצה / Select a Team</option>
+                            <option value="" disabled>{t('select_team')}</option>
                             {dropdownTeams.map((team) => (
                                 <option key={team.value} value={team.value}>{team.label}</option>
                             ))}
                         </select>
 
                         <div className="view-tabs">
-                            <button className={`vtab ${viewMode === 'team' ? 'on' : ''}`} onClick={() => setViewMode('team')}>לו"ז קבוצה</button>
-                            <button className={`vtab ${viewMode === 'halls' ? 'on' : ''}`} onClick={() => setViewMode('halls')}>📍 אולמות</button>
-                            <button className={`vtab ${viewMode === 'daily' ? 'on' : ''}`} onClick={() => setViewMode('daily')}>📅 יומי מרוכז</button>
+                            <button className={`vtab ${viewMode === 'team' ? 'on' : ''}`} onClick={() => setViewMode('team')}>{t('tab_team')}</button>
+                            <button className={`vtab ${viewMode === 'halls' ? 'on' : ''}`} onClick={() => setViewMode('halls')}>📍 {t('tab_halls')}</button>
+                            <button className={`vtab ${viewMode === 'daily' ? 'on' : ''}`} onClick={() => setViewMode('daily')}>📅 {t('tab_daily')}</button>
                         </div>
                     </div>
 
@@ -320,31 +323,31 @@ function PublicScheduleWomen() {
                     ) : viewMode === 'daily' ? (
                         <DailyView data={data} headers={headers} teams={teams} dayStart={dayStart} defaultGender="W" />
                     ) : !selectedTeamId ? (
-                        <div className="empty-state"><h3>נא לבחור קבוצה לצפייה בלו"ז</h3></div>
+                        <div className="empty-state"><h3>{t('pick_team')}</h3></div>
                     ) : (
                         <>
                             {/* ===== HERO: next training ===== */}
                             <section className="hero">
                                 <div className="hero-card">
-                                    <div className="hero-label">האימון הקרוב · {teamObj?.name}</div>
-                                    <div className="hero-time">{next ? (next.time || '—') : 'אין אימון קרוב'}</div>
+                                    <div className="hero-label">{t('next_training')} · {teamObj?.name}</div>
+                                    <div className="hero-time">{next ? (next.time || '—') : t('no_next')}</div>
                                     <div className="hero-meta">
-                                        <div className="m"><b>{next ? `יום ${next.dayName}` : '—'}</b><span>{next ? (next.isToday ? 'היום' : next.dateText) : ''}</span></div>
-                                        <div className="m"><b>{next?.location || '—'}</b><span>{next?.isMatch ? '🏀 משחק' : 'אימון'}</span></div>
-                                        <div className="m"><b>{teamObj?.coach || '—'}</b><span>מאמן</span></div>
+                                        <div className="m"><b>{next ? localizeDay(next.dayName) : '—'}</b><span>{next ? (next.isToday ? t('today') : next.dateText) : ''}</span></div>
+                                        <div className="m"><b>{next?.location || '—'}</b><span>{next?.isMatch ? `🏀 ${t('match')}` : t('training')}</span></div>
+                                        <div className="m"><b>{teamObj?.coach || '—'}</b><span>{t('coach')}</span></div>
                                     </div>
                                     <div className="hero-actions">
                                         <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
-                                            <span>שיתוף בוואטסאפ</span><span>💬</span>
+                                            <span>{t('share_whatsapp')}</span><span>💬</span>
                                         </button>
-                                        <button onClick={subscribeCalendar} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title="הירשם ליומן שמתעדכן אוטומטית בכל שינוי">
-                                            <span>יומן מתעדכן</span><span>📲</span>
+                                        <button onClick={subscribeCalendar} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title={t('cal_live_title')}>
+                                            <span>{t('cal_live')}</span><span>📲</span>
                                         </button>
-                                        <button onClick={saveToCalendar} className="action-btn ghost" title="הורדה חד-פעמית ליומן">
-                                            <span>שמור ליומן</span><span>📅</span>
+                                        <button onClick={saveToCalendar} className="action-btn ghost" title={t('cal_save_title')}>
+                                            <span>{t('cal_save')}</span><span>📅</span>
                                         </button>
                                         <button onClick={() => setIsRegisterModalOpen(true)} className="action-btn ghost">
-                                            <span>עדכונים</span><span>🔔</span>
+                                            <span>{t('updates')}</span><span>🔔</span>
                                         </button>
                                     </div>
                                     <div className="hero-ball" aria-hidden="true"></div>
@@ -352,19 +355,19 @@ function PublicScheduleWomen() {
 
                                 <div className="hero-card map-card">
                                     <div className="map-info">
-                                        <div className="hero-label">📍 מיקום</div>
-                                        <h4>{next?.location || 'אולם האימון'}</h4>
-                                        <p>{next ? `יום ${next.dayName} ${next.isToday ? '(היום)' : next.dateText} · ${next.time || ''}` : 'בחר קבוצה לצפייה במיקום'}</p>
-                                        {next?.location && <NavButton location={next.location} />}
+                                        <div className="hero-label">📍 {t('location')}</div>
+                                        <h4>{next?.location || t('venue_default')}</h4>
+                                        <p>{next ? `${localizeDay(next.dayName)} ${next.isToday ? `(${t('today')})` : next.dateText} · ${next.time || ''}` : t('pick_team_location')}</p>
+                                        {next?.location && <NavButton location={next.location} label={`${t('navigate')} ‹`} navWith={t('nav_with')} />}
                                     </div>
                                     <div className="map-box"><div className="map-pin"></div></div>
                                 </div>
                             </section>
 
                             {/* ===== full weekly schedule ===== */}
-                            <h2 className="section-title">לו"ז שבועי מלא</h2>
+                            <h2 className="section-title">{t('full_week')}</h2>
                             <div className="schedule-grid">
-                                {!hasWeek && <div className="empty-state"><h3>אין אימונים מתוכננים לשבוע זה 🏀</h3></div>}
+                                {!hasWeek && <div className="empty-state"><h3>{t('no_week')} 🏀</h3></div>}
                                 {headers.slice(dayStart, dayStart + 7).map((dayHeader, index) => {
                                     const parts = dayHeader.split(' ');
                                     const dayName = parts[0];
@@ -388,7 +391,7 @@ function PublicScheduleWomen() {
                                     return (
                                         <div key={index} className={cardClass}>
                                             <div className="day-header">
-                                                <span className="day-name">{dayName}</span>
+                                                <span className="day-name">{localizeDay(dayName)}</span>
                                                 <span className="day-date">{date}</span>
                                             </div>
                                             <div className="events-container">
@@ -398,11 +401,11 @@ function PublicScheduleWomen() {
                                                     const isChanged = status === 'changed';
                                                     return (
                                                         <div key={lIdx} className="event-item" style={{ textDecoration: isCancelled ? 'line-through' : 'none' }}>
-                                                            {isCancelled && <span className="status-tag cancelled">❌ בוטל</span>}
-                                                            {isChanged && <span className="status-tag changed">⚠️ שינוי</span>}
+                                                            {isCancelled && <span className="status-tag cancelled">❌ {t('cancelled')}</span>}
+                                                            {isChanged && <span className="status-tag changed">⚠️ {t('changed')}</span>}
                                                             <div className="event-time">{time}</div>
                                                             <div className="event-location">{location}</div>
-                                                            {isMatch && <div className="match-badge">🏀 משחק</div>}
+                                                            {isMatch && <div className="match-badge">🏀 {t('match')}</div>}
                                                         </div>
                                                     );
                                                 })}
