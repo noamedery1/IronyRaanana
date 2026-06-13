@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n.jsx';
 
 // "Auto calendar" subscribe button + a centered chooser modal (not clipped by the hero card),
@@ -14,11 +15,15 @@ export default function CalendarSubscribe({ teamLabel }) {
     const q = encodeURIComponent(teamLabel);
     const httpsUrl = `${window.location.protocol}//${host}/calendar.ics?team=${q}`;
     const webcalUrl = `webcal://${host}/calendar.ics?team=${q}`;
-    const googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(httpsUrl)}`;
 
     const apple = () => { window.location.href = webcalUrl; setOpen(false); };
     const android = () => { window.location.href = httpsUrl; setOpen(false); };
-    const google = () => { window.open(googleUrl, '_blank', 'noreferrer'); setOpen(false); };
+    // Google has no reliable one-click subscribe for external feeds → copy the link and open the add-by-URL settings page
+    const google = async () => {
+        try { await navigator.clipboard.writeText(httpsUrl); } catch { /* ignore */ }
+        window.open('https://calendar.google.com/calendar/r/settings/addbyurl', '_blank', 'noreferrer');
+        setOpen(false);
+    };
     const copy = async () => {
         try { await navigator.clipboard.writeText(httpsUrl); setCopied(true); setTimeout(() => setCopied(false), 1800); }
         catch { window.prompt(t('cal_copy'), httpsUrl); }
@@ -29,7 +34,7 @@ export default function CalendarSubscribe({ teamLabel }) {
             <button onClick={() => setOpen(true)} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title={t('cal_live_title')}>
                 <span>{t('cal_live')}</span><span>📲</span>
             </button>
-            {open && (
+            {open && createPortal((
                 <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
                     <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--ink2)', border: '1px solid var(--bd2)', borderRadius: '18px', padding: '1.2rem', width: 'min(360px, 92vw)', boxShadow: '0 30px 80px -20px rgba(0,0,0,.9)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
@@ -42,9 +47,10 @@ export default function CalendarSubscribe({ teamLabel }) {
                             <button onClick={google} style={item('#4285f4')}>📅 {t('cal_google')}</button>
                             <button onClick={copy} style={item('#38bdf8')}>{copied ? t('cal_copied') : `🔗 ${t('cal_copy')}`}</button>
                         </div>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.6, marginTop: '0.8rem' }}>{t('cal_hint')}</p>
                     </div>
                 </div>
-            )}
+            ), document.body)}
         </>
     );
 }
