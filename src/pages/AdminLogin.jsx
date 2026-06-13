@@ -34,7 +34,7 @@ const AdminLogin = () => {
             }}>
                 <div style={{ fontSize: '2.4rem', marginBottom: '0.4rem' }}>🏀</div>
                 <h1 className="title" style={{ fontSize: '1.9rem', marginBottom: '0.3rem' }}>כניסת מנהל</h1>
-                <p className="subtitle" style={{ fontSize: '0.9rem', marginBottom: '1.6rem' }}>מערכת ניהול הלו"ז · הפועל רעננה</p>
+                <p className="subtitle" style={{ fontSize: '0.9rem', marginBottom: '1.6rem' }}>מערכת ניהול הלו"ז · עירוני רעננה</p>
 
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div>

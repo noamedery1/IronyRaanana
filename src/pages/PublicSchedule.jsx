@@ -324,7 +324,7 @@ function PublicSchedule() {
                 <div className="brand">
                     <img src="/men_logo.png" alt="עירוני רעננה" className="brand-logo" />
                     <div>
-                        <div className="brand-name">הפועל רעננה</div>
+                        <div className="brand-name">עירוני רעננה</div>
                         <div className="brand-sub">מחלקת הכדורסל · לו"ז שבועי</div>
                     </div>
                 </div>
