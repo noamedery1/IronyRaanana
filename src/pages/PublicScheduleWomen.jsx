@@ -8,6 +8,7 @@ import HallView from '../components/HallView';
 import DailyView from '../components/DailyView';
 import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 import NavButton from '../components/NavButton';
+import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 
 const parseScheduleContent = parseCellContent;
@@ -224,14 +225,6 @@ function PublicScheduleWomen() {
         }
     };
 
-    const subscribeCalendar = () => {
-        const teamLabel = getSelectedTeamName();
-        if (!teamLabel) return;
-        const host = window.location.host;
-        const url = `webcal://${host}/calendar.ics?team=${encodeURIComponent(teamLabel)}`;
-        window.open(url, '_blank');
-    };
-
     const getNextTraining = () => {
         const teamObj = getTeamObj();
         if (!teamObj) return null;
@@ -340,9 +333,7 @@ function PublicScheduleWomen() {
                                         <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                             <span>{t('share_whatsapp')}</span><span>💬</span>
                                         </button>
-                                        <button onClick={subscribeCalendar} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title={t('cal_live_title')}>
-                                            <span>{t('cal_live')}</span><span>📲</span>
-                                        </button>
+                                        <CalendarSubscribe teamLabel={getSelectedTeamName()} />
                                         <button onClick={saveToCalendar} className="action-btn ghost" title={t('cal_save_title')}>
                                             <span>{t('cal_save')}</span><span>📅</span>
                                         </button>

@@ -9,6 +9,7 @@ import DailyView from '../components/DailyView';
 import TrainerEditModal from '../components/TrainerEditModal'; // Import the Modal
 import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 import NavButton from '../components/NavButton';
+import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
@@ -277,15 +278,6 @@ function PublicSchedule() {
         }
     };
 
-    // ---- Subscribe to a live, auto-updating calendar feed for this team ----
-    const subscribeCalendar = () => {
-        const teamLabel = getSelectedTeamName();
-        if (!teamLabel) return;
-        const host = window.location.host;
-        const url = `webcal://${host}/calendar.ics?team=${encodeURIComponent(teamLabel)}`;
-        window.open(url, '_blank');
-    };
-
     // ---- Compute the nearest upcoming session for the hero card ----
     const getNextTraining = () => {
         const teamObj = getTeamObj();
@@ -399,9 +391,7 @@ function PublicSchedule() {
                                         <button onClick={shareWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                             <span>{t('share_whatsapp')}</span><span>💬</span>
                                         </button>
-                                        <button onClick={subscribeCalendar} className="action-btn" style={{ background: 'linear-gradient(135deg,#38bdf8,#0284c7)' }} title={t('cal_live_title')}>
-                                            <span>{t('cal_live')}</span><span>📲</span>
-                                        </button>
+                                        <CalendarSubscribe teamLabel={getSelectedTeamName()} />
                                         <button onClick={saveToCalendar} className="action-btn ghost" title={t('cal_save_title')}>
                                             <span>{t('cal_save')}</span><span>📅</span>
                                         </button>
