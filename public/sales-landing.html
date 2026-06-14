@@ -264,7 +264,67 @@ section{padding:4rem 0}
   </div>
 </section>
 
+<style>@keyframes slideIn{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}@media(max-width:760px){.pwa-cols{grid-template-columns:1fr!important;gap:2.4rem!important}}</style>
+<!-- PWA / PUSH SHOWCASE -->
+<section id="app-experience" style="padding-top:1rem">
+  <div class="wrap">
+    <h2 class="sec-title">אפליקציה אמיתית על הטלפון</h2>
+    <p class="sec-sub">ההורים שומרים את המועדון למסך הבית — ומקבלים התראה מיידית בכל שינוי בלו"ז, בדיוק כמו אפליקציה.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;max-width:920px;margin:0 auto;align-items:center" class="pwa-cols">
+
+      <!-- Phone mockup -->
+      <div style="justify-self:center;position:relative;width:250px;height:500px;border-radius:36px;background:linear-gradient(160deg,#5b4b8a,#3a2f63 55%,#2a2350);border:8px solid #1a2238;box-shadow:0 40px 80px -20px rgba(0,0,0,.7),0 0 40px rgba(255,122,24,.25);overflow:hidden">
+        <!-- notch -->
+        <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:90px;height:7px;border-radius:10px;background:#1a2238;z-index:5"></div>
+        <!-- status bar -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px 0;color:#fff;font-size:.7rem;font-weight:700;opacity:.9"><span>13:00</span><span>📶 🔋</span></div>
+
+        <!-- push notification -->
+        <div style="margin:18px 12px 0;background:rgba(255,255,255,.96);border-radius:16px;padding:.7rem .8rem;display:flex;gap:.6rem;align-items:flex-start;box-shadow:0 14px 30px -8px rgba(0,0,0,.5);animation:slideIn .8s ease">
+          <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#ff7a18,#c2410c);display:grid;place-items:center;font-size:18px;flex-shrink:0">🏀</div>
+          <div style="flex:1;min-width:0;text-align:right">
+            <div style="display:flex;justify-content:space-between;gap:.4rem"><b style="font-size:.72rem;color:#0f172a">עירוני רעננה כדורסל</b><span style="font-size:.62rem;color:#64748b">עכשיו</span></div>
+            <div style="font-size:.72rem;color:#334155;line-height:1.4;margin-top:2px">עדכון לו"ז — האימון ביום שבת שונה ל-18:00 ✅</div>
+          </div>
+        </div>
+
+        <!-- home screen app icons -->
+        <div style="position:absolute;bottom:36px;left:0;right:0;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 20px">
+          <div style="text-align:center">
+            <div style="position:relative;width:48px;height:48px;margin:0 auto;border-radius:13px;background:linear-gradient(135deg,#ff7a18,#c2410c);display:grid;place-items:center;font-size:24px;box-shadow:0 8px 18px -4px rgba(255,122,24,.6)">🏀
+              <span style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;font-size:.62rem;font-weight:800;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;border:2px solid #3a2f63">1</span>
+            </div>
+            <div style="color:#fff;font-size:.6rem;margin-top:5px;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.5)">רעננה לו"ז</div>
+          </div>
+          <div style="text-align:center"><div style="width:48px;height:48px;margin:0 auto;border-radius:13px;background:rgba(255,255,255,.14)"></div></div>
+          <div style="text-align:center"><div style="width:48px;height:48px;margin:0 auto;border-radius:13px;background:rgba(255,255,255,.14)"></div></div>
+          <div style="text-align:center"><div style="width:48px;height:48px;margin:0 auto;border-radius:13px;background:rgba(255,255,255,.14)"></div></div>
+        </div>
+      </div>
+
+      <!-- Bullets -->
+      <div>
+        <div style="display:flex;gap:.8rem;align-items:flex-start;margin-bottom:1.3rem">
+          <div style="font-size:1.6rem;flex-shrink:0">📲</div>
+          <div><h4 style="margin:0 0 .2rem;font-size:1.1rem;font-weight:800">שמירה למסך הבית בלחיצה</h4><p style="margin:0;color:var(--dim);font-size:.95rem;line-height:1.6">אנדרואיד ואייפון — האתר נפתח במסך מלא עם אייקון של המועדון, בלי שורת כתובת. נראה ומרגיש כמו אפליקציה.</p></div>
+        </div>
+        <div style="display:flex;gap:.8rem;align-items:flex-start;margin-bottom:1.3rem">
+          <div style="font-size:1.6rem;flex-shrink:0">🔔</div>
+          <div><h4 style="margin:0 0 .2rem;font-size:1.1rem;font-weight:800">התראת פוש מיידית</h4><p style="margin:0;color:var(--dim);font-size:.95rem;line-height:1.6">כל שינוי, ביטול או הזזת אימון — קופץ ישר על מסך הטלפון של ההורה, גם כשהאתר סגור.</p></div>
+        </div>
+        <div style="display:flex;gap:.8rem;align-items:flex-start">
+          <div style="font-size:1.6rem;flex-shrink:0">✉️</div>
+          <div><h4 style="margin:0 0 .2rem;font-size:1.1rem;font-weight:800">או עדכון למייל</h4><p style="margin:0;color:var(--dim);font-size:.95rem;line-height:1.6">מי שמעדיף — נרשם ומקבל את העדכונים גם לתיבת המייל. פוש, מייל, או שניהם.</p></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 <!-- PRICING -->
+
 <section>
   <div class="wrap">
     <h2 class="sec-title">חבילות ומחירים</h2>
