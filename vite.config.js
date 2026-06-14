@@ -30,6 +30,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+        // Pull our Web Push handlers into the generated service worker.
+        importScripts: ['push-sw.js'],
         navigateFallbackDenylist: [/^\/calendar\.ics/, /^\/sales-landing/],
         runtimeCaching: [
           {

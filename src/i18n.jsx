@@ -52,6 +52,7 @@ const DICT = {
         cal_choose: 'הוסף ליומן:', cal_apple: 'אייפון (Apple)', cal_android: 'יומן המכשיר (אנדרואיד)', cal_google: 'Google Calendar', cal_copy: 'העתק קישור', cal_copied: '✓ הועתק',
         cal_hint: 'אייפון = מנוי מתעדכן · אנדרואיד = הוספה מיידית · Google = הדבק את הקישור (שהועתק) בהגדרות › הוספת יומן › מכתובת',
         install_title: 'התקינו את האפליקציה 🏀', install_btn: 'התקנה', install_later: 'אחר כך', install_ios: 'להתקנה: הקישו על שיתוף ⬆ ואז "הוסף למסך הבית"',
+        install_desc: 'הוסיפו את הלו"ז למסך הבית — נפתח כמו אפליקציה, במסך מלא וזמין במהירות.',
     },
     ar: {
         brand_sub: 'قسم كرة السلة · الجدول الأسبوعي', men: 'رجال', women: 'نساء', admin: 'الإدارة',
@@ -65,6 +66,7 @@ const DICT = {
         cal_choose: 'أضف إلى التقويم:', cal_apple: 'آيفون (Apple)', cal_android: 'تقويم الجهاز (أندرويد)', cal_google: 'Google Calendar', cal_copy: 'نسخ الرابط', cal_copied: '✓ تم النسخ',
         cal_hint: 'آيفون = اشتراك محدّث · أندرويد = إضافة فورية · Google = الصق الرابط (المنسوخ) في الإعدادات › إضافة تقويم › من الرابط',
         install_title: 'ثبّت التطبيق 🏀', install_btn: 'تثبيت', install_later: 'لاحقاً', install_ios: 'للتثبيت: اضغط مشاركة ⬆ ثم "إضافة إلى الشاشة الرئيسية"',
+        install_desc: 'أضِف الجدول إلى الشاشة الرئيسية — يُفتح كتطبيق بملء الشاشة ووصول سريع.',
     },
     ru: {
         brand_sub: 'Баскетбол · Недельное расписание', men: 'Мужчины', women: 'Женщины', admin: 'Админ',
@@ -78,6 +80,7 @@ const DICT = {
         cal_choose: 'Добавить в календарь:', cal_apple: 'iPhone (Apple)', cal_android: 'Календарь устройства (Android)', cal_google: 'Google Calendar', cal_copy: 'Копировать ссылку', cal_copied: '✓ Скопировано',
         cal_hint: 'iPhone = авто-подписка · Android = добавить сейчас · Google = вставьте ссылку в Настройки › Добавить календарь › по URL',
         install_title: 'Установите приложение 🏀', install_btn: 'Установить', install_later: 'Позже', install_ios: 'Чтобы установить: нажмите Поделиться ⬆ и «На экран «Домой»»',
+        install_desc: 'Добавьте расписание на главный экран — откроется как приложение, на весь экран и под рукой.',
     },
     en: {
         brand_sub: 'Basketball Dept · Weekly Schedule', men: 'Men', women: 'Women', admin: 'Admin',
@@ -91,6 +94,7 @@ const DICT = {
         cal_choose: 'Add to calendar:', cal_apple: 'iPhone (Apple)', cal_android: 'Device calendar (Android)', cal_google: 'Google Calendar', cal_copy: 'Copy link', cal_copied: '✓ Copied',
         cal_hint: 'iPhone = live subscription · Android = add now · Google = paste the copied link in Settings › Add calendar › From URL',
         install_title: 'Install the app 🏀', install_btn: 'Install', install_later: 'Later', install_ios: 'To install: tap Share ⬆ then "Add to Home Screen"',
+        install_desc: 'Add the schedule to your home screen — opens like an app, full-screen and a tap away.',
     },
 };
 

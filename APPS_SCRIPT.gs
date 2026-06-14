@@ -13,8 +13,18 @@ function doPost(e) {
   if (action === 'trainerLogin') return handleTrainerLogin(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
-  
+  if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
+
   return createErrorResponse("Unknown action: " + action);
+}
+
+// ===== Web Push config =====
+// Node backend that actually delivers the push (holds the VAPID private key).
+const NODE_PUSH_URL = 'https://ironyraanana-production.up.railway.app/api/push/send';
+// Shared secret — must match the PUSH_SECRET env var on the Node server.
+// Set it in: Project Settings → Script Properties → key "PUSH_SECRET". Never hardcode it here.
+function getPushSecret() {
+  return PropertiesService.getScriptProperties().getProperty('PUSH_SECRET') || '';
 }
 
 // 1. SAVE SCHEDULE
@@ -235,7 +245,8 @@ function handleApprove(reqRow) {
   else if (type === 'MOVE') msgDesc = `האימון שהיה ב${oldDayName} הוזז ליום ${newDay}, שעה ${newTime}, ${newLoc}.`;
   
   notifySubscribers(team, "שים לב! בוצע שינוי בלוח הזמנים של הקבוצה:<br/>" + msgDesc);
-  
+  sendPushForTeam(team, "עדכון לו\"ז — " + team, msgDesc);
+
   return HtmlService.createHtmlOutput("<h1 style='color:green'>Request Approved & Updated!</h1>");
 }
 
@@ -328,6 +339,84 @@ function handleRegisterSubscriber(data) {
   
   sheet.appendRow([new Date(), data.name || "", data.email, data.team]);
   return createSuccessResponse("Registered successfully");
+}
+
+// Stores a Web Push subscription for a team (one row per device/endpoint).
+function handleRegisterPushSubscription(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("PushSubs");
+  if (!sheet) {
+    sheet = ss.insertSheet("PushSubs");
+    sheet.appendRow(["Timestamp", "Team", "Endpoint", "Subscription"]);
+  }
+
+  if (!data.subscription || !data.subscription.endpoint || !data.team) {
+    return createErrorResponse("Missing subscription or team");
+  }
+
+  const endpoint = data.subscription.endpoint.toString();
+  const team = data.team.toString();
+
+  // Skip if this exact endpoint is already registered for this team.
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][2].toString() === endpoint && values[i][1].toString() === team) {
+      return createSuccessResponse("Already registered");
+    }
+  }
+
+  sheet.appendRow([new Date(), team, endpoint, JSON.stringify(data.subscription)]);
+  return createSuccessResponse("Push subscription registered");
+}
+
+// Reads stored push subscriptions for a team and asks the Node backend to deliver the push.
+// Prunes any endpoints the backend reports as expired (404/410).
+function sendPushForTeam(team, title, body) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("PushSubs");
+  if (!sheet) return;
+
+  const values = sheet.getDataRange().getValues();
+  const normalizedTeam = (team || "").toString().trim();
+  const subscriptions = [];
+  const rowByEndpoint = {};
+
+  for (let i = 1; i < values.length; i++) {
+    const sheetTeam = (values[i][1] || "").toString().trim();
+    if ((sheetTeam === normalizedTeam || sheetTeam.startsWith(normalizedTeam)) && values[i][3]) {
+      try {
+        const sub = JSON.parse(values[i][3]);
+        subscriptions.push(sub);
+        rowByEndpoint[sub.endpoint] = i + 1; // 1-based sheet row
+      } catch (e) { /* skip malformed row */ }
+    }
+  }
+
+  if (subscriptions.length === 0) return;
+
+  try {
+    const resp = UrlFetchApp.fetch(NODE_PUSH_URL, {
+      method: 'post',
+      contentType: 'application/json',
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        secret: getPushSecret(),
+        title: title || "עירוני רעננה כדורסל",
+        body: body || "",
+        url: "/",
+        subscriptions: subscriptions
+      })
+    });
+
+    const result = JSON.parse(resp.getContentText() || "{}");
+    // Remove dead subscriptions (delete bottom-up so row indexes stay valid).
+    if (result.expired && result.expired.length) {
+      const rows = result.expired.map(ep => rowByEndpoint[ep]).filter(Boolean).sort((a, b) => b - a);
+      rows.forEach(r => sheet.deleteRow(r));
+    }
+  } catch (e) {
+    Logger.log("Push send failed: " + e);
+  }
 }
 
 function notifySubscribers(team, message) {
