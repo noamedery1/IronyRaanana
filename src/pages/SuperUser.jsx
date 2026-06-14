@@ -1,0 +1,177 @@
+import { useState, useEffect, useCallback } from 'react';
+
+// Superuser console (general manager). Password-gated. Lets you add/edit clubs and
+// upload their icons without touching code — everything persists on the server volume.
+
+const FILE_TO_DATAURL = (file) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+});
+
+const EMPTY = {
+    slug: '', name: '', shortName: '', themeColor: '#ff7a18', backgroundColor: '#070b16',
+    dataUrl: '', sheetApi: '',
+};
+
+const inputStyle = {
+    width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1px solid #334155',
+    background: '#0b1220', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit',
+};
+const labelStyle = { display: 'block', margin: '0 0 0.3rem', fontSize: '0.85rem', color: '#94a3b8' };
+
+export default function SuperUser() {
+    const [token, setToken] = useState(() => localStorage.getItem('superuserToken') || '');
+    const [password, setPassword] = useState('');
+    const [loginErr, setLoginErr] = useState('');
+    const [clubs, setClubs] = useState([]);
+    const [form, setForm] = useState(EMPTY);
+    const [icons, setIcons] = useState({});
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const loadClubs = useCallback(async () => {
+        const res = await fetch('/api/clubs');
+        if (res.ok) setClubs(await res.json());
+    }, []);
+
+    useEffect(() => { loadClubs(); }, [loadClubs]);
+
+    const login = async (e) => {
+        e.preventDefault();
+        setLoginErr('');
+        const res = await fetch('/api/superuser/login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.token) {
+            setToken(data.token);
+            localStorage.setItem('superuserToken', data.token);
+        } else {
+            setLoginErr(data.error === 'superuser not configured'
+                ? 'מסך הניהול עדיין לא הוגדר (חסר SUPERUSER_PASSWORD בשרת).'
+                : 'סיסמה שגויה.');
+        }
+    };
+
+    const logout = () => { setToken(''); localStorage.removeItem('superuserToken'); };
+
+    const onIcon = async (kind, file) => {
+        if (!file) return;
+        const dataUrl = await FILE_TO_DATAURL(file);
+        setIcons((p) => ({ ...p, [kind]: dataUrl }));
+    };
+
+    const editClub = (c) => {
+        setForm({
+            slug: c.slug, name: c.name, shortName: c.shortName || '', themeColor: c.themeColor || '#ff7a18',
+            backgroundColor: c.backgroundColor || '#070b16', dataUrl: c.dataUrl || '', sheetApi: c.sheetApi || '',
+        });
+        setIcons({});
+        setMsg('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const save = async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setMsg('');
+        try {
+            const res = await fetch('/api/superuser/clubs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-superuser-token': token },
+                body: JSON.stringify({ club: form, icons }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.status === 401) { logout(); return; }
+            if (!res.ok) { setMsg('❌ ' + (data.error || 'שמירה נכשלה')); return; }
+            setMsg('✓ נשמר! המועדון זמין בכתובת /' + form.slug);
+            setForm(EMPTY);
+            setIcons({});
+            loadClubs();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const removeClub = async (slug) => {
+        if (!confirm(`למחוק את המועדון "${slug}"?`)) return;
+        const res = await fetch('/api/superuser/clubs/' + slug, {
+            method: 'DELETE', headers: { 'x-superuser-token': token },
+        });
+        if (res.status === 401) { logout(); return; }
+        loadClubs();
+    };
+
+    const wrap = { minHeight: '100vh', background: '#070b16', color: '#e2e8f0', fontFamily: 'Rubik, sans-serif', direction: 'rtl', padding: '2rem 1rem' };
+    const card = { maxWidth: '640px', margin: '0 auto', background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem' };
+
+    if (!token) {
+        return (
+            <div style={wrap}>
+                <div style={{ ...card, maxWidth: '380px' }}>
+                    <h2 style={{ marginTop: 0, textAlign: 'center' }}>🔐 מסך ניהול־על</h2>
+                    <form onSubmit={login}>
+                        <label style={labelStyle}>סיסמת SUPERUSER</label>
+                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} autoFocus />
+                        <button type="submit" style={{ width: '100%', marginTop: '1rem', padding: '0.7rem', border: 'none', borderRadius: '10px', background: '#ff7a18', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>כניסה</button>
+                        {loginErr && <div style={{ marginTop: '0.8rem', color: '#f87171', textAlign: 'center', fontSize: '0.9rem' }}>{loginErr}</div>}
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={wrap}>
+            <div style={card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h2 style={{ margin: 0 }}>🏟️ ניהול מועדונים</h2>
+                    <button onClick={logout} style={{ background: 'none', border: '1px solid #334155', color: '#94a3b8', borderRadius: '8px', padding: '0.4rem 0.8rem', cursor: 'pointer' }}>יציאה</button>
+                </div>
+
+                <form onSubmit={save} style={{ display: 'grid', gap: '0.8rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                        <div><label style={labelStyle}>מזהה בכתובת (slug) — אותיות קטנות באנגלית</label><input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="hapoel" style={inputStyle} /></div>
+                        <div><label style={labelStyle}>שם מלא</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder='הפועל ... — לו"ז' style={inputStyle} /></div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                        <div><label style={labelStyle}>שם קצר (לאייקון)</label><input value={form.shortName} onChange={(e) => setForm({ ...form, shortName: e.target.value })} placeholder='הפועל לו"ז' style={inputStyle} /></div>
+                        <div style={{ display: 'flex', gap: '0.8rem' }}>
+                            <div style={{ flex: 1 }}><label style={labelStyle}>צבע ראשי</label><input type="color" value={form.themeColor} onChange={(e) => setForm({ ...form, themeColor: e.target.value })} style={{ ...inputStyle, padding: '0.2rem', height: '42px' }} /></div>
+                            <div style={{ flex: 1 }}><label style={labelStyle}>צבע רקע</label><input type="color" value={form.backgroundColor} onChange={(e) => setForm({ ...form, backgroundColor: e.target.value })} style={{ ...inputStyle, padding: '0.2rem', height: '42px' }} /></div>
+                        </div>
+                    </div>
+                    <div><label style={labelStyle}>קישור לנתונים (Google Sheet CSV)</label><input value={form.dataUrl} onChange={(e) => setForm({ ...form, dataUrl: e.target.value })} placeholder="https://docs.google.com/.../export?format=csv&gid=0" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                    <div><label style={labelStyle}>כתובת Apps Script (/exec)</label><input value={form.sheetApi} onChange={(e) => setForm({ ...form, sheetApi: e.target.value })} placeholder="https://script.google.com/macros/s/.../exec" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
+                        <div><label style={labelStyle}>אייקון 192px</label><input type="file" accept="image/png" onChange={(e) => onIcon('i192', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
+                        <div><label style={labelStyle}>אייקון 512px</label><input type="file" accept="image/png" onChange={(e) => onIcon('i512', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
+                        <div><label style={labelStyle}>Apple icon</label><input type="file" accept="image/png" onChange={(e) => onIcon('apple', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
+                    </div>
+
+                    <button type="submit" disabled={busy} style={{ padding: '0.8rem', border: 'none', borderRadius: '10px', background: '#ff7a18', color: '#fff', fontWeight: 'bold', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'שומר...' : 'שמור מועדון'}</button>
+                    {msg && <div style={{ textAlign: 'center', fontSize: '0.9rem', color: msg.startsWith('✓') ? '#34d399' : '#f87171' }}>{msg}</div>}
+                </form>
+
+                <h3 style={{ marginTop: '2rem', marginBottom: '0.6rem', fontSize: '1rem', color: '#94a3b8' }}>מועדונים קיימים</h3>
+                <div style={{ display: 'grid', gap: '0.5rem' }}>
+                    {clubs.map((c) => (
+                        <div key={c.slug} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', background: '#0b1220', border: '1px solid #1e293b', borderRadius: '10px', padding: '0.6rem 0.8rem' }}>
+                            <img src={c.icon192} alt="" style={{ width: 34, height: 34, borderRadius: 8 }} onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 'bold' }}>{c.name}</div>
+                                <a href={'/' + c.slug} style={{ color: '#60a5fa', fontSize: '0.8rem', textDecoration: 'none' }}>/{c.slug}</a>
+                            </div>
+                            <button onClick={() => editClub(c)} style={{ background: 'none', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', padding: '0.35rem 0.7rem', cursor: 'pointer' }}>עריכה</button>
+                            {c.slug !== 'raanana' && <button onClick={() => removeClub(c.slug)} style={{ background: 'none', border: '1px solid #7f1d1d', color: '#f87171', borderRadius: '8px', padding: '0.35rem 0.7rem', cursor: 'pointer' }}>מחק</button>}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}

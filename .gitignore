@@ -10,6 +10,10 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+
+# Superuser club store (lives on the Railway volume, never in git)
+data
+data_test
 *.local
 
 # Editor directories and files

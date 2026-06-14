@@ -6,6 +6,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import WomenDashboard from './pages/WomenDashboard';
 import TrainerPortal from './pages/TrainerPortal';
+import SuperUser from './pages/SuperUser';
 import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
 import { useI18n } from './i18n.jsx';
@@ -32,6 +33,9 @@ function App() {
             installed PWAs (start_url "/") keep working without anyone changing URLs. */}
         <Route path="/" element={<Navigate to={`/${DEFAULT_CLUB}`} replace />} />
         <Route path="/women" element={<Navigate to={`/${DEFAULT_CLUB}/women`} replace />} />
+
+        {/* Superuser console (general manager) */}
+        <Route path="/superuser" element={<SuperUser />} />
 
         {/* Admin (cross-club for now) */}
         <Route path="/admin" element={<AdminLogin />} />
