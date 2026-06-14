@@ -99,46 +99,50 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                     style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
                 >✕</button>
 
-                <h3 style={{ marginTop: 0, color: '#2563EB', textAlign: 'center', marginBottom: '1.5rem' }}>
-                    קבלת עדכונים למייל
+                <h3 style={{ marginTop: 0, color: '#0f172a', textAlign: 'center', marginBottom: '0.4rem', fontSize: '1.25rem' }}>
+                    הישארו מעודכנים 🔔
                 </h3>
-
-                <div style={{ background: '#eff6ff', padding: '0.8rem', borderRadius: '6px', marginBottom: '1.2rem', fontSize: '0.95rem', textAlign: 'center', color: '#1e3a8a' }}>
-                    הרשמה לעדכונים עבור קבוצת:<br />
-                    <strong>{teamName}</strong>
-                </div>
+                <p style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem', margin: '0 0 1rem' }}>
+                    בחרו איך לקבל עדכונים על קבוצת <strong style={{ color: '#0f172a' }}>{teamName}</strong> — פוש, מייל, או שניהם.
+                </p>
 
                 {pushSupported() && (
-                    <div style={{ marginBottom: '1.2rem' }}>
+                    <div style={{ border: '1px solid #fed7aa', background: '#fff7ed', borderRadius: '10px', padding: '0.9rem', marginBottom: '0.9rem' }}>
+                        <div style={{ fontWeight: 'bold', color: '#9a3412', fontSize: '0.95rem', marginBottom: '0.15rem' }}>📱 התראות לטלפון</div>
+                        <div style={{ color: '#9a3412', opacity: 0.8, fontSize: '0.8rem', marginBottom: '0.7rem', lineHeight: 1.5 }}>
+                            התראה מיידית למסך, גם כשהאתר סגור. מומלץ.
+                        </div>
                         <button
                             type="button"
                             onClick={handlePush}
                             disabled={pushLoading}
                             style={{
                                 width: '100%', background: '#ff7a18', color: 'white', border: 'none',
-                                padding: '0.8rem', borderRadius: '6px', fontWeight: 'bold',
+                                padding: '0.7rem', borderRadius: '8px', fontWeight: 'bold',
                                 cursor: pushLoading ? 'not-allowed' : 'pointer', opacity: pushLoading ? 0.7 : 1,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
                             }}
                         >
-                            {pushLoading ? 'מפעיל...' : <>🔔 קבל התראות לטלפון (פוש)</>}
+                            {pushLoading ? 'מפעיל...' : <>🔔 הפעל התראות במכשיר זה</>}
                         </button>
                         {pushMsg && (
                             <div style={{
-                                color: pushErr ? '#ef4444' : '#10b981', textAlign: 'center',
+                                color: pushErr ? '#ef4444' : '#047857', textAlign: 'center',
                                 background: pushErr ? '#fef2f2' : '#ecfdf5', padding: '0.5rem',
                                 borderRadius: '6px', fontSize: '0.85rem', marginTop: '0.6rem', lineHeight: 1.5
                             }}>
                                 {pushMsg}
                             </div>
                         )}
-                        <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.8rem', margin: '1rem 0 0' }}>
-                            — או קבלת עדכונים למייל —
-                        </div>
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ border: '1px solid #e2e8f0', background: '#f8fafc', borderRadius: '10px', padding: '0.9rem' }}>
+                    <div style={{ fontWeight: 'bold', color: '#1e3a8a', fontSize: '0.95rem', marginBottom: '0.15rem' }}>✉️ עדכונים למייל</div>
+                    <div style={{ color: '#475569', fontSize: '0.8rem', marginBottom: '0.7rem', lineHeight: 1.5 }}>
+                        קבלת מייל מסודר בכל שינוי בלו"ז.
+                    </div>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <div>
                         <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#475569' }}>שם מלא</label>
                         <input
@@ -174,7 +178,7 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                             opacity: loading || !email || !name ? 0.7 : 1
                         }}
                     >
-                        {loading ? 'רושם...' : 'הרשם וקבל עדכונים'}
+                        {loading ? 'רושם...' : 'הרשם לעדכוני מייל'}
                     </button>
 
                     {message && (
@@ -190,6 +194,7 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                         </div>
                     )}
                 </form>
+                </div>
             </div>
         </div>
     );
