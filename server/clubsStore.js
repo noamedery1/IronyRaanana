@@ -7,7 +7,12 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+// Prefer an explicit DATA_DIR, else Railway's auto-injected volume mount path,
+// else a local ./data dir (dev). Attaching a Railway Volume is enough — no manual env needed.
+export const DATA_DIR =
+    process.env.DATA_DIR ||
+    process.env.RAILWAY_VOLUME_MOUNT_PATH ||
+    path.join(__dirname, '..', 'data');
 export const ICONS_DIR = path.join(DATA_DIR, 'icons');
 const CLUBS_FILE = path.join(DATA_DIR, 'clubs.json');
 
