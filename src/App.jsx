@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import WomenDashboard from './pages/WomenDashboard';
 import TrainerPortal from './pages/TrainerPortal';
 import FeedbackModal from './components/FeedbackModal';
+import InstallPrompt from './components/InstallPrompt';
 import { useI18n } from './i18n.jsx';
 import './App.css';
 
@@ -80,6 +81,8 @@ function App() {
         isOpen={isFeedbackOpen}
         onClose={() => setIsFeedbackOpen(false)}
       />
+
+      <InstallPrompt />
 
     </Router>
   );
