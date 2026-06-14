@@ -1,0 +1,18 @@
+{
+  "name": "עירוני רעננה — לו\"ז",
+  "short_name": "רעננה לו\"ז",
+  "description": "לו\"ז אימונים, משחקים ועדכונים של מחלקת הכדורסל",
+  "lang": "he",
+  "dir": "rtl",
+  "theme_color": "#ff7a18",
+  "background_color": "#070b16",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/raanana",
+  "scope": "/",
+  "icons": [
+    { "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/pwa-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -9,6 +9,7 @@ import TrainerPortal from './pages/TrainerPortal';
 import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
 import { useI18n } from './i18n.jsx';
+import { DEFAULT_CLUB } from './clubConfig.js';
 import './App.css';
 
 // Protected Route Component
@@ -27,9 +28,12 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<PublicSchedule />} />
-        <Route path="/women" element={<PublicScheduleWomen />} />
-        <Route path="/trainer" element={<TrainerPortal />} />
+        {/* Legacy links redirect to the canonical club path so existing bookmarks /
+            installed PWAs (start_url "/") keep working without anyone changing URLs. */}
+        <Route path="/" element={<Navigate to={`/${DEFAULT_CLUB}`} replace />} />
+        <Route path="/women" element={<Navigate to={`/${DEFAULT_CLUB}/women`} replace />} />
+
+        {/* Admin (cross-club for now) */}
         <Route path="/admin" element={<AdminLogin />} />
         <Route
           path="/admin/dashboard"
@@ -47,6 +51,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Per-club public routes — club slug is the first path segment */}
+        <Route path="/:club" element={<PublicSchedule />} />
+        <Route path="/:club/women" element={<PublicScheduleWomen />} />
+        <Route path="/:club/trainer" element={<TrainerPortal />} />
+
+        {/* Legacy unprefixed trainer link */}
+        <Route path="/trainer" element={<Navigate to={`/${DEFAULT_CLUB}/trainer`} replace />} />
       </Routes>
 
       {/* Floating Feedback Button - Shows on all pages (or conditionally if needed) */}

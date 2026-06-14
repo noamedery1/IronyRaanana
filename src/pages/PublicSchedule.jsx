@@ -11,15 +11,17 @@ import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 import NavButton from '../components/NavButton';
 import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
+import { getActiveClub } from '../clubConfig.js';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
 const parseScheduleContent = parseCellContent;
 
-// This URL should be the LIVE sheet's Web App URL
-const LIVE_SHEET_API = "https://script.google.com/macros/s/AKfycbxZBUPujrqGRHOgX7Vb8JXdGuivho-FiMqGoshZxLTvqIumLDKGUzyc1mM9-W4jVC0/exec";
-const DATA_URL = "https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0";
-
 function PublicSchedule() {
+    // Data sources come from the active club (resolved from the URL path).
+    const club = getActiveClub();
+    const LIVE_SHEET_API = club.sheetApi;
+    const DATA_URL = club.dataUrl;
+
     const [locations, setLocations] = useState([]); // Store active halls for dropdown
     const [data, setData] = useState([]);
     const [teams, setTeams] = useState([]); // Array of objects
