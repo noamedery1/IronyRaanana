@@ -14,7 +14,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-ensureStore();
+try {
+    ensureStore();
+} catch (e) {
+    // Don't let a storage/volume hiccup take down the whole server — club features
+    // degrade to the client's built-in fallback; push & schedule keep working.
+    console.error('[clubs] store init failed:', e.message);
+}
 
 // ===== Web Push config =====
 // Public key is shipped to the client (src/push.js); private key + secret stay on the server (env vars).
