@@ -305,8 +305,10 @@ function findColumnForDayInSheet(sheet, dayName) {
     
     if (searchCols < 1) return -1;
 
-    const range = sheet.getRange(1, 1, 20, searchCols); 
-    const values = range.getValues();
+    const range = sheet.getRange(1, 1, 20, searchCols);
+    // Use display values: some day headers (e.g. שבת) are real Date cells formatted to show
+    // "שבת 20/6". getValues() would return the raw Date and never match the day name.
+    const values = range.getDisplayValues();
     
     for (let r = 0; r < values.length; r++) {
         // First check if this row looks like a header (contains "ראשון" or "Day")
