@@ -293,6 +293,11 @@ function findScheduleSheetAndCol(ss, dayName) {
 
 function findColumnForDayInSheet(sheet, dayName) {
     if (!dayName) return -1;
+    // Match on the day NAME only (first token), ignoring any trailing date. The client sends
+    // headers like "שבת 20/6"; by approval time the sheet's date may differ, so comparing the
+    // full string is fragile — compare just "שבת".
+    const dayToken = dayName.toString().trim().split(/\s+/)[0];
+    if (!dayToken) return -1;
     // Search first 20 rows, all columns
     const lastCol = sheet.getLastColumn();
     // Optimization: limit to 30 columns if lastCol is huge
@@ -308,7 +313,7 @@ function findColumnForDayInSheet(sheet, dayName) {
         // But dayName itself is "ראשון", so just look for dayName.
         const row = values[r];
         for (let c = 0; c < row.length; c++) {
-            if (row[c] && row[c].toString().trim().includes(dayName)) {
+            if (row[c] && row[c].toString().trim().split(/\s+/)[0] === dayToken) {
                 return c + 1; // 1-based
             }
         }
