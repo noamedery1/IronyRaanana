@@ -40,6 +40,7 @@ const TrainerPortal = () => {
     const [filterTeam, setFilterTeam] = useState(''); // requests tab filters
     const [filterDay, setFilterDay] = useState('');
     const [pushMsg2, setPushMsg2] = useState(''); // trainer push enable status
+    const [pushEnabled, setPushEnabled] = useState(localStorage.getItem('trainerPushV2') === '1');
 
     // Login Form
     const [loginName, setLoginName] = useState('');
@@ -68,7 +69,7 @@ const TrainerPortal = () => {
         fetchManagerBoard(name);  // manager board → proposals
         if (localStorage.getItem('trainerPushV2') !== '1') {
             subscribeToPush(TRAINER_PUSH_PREFIX + name, LIVE_SHEET_API)
-                .then((res) => { if (res && res.ok) localStorage.setItem('trainerPushV2', '1'); })
+                .then((res) => { if (res && res.ok) { localStorage.setItem('trainerPushV2', '1'); setPushEnabled(true); } })
                 .catch(() => {});
         }
     };
@@ -95,7 +96,7 @@ const TrainerPortal = () => {
         setPushMsg2('מבקש הרשאה…');
         try {
             const res = await subscribeToPush(TRAINER_PUSH_PREFIX + trainer.name, LIVE_SHEET_API);
-            if (res && res.ok) { localStorage.setItem('trainerPushV2', '1'); setPushMsg2('✓ התראות פעילות במכשיר זה'); }
+            if (res && res.ok) { localStorage.setItem('trainerPushV2', '1'); setPushEnabled(true); setPushMsg2('✓ התראות פעילות במכשיר זה'); }
             else if (res && res.reason === 'denied') setPushMsg2('ההרשאה נדחתה — אפשר התראות בהגדרות הדפדפן ונסה שוב');
             else if (res && res.reason === 'unsupported') setPushMsg2('הדפדפן לא תומך — התקן את האפליקציה ונסה שוב');
             else setPushMsg2('שגיאה בהפעלה: ' + ((res && res.reason) || ''));
@@ -383,13 +384,15 @@ const TrainerPortal = () => {
                 </div>
             </header>
 
-            {/* Trainer push enable + status */}
+            {/* Trainer push enable — shown only until notifications are active on this device */}
+            {!pushEnabled && (
             <div style={{ maxWidth: 600, margin: '0.9rem auto 0', padding: '0 1rem' }}>
                 <div style={{ background: 'rgba(255,122,24,0.1)', border: '1px solid rgba(255,122,24,0.3)', borderRadius: 10, padding: '0.6rem 0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap' }}>
-                    <span style={{ color: pushMsg2.startsWith('✓') ? '#86efac' : '#fed7aa', fontSize: '0.82rem' }}>{pushMsg2 || '🔔 הפעל התראות כדי לקבל הודעות מהמנהל'}</span>
+                    <span style={{ color: pushMsg2 && !pushMsg2.startsWith('✓') ? '#fca5a5' : '#fed7aa', fontSize: '0.82rem' }}>{pushMsg2 || '🔔 הפעל התראות כדי לקבל הודעות מהמנהל'}</span>
                     <button onClick={enableTrainerPush} style={{ background: 'linear-gradient(135deg,#ff7a18,#c2410c)', color: '#fff', border: 'none', borderRadius: 8, padding: '0.4rem 0.9rem', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', fontSize: '0.82rem' }}>הפעל התראות</button>
                 </div>
             </div>
+            )}
 
             {/* Tabs */}
             <div style={{ maxWidth: 600, margin: '1rem auto 0', padding: '0 1rem', display: 'flex', gap: '0.4rem' }}>
