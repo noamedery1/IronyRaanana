@@ -12,6 +12,8 @@ function doPost(e) {
   if (action === 'sendFeedback') return handleSendFeedback(postData);
   if (action === 'trainerLogin') return handleTrainerLogin(postData);
   if (action === 'trainerAuth') return handleTrainerAuth(postData);
+  if (action === 'getTrainers') return handleGetTrainers(postData);
+  if (action === 'sendTrainerPush') return handleSendTrainerPush(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
@@ -136,6 +138,38 @@ function handleTrainerAuth(data) {
     }
   }
   return createSuccessResponse({ valid: false });
+}
+
+// Returns the list of trainer names (for the manager's broadcast picker).
+function handleGetTrainers() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getTrainersSheet(ss);
+  const values = sheet.getDataRange().getValues();
+  const names = [];
+  for (let i = 1; i < values.length; i++) {
+    const n = (values[i][0] || '').toString().trim();
+    if (n) names.push(n);
+  }
+  return createSuccessResponse({ trainers: names });
+}
+
+// Sends a free-text push to all trainers ('all') or a selected subset (array of names).
+// Optional guard: Script Property MANAGER_PUSH_PW (leave unset to allow without a password).
+function handleSendTrainerPush(data) {
+  const pw = PropertiesService.getScriptProperties().getProperty('MANAGER_PUSH_PW') || '';
+  if (pw && (data.password || '').toString() !== pw) return createErrorResponse("Wrong manager password");
+
+  const title = data.title || "הודעה מהנהלת המועדון";
+  const body = (data.body || '').toString();
+  if (!body.trim()) return createErrorResponse("Empty message");
+
+  const targets = data.targets;
+  if (targets === 'all' || !Array.isArray(targets) || !targets.length) {
+    sendPushForTeam('__TRAINER__:', title, body); // prefix matches every trainer
+  } else {
+    targets.forEach(function (name) { sendPushForTeam('__TRAINER__:' + name, title, body); });
+  }
+  return createSuccessResponse({ ok: true });
 }
 
 // 4. SUBMIT REQUEST

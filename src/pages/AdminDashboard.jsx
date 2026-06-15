@@ -5,9 +5,12 @@ import WeekBuilder from '../components/WeekBuilder';
 import Preview from '../components/Preview';
 import HallsConfig from '../components/HallsConfig';
 import ClubMessages from '../components/ClubMessages';
+import TrainerBroadcast from '../components/TrainerBroadcast';
 
 const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
 const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID}/edit?gid=0#gid=0`;
+// LIVE script (holds trainer push subscriptions + the send mechanism).
+const LIVE_SCRIPT_API = 'https://script.google.com/macros/s/AKfycbxZBUPujrqGRHOgX7Vb8JXdGuivho-FiMqGoshZxLTvqIumLDKGUzyc1mM9-W4jVC0/exec';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -520,6 +523,8 @@ const AdminDashboard = () => {
                         sheetId={extractSheetId(sheetUrl)}
                     />
                 );
+            case 'trainerPush':
+                return <TrainerBroadcast liveApi={LIVE_SCRIPT_API} />;
             default:
                 return null;
         }
@@ -597,6 +602,12 @@ const AdminDashboard = () => {
                             title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
                         >
                             📣 הודעות צפות
+                        </button>
+                        <button
+                            style={menuButtonStyle(activeTab === 'trainerPush')}
+                            onClick={() => setActiveTab('trainerPush')}
+                        >
+                            📨 הודעות למאמנים
                         </button>
                     </nav>
                 </aside>}

@@ -4,8 +4,9 @@ import { parseCellContent } from '../utils/scheduleUtils';
 import { getActiveClub } from '../clubConfig.js';
 import { subscribeToPush } from '../push.js';
 
-// Group key used to register trainer devices for push (manager can broadcast to all trainers).
-const TRAINERS_PUSH_GROUP = '__TRAINERS__';
+// Trainer devices register under "__TRAINER__:<name>" so the manager can push to all
+// (prefix match) or to selected trainers (exact match).
+const TRAINER_PUSH_PREFIX = '__TRAINER__:';
 
 const TrainerPortal = () => {
     // --------------------------------------------------------------------------
@@ -68,7 +69,7 @@ const TrainerPortal = () => {
         // First login on this device: register it under the trainers group so the
         // manager can later push reminders to all trainers at once. Best-effort.
         if (localStorage.getItem('trainerPushDone') !== '1') {
-            subscribeToPush(TRAINERS_PUSH_GROUP, LIVE_SHEET_API)
+            subscribeToPush(TRAINER_PUSH_PREFIX + data.trainerName, LIVE_SHEET_API)
                 .then((res) => { if (res && res.ok) localStorage.setItem('trainerPushDone', '1'); })
                 .catch(() => {});
         }
