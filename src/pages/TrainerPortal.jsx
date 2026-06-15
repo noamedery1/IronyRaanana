@@ -282,34 +282,41 @@ const TrainerPortal = () => {
     // --------------------------------------------------------------------------
 
     if (view === 'login') {
+        const inputStyle = {
+            padding: '0.85rem', borderRadius: '10px', border: '1px solid #243049',
+            background: '#0b1220', color: '#e8edf7', outline: 'none', fontFamily: 'inherit',
+            fontSize: '0.95rem', textAlign: 'center',
+        };
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f3f4f6', fontFamily: 'Rubik' }}>
-                <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '90%', maxWidth: '350px', textAlign: 'center' }}>
-                    <h2 style={{ color: '#BE185D', marginBottom: '1.5rem' }}>פורטל מאמנים</h2>
-                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Rubik, sans-serif', padding: '1rem' }}>
+                <div style={{ background: 'rgba(12,19,36,0.96)', backdropFilter: 'blur(20px)', padding: '2rem 1.6rem', borderRadius: '20px', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.08)', width: '90%', maxWidth: '360px', textAlign: 'center' }}>
+                    <div style={{ width: 64, height: 64, margin: '0 auto 1rem', borderRadius: 16, background: 'linear-gradient(135deg,#ff7a18,#c2410c)', display: 'grid', placeItems: 'center', fontSize: 30, boxShadow: '0 12px 30px -10px rgba(255,122,24,0.6)' }}>🏀</div>
+                    <h2 style={{ color: '#fff', margin: '0 0 0.3rem', fontSize: '1.4rem', fontWeight: 800 }}>פורטל מאמנים</h2>
+                    <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 1.5rem' }}>כניסה לניהול לוח האימונים שלך</p>
+                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                         <input
                             type="text"
-                            placeholder="שם מאמן (כפי שמופיע בלוז)"
+                            placeholder="שם מאמן (כפי שמופיע בלוח)"
                             value={loginName}
                             onChange={(e) => setLoginName(e.target.value)}
-                            style={{ padding: '0.8rem', borderRadius: '6px', border: '1px solid #ddd', textAlign: 'center' }}
+                            style={inputStyle}
                         />
                         <input
                             type="password"
                             placeholder="קוד אישי"
                             value={loginCode}
                             onChange={(e) => setLoginCode(e.target.value)}
-                            style={{ padding: '0.8rem', borderRadius: '6px', border: '1px solid #ddd', textAlign: 'center' }}
+                            style={inputStyle}
                         />
                         <button
                             type="submit"
                             disabled={loading}
-                            style={{ background: '#BE185D', color: 'white', border: 'none', padding: '0.8rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                            style={{ background: 'linear-gradient(135deg,#ff7a18,#c2410c)', color: 'white', border: 'none', padding: '0.85rem', borderRadius: '12px', fontWeight: 800, fontFamily: 'inherit', fontSize: '1rem', cursor: loading ? 'wait' : 'pointer', marginTop: '0.3rem' }}
                         >
                             {loading ? 'מתחבר...' : 'כניסה'}
                         </button>
                     </form>
-                    {error && <div style={{ color: 'red', marginTop: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+                    {error && <div style={{ color: '#f87171', marginTop: '1rem', fontSize: '0.9rem' }}>{error}</div>}
                 </div>
             </div>
         );
@@ -328,8 +335,8 @@ const TrainerPortal = () => {
 
             {/* Tabs */}
             <div style={{ maxWidth: 600, margin: '1rem auto 0', padding: '0 1rem', display: 'flex', gap: '0.4rem' }}>
-                <button onClick={() => setTab('requests')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? 'white' : '#e2e8f0', color: tab === 'requests' ? '#BE185D' : '#64748b' }}>האימונים שלי</button>
-                <button onClick={() => setTab('propose')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? 'white' : '#e2e8f0', color: tab === 'propose' ? '#BE185D' : '#64748b' }}>הזנת לו&quot;ז</button>
+                <button onClick={() => setTab('requests')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? 'white' : '#e2e8f0', color: tab === 'requests' ? '#ff7a18' : '#64748b' }}>האימונים שלי</button>
+                <button onClick={() => setTab('propose')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? 'white' : '#e2e8f0', color: tab === 'propose' ? '#ff7a18' : '#64748b' }}>הזנת לו&quot;ז</button>
             </div>
 
             {/* Schedule List */}
@@ -348,7 +355,7 @@ const TrainerPortal = () => {
                         <div key={session.id} style={{ background: 'white', borderRadius: '8px', padding: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#334155' }}>{session.team}</div>
-                                <div style={{ color: '#BE185D', fontWeight: '500' }}>{session.day}</div>
+                                <div style={{ color: '#ff7a18', fontWeight: '500' }}>{session.day}</div>
                                 <div style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.2rem' }}>{session.raw}</div>
                             </div>
                             <button
@@ -400,7 +407,7 @@ const TrainerPortal = () => {
                                 </div>
                             );
                         })}
-                        <button onClick={() => submitProposals(tr)} disabled={loading} style={{ marginTop: '0.6rem', width: '100%', padding: '0.7rem', border: 'none', borderRadius: 8, background: '#BE185D', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>שלח הצעות למנהל</button>
+                        <button onClick={() => submitProposals(tr)} disabled={loading} style={{ marginTop: '0.6rem', width: '100%', padding: '0.7rem', border: 'none', borderRadius: 8, background: '#ff7a18', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>שלח הצעות למנהל</button>
                     </div>
                 ))}
 
@@ -427,7 +434,7 @@ const TrainerPortal = () => {
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
                                     onClick={() => setEditType('CHANGE')}
-                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #BE185D' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fdf2f8' : 'white', color: editType === 'CHANGE' ? '#BE185D' : '#64748b' }}
+                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #ff7a18' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fff7ed' : 'white', color: editType === 'CHANGE' ? '#ff7a18' : '#64748b' }}
                                 >
                                     שינוי פרטים
                                 </button>
@@ -496,7 +503,7 @@ const TrainerPortal = () => {
                                                     value={newLocation}
                                                     onChange={(e) => setNewLocation(e.target.value)}
                                                     placeholder="הקלד שם אולם חדש..."
-                                                    style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', border: '1px solid #BE185D', background: '#fff1f2' }}
+                                                    style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ff7a18', background: '#fff7ed' }}
                                                     autoFocus
                                                 />
                                             )}
@@ -515,7 +522,7 @@ const TrainerPortal = () => {
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <button onClick={() => setEditModalOpen(false)} style={{ flex: 1, padding: '0.8rem', borderRadius: '6px', border: 'none', background: '#f1f5f9', cursor: 'pointer' }}>ביטול</button>
-                            <button onClick={submitRequest} disabled={loading} style={{ flex: 1, padding: '0.8rem', borderRadius: '6px', border: 'none', background: '#BE185D', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>
+                            <button onClick={submitRequest} disabled={loading} style={{ flex: 1, padding: '0.8rem', borderRadius: '6px', border: 'none', background: '#ff7a18', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>
                                 {loading ? 'שולח...' : 'שלח לאישור'}
                             </button>
                         </div>
