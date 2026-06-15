@@ -16,6 +16,7 @@ function doPost(e) {
   if (action === 'sendTrainerPush') return handleSendTrainerPush(postData);
   if (action === 'registerUser') return handleRegisterUser(postData);
   if (action === 'userAuth') return handleUserAuth(postData);
+  if (action === 'sendBroadcast') return handleSendBroadcast(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
@@ -173,6 +174,20 @@ function handleSendTrainerPush(data) {
   } else {
     targets.forEach(function (name) { sendPushForTeam('__TRAINER__:' + name, title, body, url, icon); });
   }
+  return createSuccessResponse({ ok: true });
+}
+
+// Manager broadcast to any audience. The client sends a push segment string:
+//   '' = whole club · '__TRAINER' = all trainers · '__OPERATOR__' = operators
+//   'team:<name>' = a team's members · '__TRAINER__:<name>' = one trainer
+function handleSendBroadcast(data) {
+  const pw = PropertiesService.getScriptProperties().getProperty('MANAGER_PUSH_PW') || '';
+  if (pw && (data.password || '').toString() !== pw) return createErrorResponse("Wrong manager password");
+  const body = (data.body || '').toString();
+  if (!body.trim()) return createErrorResponse("Empty message");
+  const title = data.title || "הודעה מהנהלת המועדון";
+  const seg = (data.segment == null) ? '' : data.segment.toString();
+  sendPushForTeam(seg, title, body);
   return createSuccessResponse({ ok: true });
 }
 

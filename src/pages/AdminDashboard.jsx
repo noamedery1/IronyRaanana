@@ -5,7 +5,7 @@ import WeekBuilder from '../components/WeekBuilder';
 import Preview from '../components/Preview';
 import HallsConfig from '../components/HallsConfig';
 import ClubMessages from '../components/ClubMessages';
-import TrainerBroadcast from '../components/TrainerBroadcast';
+import MessageCenter from '../components/MessageCenter';
 import InviteLinks from '../components/InviteLinks';
 
 const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
@@ -525,7 +525,7 @@ const AdminDashboard = () => {
                     />
                 );
             case 'trainerPush':
-                return <TrainerBroadcast liveApi={LIVE_SCRIPT_API} />;
+                return <MessageCenter liveApi={LIVE_SCRIPT_API} />;
             case 'invites':
                 return <InviteLinks />;
             default:
@@ -610,7 +610,7 @@ const AdminDashboard = () => {
                             style={menuButtonStyle(activeTab === 'trainerPush')}
                             onClick={() => setActiveTab('trainerPush')}
                         >
-                            📨 הודעות למאמנים
+                            📢 הודעות
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'invites')}
