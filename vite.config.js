@@ -31,6 +31,10 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2,webmanifest}'],
+        // Force every new deploy to take over immediately (no waiting for all tabs to close).
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // Pull our Web Push handlers into the generated service worker.
         // Bump the ?v when push-sw.js changes to force the SW (and the imported script) to update.
         importScripts: ['push-sw.js?v=3'],

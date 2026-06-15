@@ -9,6 +9,7 @@ import TrainerPortal from './pages/TrainerPortal';
 import SuperUser from './pages/SuperUser';
 import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
+import AdminSwitcher from './components/AdminSwitcher';
 import { useI18n } from './i18n.jsx';
 import { DEFAULT_CLUB } from './clubConfig.js';
 import './App.css';
@@ -106,6 +107,8 @@ function App() {
       />
 
       <InstallPrompt />
+
+      <AdminSwitcher />
 
     </Router>
   );
