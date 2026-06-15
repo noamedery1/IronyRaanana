@@ -186,6 +186,17 @@ app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+// Graceful shutdown on redeploy: Railway sends SIGTERM to the old container.
+// Close cleanly and exit 0 so it isn't reported as a crash ("npm error signal SIGTERM").
+function shutdown(signal) {
+    console.log(`Received ${signal}, shutting down gracefully...`);
+    server.close(() => process.exit(0));
+    // Safety net if connections hang.
+    setTimeout(() => process.exit(0), 5000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
