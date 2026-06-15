@@ -19,6 +19,7 @@ function doPost(e) {
   if (action === 'sendBroadcast') return handleSendBroadcast(postData);
   if (action === 'listTrainers') return handleListTrainers(postData);
   if (action === 'addTrainer') return handleAddTrainer(postData);
+  if (action === 'saveTrainer') return handleSaveTrainer(postData);
   if (action === 'deleteTrainer') return handleDeleteTrainer(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
@@ -187,17 +188,50 @@ function managerOk(data) {
 }
 
 function handleListTrainers(data) {
-  // Reading the trainer list (names + teams only, no codes) is unguarded so the
-  // management screen always loads what's in the sheet. Add/delete stay guarded.
+  // Unguarded read; merges multiple rows of the same trainer into one (teams combined),
+  // sorted by name.
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const s = getTrainersSheet(ss);
   const v = s.getDataRange().getValues();
-  const list = [];
+  const byName = {}, order = [];
   for (let i = 1; i < v.length; i++) {
     const n = (v[i][0] || '').toString().trim();
-    if (n) list.push({ name: n, teams: (v[i][2] || '').toString() });
+    if (!n) continue;
+    const key = n.toLowerCase();
+    if (!byName[key]) { byName[key] = { name: n, teams: [] }; order.push(key); }
+    (v[i][2] || '').toString().split(/[,;\n]/).map(t => t.trim()).filter(Boolean).forEach(function (t) {
+      if (byName[key].teams.indexOf(t) < 0) byName[key].teams.push(t);
+    });
   }
+  const list = order.map(function (k) { return { name: byName[k].name, teams: byName[k].teams.join(', ') }; });
+  list.sort(function (a, b) { return a.name.localeCompare(b.name, 'he'); });
   return createSuccessResponse({ trainers: list });
+}
+
+// Upsert a trainer: if the name exists, consolidate all its rows into one (keeping the
+// existing code/color/token unless a new code is given) and set the merged teams.
+function handleSaveTrainer(data) {
+  if (!managerOk(data)) return createErrorResponse("Wrong manager password");
+  const name = (data.name || '').toString().trim();
+  const code = (data.code || '').toString().trim();
+  const teams = (data.teams || '').toString();
+  if (!name) return createErrorResponse("חסר שם");
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s = getTrainersSheet(ss);
+  const v = s.getDataRange().getValues();
+  let baseCode = '', baseColor = '', baseToken = '', found = false;
+  const rowsToDelete = [];
+  for (let i = 1; i < v.length; i++) {
+    if ((v[i][0] || '').toString().trim().toLowerCase() === name.toLowerCase()) {
+      if (!found) { baseCode = (v[i][1] || '').toString(); baseColor = (v[i][3] || '').toString(); baseToken = (v[i][4] || '').toString(); found = true; }
+      rowsToDelete.push(i + 1);
+    }
+  }
+  if (!found && !code) return createErrorResponse("מאמן חדש דורש קוד");
+  rowsToDelete.sort(function (a, b) { return b - a; }).forEach(function (r) { s.deleteRow(r); });
+  s.appendRow([name, code || baseCode, teams, baseColor, baseToken]);
+  return createSuccessResponse({ ok: true });
 }
 
 function handleAddTrainer(data) {
