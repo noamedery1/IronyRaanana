@@ -10,6 +10,10 @@ const TrainerPortal = () => {
     // --------------------------------------------------------------------------
     const LIVE_SHEET_API = getActiveClub().sheetApi;
     const CSV_URL = getActiveClub().dataUrl;
+    // Trainer schedule PROPOSALS must write to the manager's planning file (its own
+    // Apps Script), NOT the live board. Set this to the manager file's /exec URL.
+    // Empty = proposing is disabled (guard against writing to the wrong file).
+    const MANAGER_PROPOSE_URL = '';
 
     // --------------------------------------------------------------------------
     // STATE
@@ -46,16 +50,25 @@ const TrainerPortal = () => {
     // ACTIONS
     // --------------------------------------------------------------------------
 
-    // Apply a successful auth result (shared by token-link and name+code login).
+    // Apply a successful auth result (shared by saved-token and name+code login).
+    // The token is saved on this device so the trainer stays identified next time —
+    // a single shared trainer link works; first login persists identity locally.
     const applyAuth = (data) => {
         setTrainer({ name: data.trainerName, teams: data.teams || [], color: data.color, token: data.token });
+        if (data.token) localStorage.setItem('trainerToken', data.token);
         setView('dashboard');
         fetchSchedule(data.trainerName);
     };
 
-    // Personal-link login: /trainer?t=<token>
+    const logout = () => {
+        localStorage.removeItem('trainerToken');
+        setTrainer(null);
+        setView('login');
+    };
+
+    // Auto-login: a token saved on this device, or a personal link (?t=token).
     useEffect(() => {
-        const token = new URLSearchParams(window.location.search).get('t');
+        const token = localStorage.getItem('trainerToken') || new URLSearchParams(window.location.search).get('t');
         if (!token) return;
         setLoading(true);
         fetch(LIVE_SHEET_API, {
@@ -64,7 +77,7 @@ const TrainerPortal = () => {
             body: JSON.stringify({ action: 'trainerAuth', token }),
         })
             .then((r) => r.json())
-            .then((data) => { if (data.valid) applyAuth(data); })
+            .then((data) => { if (data.valid) applyAuth(data); else localStorage.removeItem('trainerToken'); })
             .catch(() => { /* fall back to manual login */ })
             .finally(() => setLoading(false));
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,16 +259,18 @@ const TrainerPortal = () => {
             })
             .filter((s) => s.time);
         if (!slots.length) { setProposalMsg('מלא לפחות יום אחד עם שעה.'); return; }
+        if (!MANAGER_PROPOSE_URL) { setProposalMsg('הזנת לו"ז עדיין בהגדרה — בקרוב.'); return; }
         setLoading(true);
         setProposalMsg('');
         try {
-            await fetch(LIVE_SHEET_API, {
+            await fetch(MANAGER_PROPOSE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
                     action: 'proposeSlots',
                     token: trainer.token,
                     trainerName: trainer.name,
+                    color: trainer.color,
                     row: teamRow.row,
                     slots,
                 }),
@@ -315,7 +330,7 @@ const TrainerPortal = () => {
                     {trainer.color && <span style={{ width: 16, height: 16, borderRadius: 4, background: trainer.color, border: '1px solid #cbd5e1' }} />}
                     שלום, {trainer.name}
                 </h3>
-                <button onClick={() => setView('login')} style={{ background: 'none', border: '1px solid #cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '4px', fontSize: '0.8rem' }}>יציאה</button>
+                <button onClick={logout} style={{ background: 'none', border: '1px solid #cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '4px', fontSize: '0.8rem' }}>יציאה</button>
             </header>
 
             {/* Tabs */}
