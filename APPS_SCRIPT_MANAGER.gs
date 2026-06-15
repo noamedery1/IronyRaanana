@@ -96,6 +96,7 @@ function handleProposeSlots(data, ss) {
   if (!Array.isArray(data.slots) || !data.slots.length) return jsonOut({ error: "No slots" });
 
   const color = (data.color || "#FFF2CC").toString();
+  const trainerName = (data.trainerName || "מאמן").toString();
   let written = 0;
 
   data.slots.forEach(function (slot) {
@@ -105,8 +106,13 @@ function handleProposeSlots(data, ss) {
     const col = findColumnForDayInSheet(sheet, slot.day);
     if (col === -1) return;
     const cell = sheet.getRange(targetRow, col);
-    cell.setValue(value + " (הצעה)");
+    // Make trainer proposals unmistakable: clear "הצעה" tag + trainer name, the trainer's
+    // color fill, bold text, and a thick blue frame so they pop out from real trainings.
+    cell.setValue("🔵 הצעה » " + value + "\n(" + trainerName + ")");
     cell.setBackground(color);
+    cell.setFontWeight("bold");
+    cell.setFontColor("#0b1f4d");
+    cell.setBorder(true, true, true, true, false, false, "#1155CC", SpreadsheetApp.BorderStyle.SOLID_THICK);
     written++;
   });
 
