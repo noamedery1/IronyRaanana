@@ -445,11 +445,20 @@ const TrainerPortal = () => {
                             const key = `${tr.row}|${dh.name}`;
                             const p = proposals[key] || {};
                             const inp = { flex: 1, minWidth: 0, padding: '0.45rem', borderRadius: 6, border: '1px solid #243049', background: '#0b1220', color: '#e8edf7', outline: 'none' };
+                            const parts = (dh.name || '').split(' ');
+                            const dayName = parts[0];
+                            const dayDate = parts.slice(1).join(' '); // the date shown in the manager board
+                            const existing = (tr.days[dh.name] || '').trim();
                             return (
-                                <div key={dh.name} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                    <div style={{ width: 60, fontSize: '0.85rem', color: '#94a3b8', flexShrink: 0 }}>{(dh.name || '').split(' ')[0]}</div>
-                                    <input value={p.time || ''} onChange={(e) => setProposal(key, 'time', e.target.value)} placeholder={tr.days[dh.name] ? 'קיים: ' + tr.days[dh.name] : 'שעה'} style={inp} />
-                                    <input value={p.location || ''} onChange={(e) => setProposal(key, 'location', e.target.value)} placeholder="אולם" list="hall-list" style={inp} />
+                                <div key={dh.name} style={{ marginBottom: '0.7rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.5rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.3rem' }}>
+                                        <span style={{ fontSize: '0.9rem', color: '#e8edf7', fontWeight: 600 }}>{dayName} <span style={{ color: '#94a3b8', fontWeight: 400 }}>{dayDate}</span></span>
+                                        {existing && <span style={{ fontSize: '0.72rem', color: '#fbbf24' }}>כעת בלוח: {existing}</span>}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                        <input value={p.time || ''} onChange={(e) => setProposal(key, 'time', e.target.value)} placeholder="שעה (לדוגמה 1800-2000)" style={inp} />
+                                        <input value={p.location || ''} onChange={(e) => setProposal(key, 'location', e.target.value)} placeholder="אולם" list="hall-list" style={inp} />
+                                    </div>
                                 </div>
                             );
                         })}
