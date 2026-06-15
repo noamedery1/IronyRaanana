@@ -17,6 +17,9 @@ function doPost(e) {
   if (action === 'registerUser') return handleRegisterUser(postData);
   if (action === 'userAuth') return handleUserAuth(postData);
   if (action === 'sendBroadcast') return handleSendBroadcast(postData);
+  if (action === 'listTrainers') return handleListTrainers(postData);
+  if (action === 'addTrainer') return handleAddTrainer(postData);
+  if (action === 'deleteTrainer') return handleDeleteTrainer(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
@@ -175,6 +178,54 @@ function handleSendTrainerPush(data) {
     targets.forEach(function (name) { sendPushForTeam('__TRAINER__:' + name, title, body, url, icon); });
   }
   return createSuccessResponse({ ok: true });
+}
+
+// ===== Trainer management (manager) =====
+function managerOk(data) {
+  const pw = PropertiesService.getScriptProperties().getProperty('MANAGER_PUSH_PW') || '';
+  return !(pw && (data.password || '').toString() !== pw);
+}
+
+function handleListTrainers(data) {
+  if (!managerOk(data)) return createErrorResponse("Wrong manager password");
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s = getTrainersSheet(ss);
+  const v = s.getDataRange().getValues();
+  const list = [];
+  for (let i = 1; i < v.length; i++) {
+    const n = (v[i][0] || '').toString().trim();
+    if (n) list.push({ name: n, teams: (v[i][2] || '').toString() });
+  }
+  return createSuccessResponse({ trainers: list });
+}
+
+function handleAddTrainer(data) {
+  if (!managerOk(data)) return createErrorResponse("Wrong manager password");
+  const name = (data.name || '').toString().trim();
+  const code = (data.code || '').toString().trim();
+  if (!name || !code) return createErrorResponse("חסר שם או קוד");
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s = getTrainersSheet(ss);
+  const v = s.getDataRange().getValues();
+  for (let i = 1; i < v.length; i++) {
+    if ((v[i][0] || '').toString().trim().toLowerCase() === name.toLowerCase()) return createErrorResponse("מאמן בשם הזה כבר קיים");
+  }
+  s.appendRow([name, code, (data.teams || '').toString(), '', '']);
+  return createSuccessResponse({ ok: true });
+}
+
+function handleDeleteTrainer(data) {
+  if (!managerOk(data)) return createErrorResponse("Wrong manager password");
+  const name = (data.name || '').toString().trim();
+  if (!name) return createErrorResponse("Missing name");
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s = getTrainersSheet(ss);
+  const v = s.getDataRange().getValues();
+  let removed = 0;
+  for (let i = v.length - 1; i >= 1; i--) {
+    if ((v[i][0] || '').toString().trim().toLowerCase() === name.toLowerCase()) { s.deleteRow(i + 1); removed++; }
+  }
+  return createSuccessResponse({ ok: true, removed: removed });
 }
 
 // Manager broadcast to any audience. The client sends a push segment string:

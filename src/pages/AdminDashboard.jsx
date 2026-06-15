@@ -7,6 +7,7 @@ import HallsConfig from '../components/HallsConfig';
 import ClubMessages from '../components/ClubMessages';
 import MessageCenter from '../components/MessageCenter';
 import InviteLinks from '../components/InviteLinks';
+import TrainerManager from '../components/TrainerManager';
 
 const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
 const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID}/edit?gid=0#gid=0`;
@@ -528,6 +529,8 @@ const AdminDashboard = () => {
                 return <MessageCenter liveApi={LIVE_SCRIPT_API} />;
             case 'invites':
                 return <InviteLinks />;
+            case 'trainersAdmin':
+                return <TrainerManager liveApi={LIVE_SCRIPT_API} />;
             default:
                 return null;
         }
@@ -617,6 +620,12 @@ const AdminDashboard = () => {
                             onClick={() => setActiveTab('invites')}
                         >
                             🔗 לינקי הזמנה
+                        </button>
+                        <button
+                            style={menuButtonStyle(activeTab === 'trainersAdmin')}
+                            onClick={() => setActiveTab('trainersAdmin')}
+                        >
+                            👤 ניהול מאמנים
                         </button>
                     </nav>
                 </aside>}
