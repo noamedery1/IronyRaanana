@@ -33,7 +33,7 @@ export function setupClubPwa() {
         document.title = 'פורטל מאמנים — ' + club.shortName;
         setMeta('theme-color', club.themeColor);
         setMeta('apple-mobile-web-app-title', 'מאמנים');
-        setLink('apple-touch-icon', '/icons/trainer.svg');
+        setLink('apple-touch-icon', '/icons/trainer-192.png');
         return;
     }
 

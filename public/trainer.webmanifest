@@ -12,7 +12,8 @@
   "start_url": "/raanana/trainer",
   "scope": "/raanana/trainer",
   "icons": [
-    { "src": "/icons/trainer.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "/icons/trainer.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+    { "src": "/icons/trainer-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/trainer-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/trainer-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
