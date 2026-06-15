@@ -346,12 +346,14 @@ function PublicSchedule() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <div className="gender-switch">
-                        <Link to="/" className="gender-btn men on">{t('men')} 👨</Link>
-                        <Link to="/women" className="gender-btn women">{t('women')} 👩</Link>
-                    </div>
+                    {!memberTeam && (
+                        <div className="gender-switch">
+                            <Link to="/" className="gender-btn men on">{t('men')} 👨</Link>
+                            <Link to="/women" className="gender-btn women">{t('women')} 👩</Link>
+                        </div>
+                    )}
                     <LanguageSwitcher />
-                    <Link to="/admin" className="admin-gear" title={t('admin')}>⚙</Link>
+                    {!memberTeam && <Link to="/admin" className="admin-gear" title={t('admin')}>⚙</Link>}
                 </div>
             </nav>
 
