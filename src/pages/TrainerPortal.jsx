@@ -68,9 +68,9 @@ const TrainerPortal = () => {
 
         // First login on this device: register it under the trainers group so the
         // manager can later push reminders to all trainers at once. Best-effort.
-        if (localStorage.getItem('trainerPushDone') !== '1') {
+        if (localStorage.getItem('trainerPushV2') !== '1') {
             subscribeToPush(TRAINER_PUSH_PREFIX + data.trainerName, LIVE_SHEET_API)
-                .then((res) => { if (res && res.ok) localStorage.setItem('trainerPushDone', '1'); })
+                .then((res) => { if (res && res.ok) localStorage.setItem('trainerPushV2', '1'); })
                 .catch(() => {});
         }
     };
