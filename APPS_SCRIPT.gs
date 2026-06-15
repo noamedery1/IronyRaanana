@@ -12,7 +12,6 @@ function doPost(e) {
   if (action === 'sendFeedback') return handleSendFeedback(postData);
   if (action === 'trainerLogin') return handleTrainerLogin(postData);
   if (action === 'trainerAuth') return handleTrainerAuth(postData);
-  if (action === 'proposeSlots') return handleProposeSlots(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
@@ -141,41 +140,6 @@ function handleTrainerAuth(data) {
 
 // Writes a trainer's proposed weekly slots directly into the manager's board, colored by trainer
 // and marked "(הצעה)". The manager then approves (clears the marker) or relocates the cell.
-function handleProposeSlots(data) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = getTrainersSheet(ss);
-  const values = sheet.getDataRange().getValues();
-
-  // Resolve the trainer (token preferred) to get a trusted color + name.
-  let trainer = null;
-  for (let i = 1; i < values.length; i++) {
-    const row = values[i];
-    const byToken = data.token && (row[4] || "").toString().trim() === data.token.toString().trim();
-    const byName = data.trainerName && (row[0] || "").toString().trim().toLowerCase() === data.trainerName.toString().trim().toLowerCase();
-    if (byToken || byName) { trainer = trainerFromRow(sheet, row, i); break; }
-  }
-  if (!trainer) return createErrorResponse("Unknown trainer");
-
-  const targetRow = Number(data.row);
-  if (isNaN(targetRow) || targetRow < 2) return createErrorResponse("Invalid row");
-  if (!Array.isArray(data.slots) || !data.slots.length) return createErrorResponse("No slots");
-
-  let written = 0;
-  data.slots.forEach(slot => {
-    if (!slot.day) return;
-    const value = (slot.time || "").toString().trim() + (slot.location ? " " + slot.location.toString().trim() : "");
-    if (!value.trim()) return;
-    const info = findScheduleSheetAndCol(ss, slot.day);
-    if (!info) return;
-    const cell = info.sheet.getRange(targetRow, info.col);
-    cell.setValue(value + " (הצעה)");
-    cell.setBackground(trainer.color);
-    written++;
-  });
-
-  return createSuccessResponse({ ok: true, written: written, color: trainer.color });
-}
-
 // 4. SUBMIT REQUEST
 function handleSubmitRequest(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
