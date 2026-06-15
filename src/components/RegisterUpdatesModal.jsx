@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { pushSupported, subscribeToPush } from '../push.js';
+import { pushSupported, subscribeToPush, unsubscribeFromPush } from '../push.js';
 
 const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
     const [name, setName] = useState('');
@@ -10,8 +10,33 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
     const [pushLoading, setPushLoading] = useState(false);
     const [pushMsg, setPushMsg] = useState('');
     const [pushErr, setPushErr] = useState(false);
+    const [showUnsub, setShowUnsub] = useState(false);
+    const [unsubEmail, setUnsubEmail] = useState('');
+    const [unsubMsg, setUnsubMsg] = useState('');
 
     if (!isOpen) return null;
+
+    const cancelPush = async () => {
+        setUnsubMsg('');
+        await unsubscribeFromPush(sheetUrl);
+        setUnsubMsg('✓ ההתראות בוטלו במכשיר זה.');
+    };
+
+    const cancelEmail = async () => {
+        if (!unsubEmail) return;
+        setUnsubMsg('');
+        try {
+            await fetch(sheetUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'unregisterSubscriber', email: unsubEmail, team: teamName }),
+            });
+            setUnsubMsg('✓ הוסרת מרשימת התפוצה במייל.');
+            setUnsubEmail('');
+        } catch {
+            setUnsubMsg('שגיאת תקשורת, נסה שוב.');
+        }
+    };
 
     const handlePush = async () => {
         setPushLoading(true);
@@ -194,6 +219,28 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                         </div>
                     )}
                 </form>
+                </div>
+
+                <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                    <button type="button" onClick={() => setShowUnsub(!showUnsub)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}>
+                        כבר רשום? ביטול הרשמה
+                    </button>
+                    {showUnsub && (
+                        <div style={{ marginTop: '0.7rem', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.8rem', textAlign: 'right' }}>
+                            {pushSupported() && (
+                                <button type="button" onClick={cancelPush} style={{ width: '100%', background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '0.55rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '0.6rem' }}>
+                                    🔕 בטל התראות במכשיר זה
+                                </button>
+                            )}
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <input type="email" value={unsubEmail} onChange={(e) => setUnsubEmail(e.target.value)} placeholder="המייל שלך" style={{ flex: 1, padding: '0.55rem', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', textAlign: 'left', direction: 'ltr' }} />
+                                <button type="button" onClick={cancelEmail} disabled={!unsubEmail} style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '0.55rem 0.8rem', borderRadius: '8px', fontWeight: 'bold', cursor: unsubEmail ? 'pointer' : 'not-allowed' }}>
+                                    בטל מייל
+                                </button>
+                            </div>
+                            {unsubMsg && <div style={{ marginTop: '0.6rem', textAlign: 'center', fontSize: '0.85rem', color: unsubMsg.startsWith('✓') ? '#10b981' : '#ef4444' }}>{unsubMsg}</div>}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

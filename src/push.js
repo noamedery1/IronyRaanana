@@ -50,3 +50,22 @@ export async function subscribeToPush(team, sheetUrl) {
 
     return { ok: true };
 }
+
+// Unsubscribes this device from push and removes it from the server store.
+export async function unsubscribeFromPush(sheetUrl) {
+    if (!pushSupported()) return { ok: false, reason: 'unsupported' };
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return { ok: true }; // already not subscribed
+
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe().catch(() => {});
+    try {
+        await fetch(sheetUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'unregisterPushSubscription', endpoint }),
+        });
+    } catch { /* best effort */ }
+    return { ok: true };
+}

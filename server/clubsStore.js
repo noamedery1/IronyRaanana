@@ -81,6 +81,7 @@ export function saveIcon(slug, kind, base64) {
 // Build a Web App Manifest object from a club record.
 export function manifestFor(club) {
     return {
+        id: `/${club.slug}`,
         name: club.name,
         short_name: club.shortName || club.name,
         description: club.description || '',

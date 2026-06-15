@@ -14,6 +14,8 @@ function doPost(e) {
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
+  if (action === 'unregisterSubscriber') return handleUnregisterSubscriber(postData);
+  if (action === 'unregisterPushSubscription') return handleUnregisterPushSubscription(postData);
 
   return createErrorResponse("Unknown action: " + action);
 }
@@ -159,7 +161,13 @@ function doGet(e) {
   
   if (action === 'approve') return handleApprove(reqId);
   if (action === 'reject') return handleReject(reqId);
-  
+  if (action === 'unsubscribe') {
+    handleUnregisterSubscriber({ email: e.parameter.email, team: e.parameter.team });
+    return HtmlService.createHtmlOutput(
+      "<div style='font-family:sans-serif;direction:rtl;text-align:center;padding:40px'>" +
+      "<h2>הוסרת מרשימת התפוצה ✅</h2><p>לא תקבל יותר עדכוני מייל לקבוצה זו.</p></div>");
+  }
+
   return ContentService.createTextOutput("Unknown action");
 }
 
@@ -281,8 +289,11 @@ function findScheduleSheetAndCol(ss, dayName) {
     for (var i = 0; i < sheets.length; i++) {
         const sheet = sheets[i];
         const name = sheet.getName();
-        if (name === "Requests" || name === "Trainers" || name === "SavedRules") continue;
-        
+        // Skip non-schedule tabs and weekly backups, so approval always edits the live
+        // schedule (גיליון1) and never a backup_week_* copy if tab order changes.
+        if (name === "Requests" || name === "Trainers" || name === "SavedRules" ||
+            name === "Subscribers" || name === "PushSubs" || name.indexOf("backup_") === 0) continue;
+
         const col = findColumnForDayInSheet(sheet, dayName);
         if (col !== -1) {
             return { sheet: sheet, col: col };
@@ -374,6 +385,48 @@ function handleRegisterPushSubscription(data) {
 
   sheet.appendRow([new Date(), team, endpoint, JSON.stringify(data.subscription)]);
   return createSuccessResponse("Push subscription registered");
+}
+
+// Remove an email from the Subscribers list (one team, or all teams if team omitted).
+function handleUnregisterSubscriber(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Subscribers");
+  if (!sheet || !data.email) return createSuccessResponse("Nothing to remove");
+
+  const email = data.email.toString().toLowerCase().trim();
+  const team = data.team ? data.team.toString().trim() : null;
+  const values = sheet.getDataRange().getValues();
+  let removed = 0;
+  // Delete bottom-up so row indexes stay valid.
+  for (let i = values.length - 1; i >= 1; i--) {
+    const rowEmail = (values[i][2] || "").toString().toLowerCase().trim();
+    const rowTeam = (values[i][3] || "").toString().trim();
+    if (rowEmail === email && (!team || rowTeam === team)) {
+      sheet.deleteRow(i + 1);
+      removed++;
+    }
+  }
+  return createSuccessResponse("Removed " + removed);
+}
+
+// Remove a push subscription by its endpoint (this device).
+function handleUnregisterPushSubscription(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("PushSubs");
+  const endpoint = data.subscription && data.subscription.endpoint
+    ? data.subscription.endpoint.toString()
+    : (data.endpoint || "").toString();
+  if (!sheet || !endpoint) return createSuccessResponse("Nothing to remove");
+
+  const values = sheet.getDataRange().getValues();
+  let removed = 0;
+  for (let i = values.length - 1; i >= 1; i--) {
+    if ((values[i][2] || "").toString() === endpoint) {
+      sheet.deleteRow(i + 1);
+      removed++;
+    }
+  }
+  return createSuccessResponse("Removed " + removed);
 }
 
 // Reads stored push subscriptions for a team and asks the Node backend to deliver the push.
@@ -534,19 +587,21 @@ function notifySubscribers(team, message) {
                 </div>
                 <div class="footer">
                   <p>הודעה זו נשלחה אוטומטית ממערכת עירוני רעננה כדורסל בעקבות רישומך לקבלת עדכונים לקבוצה זו.</p>
-                  <p>במידה ואינך מעוניין לקבל עדכונים נוספים, אנא פנה להנהלת המועדון.</p>
+                  <p>במידה ואינך מעוניין לקבל עדכונים נוספים, <a href="{{UNSUB_LINK}}" style="color:#2563eb">לחץ כאן להסרה מרשימת התפוצה</a>.</p>
                 </div>
               </div>
             </body>
             </html>
           `;
 
-      // Loop through and send email individually to each registered user
+      // Loop through and send email individually to each registered user (personalized unsubscribe link).
+      const serviceUrl = ScriptApp.getService().getUrl();
       bccEmails.forEach(userEmail => {
+          const unsub = serviceUrl + "?action=unsubscribe&email=" + encodeURIComponent(userEmail) + "&team=" + encodeURIComponent(normalizedTeam);
           MailApp.sendEmail({
               to: userEmail,
               subject: "מערכת רעננה כדורסל: עדכון לו\"ז לקבוצת " + normalizedTeam,
-              htmlBody: htmlBodyContent
+              htmlBody: htmlBodyContent.replace("{{UNSUB_LINK}}", unsub)
           });
       });
   }

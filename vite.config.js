@@ -11,6 +11,7 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['apple-touch-icon.png', 'men_logo.png', 'women_logo.png'],
       manifest: {
+        id: '/raanana',
         name: 'עירוני רעננה — לו"ז',
         short_name: 'רעננה לו"ז',
         description: 'לו"ז אימונים, משחקים ועדכונים של מחלקת הכדורסל',
