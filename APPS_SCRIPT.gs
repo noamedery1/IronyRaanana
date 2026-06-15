@@ -138,8 +138,6 @@ function handleTrainerAuth(data) {
   return createSuccessResponse({ valid: false });
 }
 
-// Writes a trainer's proposed weekly slots directly into the manager's board, colored by trainer
-// and marked "(הצעה)". The manager then approves (clears the marker) or relocates the cell.
 // 4. SUBMIT REQUEST
 function handleSubmitRequest(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
