@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import { parseCellContent } from '../utils/scheduleUtils';
 import { getActiveClub } from '../clubConfig.js';
 import { subscribeToPush } from '../push.js';
+import { isStandalone, hasNativePrompt, promptInstall, subscribe as subscribeInstall } from '../installState.js';
 
 // Trainer devices register under "__TRAINER__:<name>" so the manager can push to all
 // (prefix match) or to selected trainers (exact match).
@@ -39,6 +40,18 @@ const TrainerPortal = () => {
     const [tab, setTab] = useState('requests'); // 'requests' | 'propose'
     const [filterTeam, setFilterTeam] = useState(''); // requests tab filters
     const [filterDay, setFilterDay] = useState('');
+    const [, forceInstall] = useState(0);
+    const [showInstallTip, setShowInstallTip] = useState(false);
+
+    // Re-render when the install prompt becomes available.
+    useEffect(() => subscribeInstall(() => forceInstall((n) => n + 1)), []);
+
+    // Install the trainer app: native prompt if available, otherwise show manual steps
+    // (works even when the auto-prompt is suppressed because the parent app is installed).
+    const installTrainerApp = async () => {
+        if (hasNativePrompt()) { await promptInstall(); return; }
+        setShowInstallTip(true);
+    };
 
     // Login Form
     const [loginName, setLoginName] = useState('');
@@ -312,6 +325,22 @@ const TrainerPortal = () => {
     // RENDER
     // --------------------------------------------------------------------------
 
+    // Install affordance shown on login + dashboard (works even when the auto-prompt
+    // is suppressed because the parent app is already installed).
+    const installBanner = isStandalone() ? null : (
+        <div style={{ background: 'rgba(255,122,24,0.12)', border: '1px solid rgba(255,122,24,0.35)', borderRadius: 12, padding: '0.7rem 0.9rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <span style={{ color: '#fed7aa', fontSize: '0.85rem', fontWeight: 600 }}>📲 התקן את אפליקציית המאמן למסך הבית</span>
+                <button onClick={installTrainerApp} style={{ background: 'linear-gradient(135deg,#ff7a18,#c2410c)', color: '#fff', border: 'none', borderRadius: 8, padding: '0.45rem 0.9rem', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', fontSize: '0.85rem' }}>התקנה</button>
+            </div>
+            {showInstallTip && (
+                <div style={{ color: '#fde68a', fontSize: '0.8rem', lineHeight: 1.6, marginTop: '0.6rem' }}>
+                    אם לא נפתח חלון התקנה (כי כבר מותקנת אפליקציית ההורים): פתח את תפריט כרום <b>⋮</b> ← בחר <b>"הוסף למסך הבית"</b> / <b>"התקן אפליקציה"</b>. ייווצר אייקון נפרד של המאמנים.
+                </div>
+            )}
+        </div>
+    );
+
     if (view === 'login') {
         const inputStyle = {
             padding: '0.85rem', borderRadius: '10px', border: '1px solid #243049',
@@ -348,6 +377,7 @@ const TrainerPortal = () => {
                         </button>
                     </form>
                     {error && <div style={{ color: '#f87171', marginTop: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+                    <div style={{ marginTop: '1.2rem' }}>{installBanner}</div>
                 </div>
             </div>
         );
@@ -369,6 +399,8 @@ const TrainerPortal = () => {
                 <button onClick={() => setTab('requests')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'requests' ? '#ff9d3c' : '#94a3b8' }}>האימונים שלי</button>
                 <button onClick={() => setTab('propose')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'propose' ? '#ff9d3c' : '#94a3b8' }}>הזנת לו&quot;ז</button>
             </div>
+
+            {installBanner && <div style={{ maxWidth: 600, margin: '1rem auto 0', padding: '0 1rem' }}>{installBanner}</div>}
 
             {/* Schedule List */}
             {tab === 'requests' && (() => {
