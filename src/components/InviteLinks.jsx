@@ -11,6 +11,7 @@ export default function InviteLinks() {
     const club = getActiveClub();
     const base = `${window.location.origin}/${club.slug}`;
     const operatorLink = `${base}/join?r=operator`;
+    const trainerLink = `${base}/trainer`;
 
     useEffect(() => {
         Papa.parse(club.dataUrl, {
@@ -58,6 +59,10 @@ export default function InviteLinks() {
 
             <h4 style={{ marginBottom: '0.6rem', color: '#9a3412' }}>מפעיל (לוח מלא — כל הקבוצות והאולמות)</h4>
             {row('מפעיל', operatorLink, 'operator')}
+
+            <h4 style={{ margin: '1.4rem 0 0.3rem', color: '#166534' }}>מאמנים</h4>
+            <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem' }}>לינק אחד לכל המאמנים. כל מאמן מתחבר עם השם והקוד שהוגדרו לו בגיליון <b>Trainers</b>.</p>
+            {row('מאמנים', trainerLink, 'trainer')}
 
             <h4 style={{ margin: '1.4rem 0 0.6rem', color: '#1e3a8a' }}>חברי קבוצה (הורים / מתאמנים)</h4>
             {teams.length === 0 && <div style={{ color: '#94a3b8' }}>טוען קבוצות...</div>}
