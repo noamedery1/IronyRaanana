@@ -12,6 +12,7 @@ import NavButton from '../components/NavButton';
 import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import { getActiveClub } from '../clubConfig.js';
+import { getIdentity } from '../userIdentity.js';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
 const parseScheduleContent = parseCellContent;
@@ -21,6 +22,11 @@ function PublicSchedule() {
     const club = getActiveClub();
     const LIVE_SHEET_API = club.sheetApi;
     const DATA_URL = club.dataUrl;
+
+    // A "member" (parent/trainee via invite) is locked to their own team; an operator/
+    // manager sees the full board. memberTeam is empty for non-members.
+    const identity = getIdentity();
+    const memberTeam = identity.role === 'member' ? identity.team : '';
 
     const [locations, setLocations] = useState([]); // Store active halls for dropdown
     const [data, setData] = useState([]);
@@ -136,12 +142,18 @@ function PublicSchedule() {
                             const sharedTeam = urlParams.get('team');
                             let defaultTeamId = '';
 
-                            if (sharedTeam) {
+                            // A member is locked to their assigned team.
+                            if (memberTeam) {
+                                const found = teamObjects.find(t => t.label === memberTeam || t.name === memberTeam);
+                                if (found) defaultTeamId = found.value;
+                            }
+
+                            if (!defaultTeamId && sharedTeam) {
                                 const found = teamObjects.find(t => t.label === sharedTeam || t.name === sharedTeam);
                                 if (found) defaultTeamId = found.value;
                             }
 
-                            if (!defaultTeamId && menTeams.length > 0) {
+                            if (!defaultTeamId && !memberTeam && menTeams.length > 0) {
                                 defaultTeamId = menTeams[0].value;
                             }
 
@@ -351,7 +363,8 @@ function PublicSchedule() {
                 </div>
             ) : (
                 <main style={{ marginTop: '1.4rem' }}>
-                    {/* ===== controls ===== */}
+                    {/* ===== controls (hidden for members — they only see their team) ===== */}
+                    {!memberTeam && (
                     <div className="controls">
                         <select
                             className="team-select"
@@ -370,6 +383,7 @@ function PublicSchedule() {
                             <button className={`vtab ${viewMode === 'daily' ? 'on' : ''}`} onClick={() => setViewMode('daily')}>📅 {t('tab_daily')}</button>
                         </div>
                     </div>
+                    )}
 
                     {viewMode === 'halls' ? (
                         <HallView data={data} headers={headers} teams={teams} dayStart={dayStart} defaultGender="M" />

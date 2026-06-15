@@ -6,6 +6,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import WomenDashboard from './pages/WomenDashboard';
 import TrainerPortal from './pages/TrainerPortal';
+import Join from './pages/Join';
 import SuperUser from './pages/SuperUser';
 import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
@@ -63,6 +64,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Invite-based registration (parent/trainee per team, or operator) */}
+        <Route path="/:club/join" element={<Join />} />
 
         {/* Per-club public routes — club slug is the first path segment */}
         <Route path="/:club" element={<PublicSchedule />} />

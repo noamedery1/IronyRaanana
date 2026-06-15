@@ -14,6 +14,8 @@ function doPost(e) {
   if (action === 'trainerAuth') return handleTrainerAuth(postData);
   if (action === 'getTrainers') return handleGetTrainers(postData);
   if (action === 'sendTrainerPush') return handleSendTrainerPush(postData);
+  if (action === 'registerUser') return handleRegisterUser(postData);
+  if (action === 'userAuth') return handleUserAuth(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
@@ -172,6 +174,45 @@ function handleSendTrainerPush(data) {
     targets.forEach(function (name) { sendPushForTeam('__TRAINER__:' + name, title, body, url, icon); });
   }
   return createSuccessResponse({ ok: true });
+}
+
+// ===== Registered users (members / operators) — Section: role-based access =====
+// Users sheet columns: Token(0), Role(1), Team(2), Name(3), Email(4), Phone(5), Code(6), Created(7).
+function getUsersSheet(ss) {
+  let s = ss.getSheetByName("Users");
+  if (!s) {
+    s = ss.insertSheet("Users");
+    s.appendRow(["Token", "Role", "Team", "Name", "Email", "Phone", "Code", "Created"]);
+  }
+  return s;
+}
+
+// Registers a member (per-team) or operator from an invite link. Returns an identity token.
+function handleRegisterUser(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s = getUsersSheet(ss);
+  const role = (data.role || '').toString();
+  if (role !== 'member' && role !== 'operator') return createErrorResponse("Invalid role");
+  if (role === 'member' && !data.team) return createErrorResponse("Missing team");
+  if (!data.name || (!data.email && !data.phone)) return createErrorResponse("Missing name / contact");
+
+  const token = Utilities.getUuid().replace(/-/g, '').substring(0, 16);
+  s.appendRow([token, role, data.team || '', data.name, data.email || '', data.phone || '', '', new Date()]);
+  return createSuccessResponse({ valid: true, token: token, role: role, team: data.team || '', name: data.name });
+}
+
+// Validates a stored identity token; returns the user's role + team.
+function handleUserAuth(data) {
+  if (!data.token) return createSuccessResponse({ valid: false });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const s = getUsersSheet(ss);
+  const v = s.getDataRange().getValues();
+  for (let i = 1; i < v.length; i++) {
+    if ((v[i][0] || '').toString() === data.token.toString()) {
+      return createSuccessResponse({ valid: true, role: v[i][1], team: v[i][2], name: v[i][3] });
+    }
+  }
+  return createSuccessResponse({ valid: false });
 }
 
 // 4. SUBMIT REQUEST
