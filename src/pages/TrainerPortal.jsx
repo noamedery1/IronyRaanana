@@ -1,29 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { parseCellContent } from '../utils/scheduleUtils';
 import { getActiveClub } from '../clubConfig.js';
 
 const TrainerPortal = () => {
     // --------------------------------------------------------------------------
-    // CONFIGURATION — Apps Script endpoint comes from the active club (URL path).
+    // CONFIGURATION — endpoint + data come from the active club (URL path).
+    // Read the SAME live board the manager works on, so proposed-slot rows line up.
     // --------------------------------------------------------------------------
     const LIVE_SHEET_API = getActiveClub().sheetApi;
-
-    // We assume the live sheet ID is the one from WomenDashboard or Public
-    // For now, let's hardcode the ID if known or ask user to provide it.
-    // Based on previous files:
-    const SHEET_ID = "1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w"; // Default Women Sheet
-    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+    const CSV_URL = getActiveClub().dataUrl;
 
     // --------------------------------------------------------------------------
     // STATE
     // --------------------------------------------------------------------------
     const [view, setView] = useState('login'); // 'login', 'dashboard'
-    const [trainer, setTrainer] = useState(null); // { name: 'Noam', teams: ['U16'] }
+    const [trainer, setTrainer] = useState(null); // { name, teams, color, token }
     const [schedule, setSchedule] = useState([]);
     const [locations, setLocations] = useState([]); // Available halls
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    // Section 5: proposing a weekly schedule directly into the manager's board.
+    const [dayHeaders, setDayHeaders] = useState([]); // [{name, col}] for the 7 days
+    const [myTeamRows, setMyTeamRows] = useState([]); // [{team, row, days:{dayName:value}}]
+    const [proposals, setProposals] = useState({}); // { "row|dayName": {time, location} }
+    const [proposalMsg, setProposalMsg] = useState('');
+    const [tab, setTab] = useState('requests'); // 'requests' | 'propose'
 
     // Login Form
     const [loginName, setLoginName] = useState('');
@@ -43,61 +46,46 @@ const TrainerPortal = () => {
     // ACTIONS
     // --------------------------------------------------------------------------
 
+    // Apply a successful auth result (shared by token-link and name+code login).
+    const applyAuth = (data) => {
+        setTrainer({ name: data.trainerName, teams: data.teams || [], color: data.color, token: data.token });
+        setView('dashboard');
+        fetchSchedule(data.trainerName);
+    };
+
+    // Personal-link login: /trainer?t=<token>
+    useEffect(() => {
+        const token = new URLSearchParams(window.location.search).get('t');
+        if (!token) return;
+        setLoading(true);
+        fetch(LIVE_SHEET_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'trainerAuth', token }),
+        })
+            .then((r) => r.json())
+            .then((data) => { if (data.valid) applyAuth(data); })
+            .catch(() => { /* fall back to manual login */ })
+            .finally(() => setLoading(false));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
-
         try {
-            // Verify against Apps Script
-            const response = await fetch(LIVE_SHEET_API, {
-                method: 'POST',
-                // mode: 'cors' if possible, but Google usually requires 'no-cors' for simple fetch,
-                // however 'no-cors' returns opaque. We can't read the response to know if login succeeded!
-                // TRICK: We can use a GET request or JSONP if supported, OR we can just fetch the 'Trainers' CSV directly here 
-                // and validate locally (clientside). It's less secure but for a MVP with a Code it's okay.
-                // BETTER: The user asked for an "App Script" approach. 
-                // Let's try to fetch the Trainers sheet as CSV to validate.
-            });
-
-            // FALLBACK STRATEGY FOR LOGIN: Read a "Trainers" tab via CSV export
-            // This requires the Trainers tab to be published or visible to the heuristic.
-            // If hidden, we can't CSV it easily without OAuth.
-            // ALTERNATIVE: Use the API in 'cors' mode? Google Apps Script Web App set to "Anyone" supports CORS.
-            // Let's assume the script handles CORS correctly (return ContentService...setMimeType(JSON)).
-
-            // Let's try the fetch to the script
             const result = await fetch(LIVE_SHEET_API, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 'text/plain' prevents preflight
-                body: JSON.stringify({
-                    action: 'trainerLogin',
-                    name: loginName,
-                    code: loginCode
-                })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 'text/plain' avoids CORS preflight
+                body: JSON.stringify({ action: 'trainerAuth', name: loginName, code: loginCode }),
             });
-
-            // If the script is set to "Anyone", valid CORS JSON is returned.
             const data = await result.json();
-
-            if (data.valid) {
-                setTrainer({ name: data.trainerName, teams: data.teams });
-                setView('dashboard');
-                fetchSchedule(data.trainerName); // Load schedule
-            } else {
-                setError('שם משתמש או קוד שגוי');
-            }
-
+            if (data.valid) applyAuth(data);
+            else setError('שם משתמש או קוד שגוי');
         } catch (err) {
-            console.error("Login Error", err);
-            // Fallback for development if script isn't ready:
-            // if (loginCode === '0000') {
-            //     setTrainer({ name: loginName, teams: [] });
-            //     setView('dashboard');
-            //     fetchSchedule(loginName);
-            // } else {
+            console.error('Login Error', err);
             setError('שגיאת תקשורת או פרטים שגויים. וודא שהסקריפט מעודכן.');
-            // }
         } finally {
             setLoading(false);
         }
@@ -133,11 +121,19 @@ const TrainerPortal = () => {
 
                 const mySessions = [];
                 const locSet = new Set();
-                const now = new Date();
+                const teamRows = [];
+
+                // The 7 day headers (name + 1-based column) for the proposal grid.
+                const dayHdrs = [];
+                for (let d = 0; d < 7; d++) {
+                    const colIdx = dayStartIndex + d;
+                    if (headers[colIdx]) dayHdrs.push({ name: headers[colIdx], col: colIdx + 1 });
+                }
 
                 rows.slice(headerRowIndex + 1).forEach((row, rIdx) => {
                     const teamName = row[0];
                     const coach = coachIndex !== -1 ? row[coachIndex] : '';
+                    const absRow = headerRowIndex + rIdx + 2; // 1-based sheet row (header at headerRowIndex)
 
                     // Collect Locations from all valid cells
                     for (let d = 0; d < 7; d++) {
@@ -149,32 +145,35 @@ const TrainerPortal = () => {
                         }
                     }
 
-                    // Filter: Coach match OR (if undefined) match team name? 
-                    // Let's match strictly by Coach Column if possible, or fuzzy match if user is assigned to team
                     const isMyCoach = coach && coach.trim().toLowerCase() === trainerName.toLowerCase();
 
                     if (isMyCoach) {
+                        const days = {};
                         for (let d = 0; d < 7; d++) {
                             const colIdx = dayStartIndex + d;
                             const cell = row[colIdx];
+                            const dayName = headers[colIdx];
                             if (cell && cell.trim()) {
-                                const dayName = headers[colIdx];
                                 mySessions.push({
                                     id: `${rIdx}-${colIdx}`,
                                     team: teamName,
                                     day: dayName,
-                                    date: dayName.split(' ')[1] || '', // Simple date extract
+                                    date: (dayName || '').split(' ')[1] || '',
                                     raw: cell,
-                                    originalrow: rIdx, // To help script find it
-                                    originalcol: colIdx
+                                    originalrow: absRow, // absolute 1-based sheet row
+                                    originalcol: colIdx + 1
                                 });
                             }
+                            if (dayName) days[dayName] = cell || '';
                         }
+                        teamRows.push({ team: teamName || '(ללא שם)', row: absRow, days });
                     }
                 });
 
                 setLocations(Array.from(locSet).sort());
                 setSchedule(mySessions);
+                setDayHeaders(dayHdrs);
+                setMyTeamRows(teamRows);
                 setLoading(false);
             }
         });
@@ -235,6 +234,41 @@ const TrainerPortal = () => {
         }
     };
 
+    const setProposal = (rowKey, field, value) => {
+        setProposals((p) => ({ ...p, [rowKey]: { ...(p[rowKey] || {}), [field]: value } }));
+    };
+
+    const submitProposals = async (teamRow) => {
+        const slots = dayHeaders
+            .map((dh) => {
+                const p = proposals[`${teamRow.row}|${dh.name}`] || {};
+                return { day: dh.name, time: (p.time || '').trim(), location: (p.location || '').trim() };
+            })
+            .filter((s) => s.time);
+        if (!slots.length) { setProposalMsg('מלא לפחות יום אחד עם שעה.'); return; }
+        setLoading(true);
+        setProposalMsg('');
+        try {
+            await fetch(LIVE_SHEET_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'proposeSlots',
+                    token: trainer.token,
+                    trainerName: trainer.name,
+                    row: teamRow.row,
+                    slots,
+                }),
+            });
+            setProposalMsg(`✓ נשלחו ${slots.length} הצעות למנהל עבור ${teamRow.team}. ימתינו לאישורו בלוח.`);
+        } catch (err) {
+            console.error(err);
+            setProposalMsg('שגיאה בשליחה, נסה שוב.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // --------------------------------------------------------------------------
     // RENDER
     // --------------------------------------------------------------------------
@@ -243,7 +277,7 @@ const TrainerPortal = () => {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f3f4f6', fontFamily: 'Rubik' }}>
                 <div style={{ background: 'white', padding: '2rem', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '90%', maxWidth: '350px', textAlign: 'center' }}>
-                    <h2 style={{ color: '#BE185D', marginBottom: '1.5rem' }}>портаל מאמנים</h2>
+                    <h2 style={{ color: '#BE185D', marginBottom: '1.5rem' }}>פורטל מאמנים</h2>
                     <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <input
                             type="text"
@@ -277,12 +311,22 @@ const TrainerPortal = () => {
         <div dir="rtl" style={{ fontFamily: 'Rubik', minHeight: '100vh', background: '#f8fafc', paddingBottom: '2rem' }}>
             {/* Header */}
             <header style={{ background: 'white', padding: '1rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, color: '#334155' }}>שלום, {trainer.name}</h3>
+                <h3 style={{ margin: 0, color: '#334155', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {trainer.color && <span style={{ width: 16, height: 16, borderRadius: 4, background: trainer.color, border: '1px solid #cbd5e1' }} />}
+                    שלום, {trainer.name}
+                </h3>
                 <button onClick={() => setView('login')} style={{ background: 'none', border: '1px solid #cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '4px', fontSize: '0.8rem' }}>יציאה</button>
             </header>
 
+            {/* Tabs */}
+            <div style={{ maxWidth: 600, margin: '1rem auto 0', padding: '0 1rem', display: 'flex', gap: '0.4rem' }}>
+                <button onClick={() => setTab('requests')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? 'white' : '#e2e8f0', color: tab === 'requests' ? '#BE185D' : '#64748b' }}>האימונים שלי</button>
+                <button onClick={() => setTab('propose')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? 'white' : '#e2e8f0', color: tab === 'propose' ? '#BE185D' : '#64748b' }}>הזנת לו&quot;ז</button>
+            </div>
+
             {/* Schedule List */}
-            <div style={{ maxWidth: '600px', margin: '1rem auto', padding: '0 1rem' }}>
+            {tab === 'requests' && (
+            <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
                 <h4 style={{ color: '#64748b', marginBottom: '1rem' }}>האימונים שלי השבוע</h4>
 
                 {loading && <div style={{ textAlign: 'center' }}>טוען נתונים...</div>}
@@ -320,6 +364,45 @@ const TrainerPortal = () => {
                     ))}
                 </div>
             </div>
+            )}
+
+            {/* Propose weekly schedule (Section 5) */}
+            {tab === 'propose' && (
+            <div style={{ maxWidth: 600, margin: '0 auto', padding: '1rem' }}>
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '0.8rem', fontSize: '0.85rem', color: '#1e3a8a', marginBottom: '1rem', lineHeight: 1.6 }}>
+                    מלאו את שעות ומיקומי האימונים המבוקשים. ההצעות ייכתבו ללוח המנהל <strong>בצבע שלכם</strong> ויסומנו "(הצעה)" — המנהל יאשר או ישבץ מחדש.
+                </div>
+
+                {loading && <div style={{ textAlign: 'center' }}>טוען...</div>}
+                {!loading && myTeamRows.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>לא נמצאו קבוצות המשויכות אליך בלוח (לפי עמודת המאמן).</div>
+                )}
+
+                {myTeamRows.map((tr) => (
+                    <div key={tr.row} style={{ background: 'white', borderRadius: 10, padding: '1rem', marginBottom: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                        <div style={{ fontWeight: 'bold', color: '#334155', marginBottom: '0.7rem' }}>{tr.team}</div>
+                        {dayHeaders.map((dh) => {
+                            const key = `${tr.row}|${dh.name}`;
+                            const p = proposals[key] || {};
+                            return (
+                                <div key={dh.name} style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <div style={{ width: 60, fontSize: '0.85rem', color: '#64748b', flexShrink: 0 }}>{(dh.name || '').split(' ')[0]}</div>
+                                    <input value={p.time || ''} onChange={(e) => setProposal(key, 'time', e.target.value)} placeholder={tr.days[dh.name] ? 'קיים: ' + tr.days[dh.name] : 'שעה'} style={{ flex: 1, minWidth: 0, padding: '0.45rem', borderRadius: 6, border: '1px solid #cbd5e1' }} />
+                                    <input value={p.location || ''} onChange={(e) => setProposal(key, 'location', e.target.value)} placeholder="אולם" list="hall-list" style={{ flex: 1, minWidth: 0, padding: '0.45rem', borderRadius: 6, border: '1px solid #cbd5e1' }} />
+                                </div>
+                            );
+                        })}
+                        <button onClick={() => submitProposals(tr)} disabled={loading} style={{ marginTop: '0.6rem', width: '100%', padding: '0.7rem', border: 'none', borderRadius: 8, background: '#BE185D', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>שלח הצעות למנהל</button>
+                    </div>
+                ))}
+
+                <datalist id="hall-list">
+                    {locations.map((loc) => <option key={loc} value={loc} />)}
+                </datalist>
+
+                {proposalMsg && <div style={{ textAlign: 'center', marginTop: '0.5rem', color: proposalMsg.startsWith('✓') ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>{proposalMsg}</div>}
+            </div>
+            )}
 
             {/* Edit Modal */}
             {editModalOpen && (

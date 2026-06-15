@@ -11,6 +11,8 @@ function doPost(e) {
   if (action === 'saveSchedule') return handleSaveSchedule(postData);
   if (action === 'sendFeedback') return handleSendFeedback(postData);
   if (action === 'trainerLogin') return handleTrainerLogin(postData);
+  if (action === 'trainerAuth') return handleTrainerAuth(postData);
+  if (action === 'proposeSlots') return handleProposeSlots(postData);
   if (action === 'submitRequest') return handleSubmitRequest(postData);
   if (action === 'registerSubscriber') return handleRegisterSubscriber(postData);
   if (action === 'registerPushSubscription') return handleRegisterPushSubscription(postData);
@@ -88,7 +90,93 @@ function handleTrainerLogin(data) {
   return createSuccessResponse({ valid: false });
 }
 
-// 4. SUBMIT REQUEST 
+// ===== Trainer self-service (Section 5) =====
+// Trainers sheet columns: Name(0), Code(1), Teams(2), Color(3), Token(4).
+const TRAINER_COLORS = ['#FCE5CD', '#D9EAD3', '#CFE2F3', '#F4CCCC', '#FFF2CC', '#D9D2E9', '#D0E0E3', '#EAD1DC'];
+
+function getTrainersSheet(ss) {
+  let sheet = ss.getSheetByName("Trainers");
+  if (!sheet) {
+    sheet = ss.insertSheet("Trainers");
+    sheet.appendRow(["Name", "Code", "Teams", "Color", "Token"]);
+  }
+  return sheet;
+}
+
+// Ensures a trainer row has a color + token; assigns and persists if missing. Returns the trainer object.
+function trainerFromRow(sheet, rowValues, rowIndex) {
+  let color = (rowValues[3] || "").toString().trim();
+  let token = (rowValues[4] || "").toString().trim();
+  if (!color) {
+    color = TRAINER_COLORS[(rowIndex - 1) % TRAINER_COLORS.length];
+    sheet.getRange(rowIndex + 1, 4).setValue(color); // col 4 (1-based), rowIndex is 0-based data index
+  }
+  if (!token) {
+    token = Utilities.getUuid().replace(/-/g, '').substring(0, 12);
+    sheet.getRange(rowIndex + 1, 5).setValue(token);
+  }
+  const teams = (rowValues[2] || "").toString().split(/[,;\n]/).map(t => t.trim()).filter(Boolean);
+  return { name: (rowValues[0] || "").toString(), teams: teams, color: color, token: token };
+}
+
+// Authenticate by token (personal link) or name+code; auto-assigns color/token on first use.
+function handleTrainerAuth(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getTrainersSheet(ss);
+  const values = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const byToken = data.token && (row[4] || "").toString().trim() === data.token.toString().trim();
+    const byCreds = data.name && data.code &&
+      (row[0] || "").toString().trim().toLowerCase() === data.name.toString().trim().toLowerCase() &&
+      (row[1] || "").toString().trim() === data.code.toString().trim();
+    if (byToken || byCreds) {
+      const t = trainerFromRow(sheet, row, i);
+      return createSuccessResponse({ valid: true, trainerName: t.name, teams: t.teams, color: t.color, token: t.token });
+    }
+  }
+  return createSuccessResponse({ valid: false });
+}
+
+// Writes a trainer's proposed weekly slots directly into the manager's board, colored by trainer
+// and marked "(הצעה)". The manager then approves (clears the marker) or relocates the cell.
+function handleProposeSlots(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = getTrainersSheet(ss);
+  const values = sheet.getDataRange().getValues();
+
+  // Resolve the trainer (token preferred) to get a trusted color + name.
+  let trainer = null;
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const byToken = data.token && (row[4] || "").toString().trim() === data.token.toString().trim();
+    const byName = data.trainerName && (row[0] || "").toString().trim().toLowerCase() === data.trainerName.toString().trim().toLowerCase();
+    if (byToken || byName) { trainer = trainerFromRow(sheet, row, i); break; }
+  }
+  if (!trainer) return createErrorResponse("Unknown trainer");
+
+  const targetRow = Number(data.row);
+  if (isNaN(targetRow) || targetRow < 2) return createErrorResponse("Invalid row");
+  if (!Array.isArray(data.slots) || !data.slots.length) return createErrorResponse("No slots");
+
+  let written = 0;
+  data.slots.forEach(slot => {
+    if (!slot.day) return;
+    const value = (slot.time || "").toString().trim() + (slot.location ? " " + slot.location.toString().trim() : "");
+    if (!value.trim()) return;
+    const info = findScheduleSheetAndCol(ss, slot.day);
+    if (!info) return;
+    const cell = info.sheet.getRange(targetRow, info.col);
+    cell.setValue(value + " (הצעה)");
+    cell.setBackground(trainer.color);
+    written++;
+  });
+
+  return createSuccessResponse({ ok: true, written: written, color: trainer.color });
+}
+
+// 4. SUBMIT REQUEST
 function handleSubmitRequest(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName("Requests");
