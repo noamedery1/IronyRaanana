@@ -26,18 +26,8 @@ function setMeta(name, content) {
 export function setupClubPwa() {
     const club = getActiveClub();
 
-    // On the trainer portal, install as a SEPARATE app with its own name + icon.
-    const isTrainer = /\/trainer(\/|$)/.test(window.location.pathname);
-    if (isTrainer) {
-        setLink('manifest', '/trainer.webmanifest');
-        document.title = 'פורטל מאמנים — ' + club.shortName;
-        setMeta('theme-color', club.themeColor);
-        setMeta('apple-mobile-web-app-title', 'מאמנים');
-        setLink('apple-touch-icon', '/icons/trainer-192.png');
-        return;
-    }
-
-    // Point the manifest at the per-club file (overrides the build-time default).
+    // One shared app for parents + trainers (Android can't install two PWAs per origin).
+    // Same icon/name for all; the app opens to the right screen by identity (RootRedirect).
     setLink('manifest', `/clubs/${club.slug}.webmanifest`);
 
     // Title + theme + iOS home-screen icon.

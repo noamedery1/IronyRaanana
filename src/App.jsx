@@ -13,6 +13,12 @@ import { useI18n } from './i18n.jsx';
 import { DEFAULT_CLUB } from './clubConfig.js';
 import './App.css';
 
+// Launch redirect: trainer devices → trainer portal; everyone else → public schedule.
+const RootRedirect = () => {
+  const dest = localStorage.getItem('trainerToken') ? `/${DEFAULT_CLUB}/trainer` : `/${DEFAULT_CLUB}`;
+  return <Navigate to={dest} replace />;
+};
+
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
@@ -29,9 +35,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Legacy links redirect to the canonical club path so existing bookmarks /
-            installed PWAs (start_url "/") keep working without anyone changing URLs. */}
-        <Route path="/" element={<Navigate to={`/${DEFAULT_CLUB}`} replace />} />
+        {/* Launch (start_url "/"): a device where a trainer logged in opens straight to
+            the trainer portal; everyone else lands on the public schedule. Navigating to
+            /raanana directly still shows the parent view (so a trainer can view it). */}
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/women" element={<Navigate to={`/${DEFAULT_CLUB}/women`} replace />} />
 
         {/* Superuser console (general manager) */}

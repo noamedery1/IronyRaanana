@@ -8,12 +8,8 @@ import { canInstall, hasNativePrompt, isIOS, isStandalone, subscribe, promptInst
 // - iOS (no beforeinstallprompt): shows "Share → Add to Home Screen" instructions.
 export default function InstallPrompt() {
     const { t } = useI18n();
-    // Separate dismiss flag per context, so dismissing the parent app prompt doesn't
-    // also hide the trainer app prompt (and vice versa).
-    const isTrainer = /\/trainer(\/|$)/.test(window.location.pathname);
-    const dismissKey = isTrainer ? 'pwaPromptDismissed_trainer' : 'pwaPromptDismissed';
     const [, force] = useState(0);
-    const [dismissed, setDismissed] = useState(localStorage.getItem(dismissKey) === '1');
+    const [dismissed, setDismissed] = useState(localStorage.getItem('pwaPromptDismissed') === '1');
     const [showIosTip, setShowIosTip] = useState(false);
 
     // Re-render when the install prompt becomes available / the app gets installed.
@@ -27,7 +23,7 @@ export default function InstallPrompt() {
         if (hasNativePrompt()) await promptInstall();
         else if (ios) setShowIosTip(true);
     };
-    const dismiss = () => { setDismissed(true); localStorage.setItem(dismissKey, '1'); };
+    const dismiss = () => { setDismissed(true); localStorage.setItem('pwaPromptDismissed', '1'); };
 
     // ===== First-visit prominent modal =====
     if (!dismissed) {
@@ -58,7 +54,7 @@ export default function InstallPrompt() {
                         width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: '0.95rem',
                     }}>✕</button>
 
-                    <img src={isTrainer ? '/icons/trainer-192.png' : '/pwa-192x192.png'} alt="" style={{
+                    <img src="/pwa-192x192.png" alt="" style={{
                         width: 72, height: 72, borderRadius: 18, margin: '0 auto 0.9rem',
                         boxShadow: '0 12px 30px -10px rgba(0,0,0,0.7)',
                     }} />
