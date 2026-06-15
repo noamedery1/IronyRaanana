@@ -37,6 +37,8 @@ const TrainerPortal = () => {
     const [proposals, setProposals] = useState({}); // { "row|dayName": {time, location} }
     const [proposalMsg, setProposalMsg] = useState('');
     const [tab, setTab] = useState('requests'); // 'requests' | 'propose'
+    const [filterTeam, setFilterTeam] = useState(''); // requests tab filters
+    const [filterDay, setFilterDay] = useState('');
 
     // Login Form
     const [loginName, setLoginName] = useState('');
@@ -59,42 +61,58 @@ const TrainerPortal = () => {
     // Apply a successful auth result (shared by saved-token and name+code login).
     // The token is saved on this device so the trainer stays identified next time —
     // a single shared trainer link works; first login persists identity locally.
-    const applyAuth = (data) => {
-        setTrainer({ name: data.trainerName, teams: data.teams || [], color: data.color, token: data.token });
-        if (data.token) localStorage.setItem('trainerToken', data.token);
-        setView('dashboard');
-        fetchSchedule(data.trainerName);      // live board → requests
-        fetchManagerBoard(data.trainerName);  // manager board → proposals
-
-        // First login on this device: register it under the trainers group so the
-        // manager can later push reminders to all trainers at once. Best-effort.
+    // Load the trainer's boards + register push (called once we know who the trainer is).
+    const initTrainer = (name) => {
+        fetchSchedule(name);      // live board → requests
+        fetchManagerBoard(name);  // manager board → proposals
         if (localStorage.getItem('trainerPushV2') !== '1') {
-            subscribeToPush(TRAINER_PUSH_PREFIX + data.trainerName, LIVE_SHEET_API)
+            subscribeToPush(TRAINER_PUSH_PREFIX + name, LIVE_SHEET_API)
                 .then((res) => { if (res && res.ok) localStorage.setItem('trainerPushV2', '1'); })
                 .catch(() => {});
         }
     };
 
+    const applyAuth = (data, skipInit) => {
+        const info = { name: data.trainerName, teams: data.teams || [], color: data.color, token: data.token };
+        setTrainer(info);
+        if (data.token) localStorage.setItem('trainerToken', data.token);
+        localStorage.setItem('trainerInfo', JSON.stringify(info)); // remembered across refreshes
+        setView('dashboard');
+        if (!skipInit) initTrainer(data.trainerName);
+    };
+
     const logout = () => {
         localStorage.removeItem('trainerToken');
+        localStorage.removeItem('trainerInfo');
         setTrainer(null);
         setView('login');
     };
 
-    // Auto-login: a token saved on this device, or a personal link (?t=token).
+    // On load: restore instantly from saved info (no login flash on refresh), then
+    // re-validate the token in the background.
     useEffect(() => {
+        const saved = localStorage.getItem('trainerInfo');
+        if (saved) {
+            try {
+                const info = JSON.parse(saved);
+                setTrainer(info);
+                setView('dashboard');
+                initTrainer(info.name);
+            } catch { /* ignore */ }
+        }
         const token = localStorage.getItem('trainerToken') || new URLSearchParams(window.location.search).get('t');
         if (!token) return;
-        setLoading(true);
         fetch(LIVE_SHEET_API, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: 'trainerAuth', token }),
         })
             .then((r) => r.json())
-            .then((data) => { if (data.valid) applyAuth(data); else localStorage.removeItem('trainerToken'); })
-            .catch(() => { /* fall back to manual login */ })
-            .finally(() => setLoading(false));
+            .then((data) => {
+                if (data.valid) applyAuth(data, !!saved); // skip re-init if already restored
+                else if (!saved) localStorage.removeItem('trainerToken');
+            })
+            .catch(() => { /* offline: keep optimistic restore */ });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -353,18 +371,37 @@ const TrainerPortal = () => {
             </div>
 
             {/* Schedule List */}
-            {tab === 'requests' && (
+            {tab === 'requests' && (() => {
+            const teamsList = [...new Set(schedule.map((s) => s.team))];
+            const daysList = [...new Set(schedule.map((s) => s.day))];
+            const filtered = schedule.filter((s) => (!filterTeam || s.team === filterTeam) && (!filterDay || s.day === filterDay));
+            const selStyle = { flex: 1, minWidth: 0, padding: '0.5rem', borderRadius: 8, border: '1px solid #243049', background: '#0b1220', color: '#e8edf7', outline: 'none' };
+            return (
             <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem' }}>
-                <h4 style={{ color: '#94a3b8', marginBottom: '1rem' }}>האימונים שלי השבוע</h4>
+                <h4 style={{ color: '#94a3b8', marginBottom: '0.8rem' }}>האימונים שלי השבוע</h4>
+
+                {/* Filters (handy when a trainer has several teams) */}
+                {schedule.length > 0 && (teamsList.length > 1 || daysList.length > 1) && (
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <select value={filterTeam} onChange={(e) => setFilterTeam(e.target.value)} style={selStyle}>
+                            <option value="">כל הקבוצות</option>
+                            {teamsList.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
+                        </select>
+                        <select value={filterDay} onChange={(e) => setFilterDay(e.target.value)} style={selStyle}>
+                            <option value="">כל הימים</option>
+                            {daysList.map((d) => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                    </div>
+                )}
 
                 {loading && <div style={{ textAlign: 'center', color: '#94a3b8' }}>טוען נתונים...</div>}
 
-                {!loading && schedule.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>לא נמצאו אימונים המשויכים אליך.</div>
+                {!loading && filtered.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>לא נמצאו אימונים{(filterTeam || filterDay) ? ' לסינון הזה' : ' המשויכים אליך'}.</div>
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    {schedule.map(session => (
+                    {filtered.map(session => (
                         <div key={session.id} style={{ background: '#121b30', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#e8edf7' }}>{session.team}</div>
@@ -386,7 +423,8 @@ const TrainerPortal = () => {
                     ))}
                 </div>
             </div>
-            )}
+            );
+            })()}
 
             {/* Propose weekly schedule (Section 5) */}
             {tab === 'propose' && (
