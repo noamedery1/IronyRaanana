@@ -163,11 +163,13 @@ function handleSendTrainerPush(data) {
   const body = (data.body || '').toString();
   if (!body.trim()) return createErrorResponse("Empty message");
 
+  const url = '/raanana/trainer';
+  const icon = '/icons/trainer-192.png';
   const targets = data.targets;
   if (targets === 'all' || !Array.isArray(targets) || !targets.length) {
-    sendPushForTeam('__TRAINER__:', title, body); // prefix matches every trainer
+    sendPushForTeam('__TRAINER__:', title, body, url, icon); // prefix matches every trainer
   } else {
-    targets.forEach(function (name) { sendPushForTeam('__TRAINER__:' + name, title, body); });
+    targets.forEach(function (name) { sendPushForTeam('__TRAINER__:' + name, title, body, url, icon); });
   }
   return createSuccessResponse({ ok: true });
 }
@@ -515,7 +517,7 @@ function handleUnregisterPushSubscription(data) {
 
 // Reads stored push subscriptions for a team and asks the Node backend to deliver the push.
 // Prunes any endpoints the backend reports as expired (404/410).
-function sendPushForTeam(team, title, body) {
+function sendPushForTeam(team, title, body, url, icon) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName("PushSubs");
   if (!sheet) return;
@@ -547,7 +549,8 @@ function sendPushForTeam(team, title, body) {
         secret: getPushSecret(),
         title: title || "עירוני רעננה כדורסל",
         body: body || "",
-        url: "/",
+        url: url || "/",
+        icon: icon || "/pwa-192x192.png",
         subscriptions: subscriptions
       })
     });

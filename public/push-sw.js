@@ -11,10 +11,11 @@ self.addEventListener('push', (event) => {
     }
 
     const title = payload.title || 'עירוני רעננה כדורסל';
+    const icon = payload.icon || '/pwa-192x192.png';
     const options = {
         body: payload.body || '',
-        icon: '/pwa-192x192.png',
-        badge: '/pwa-192x192.png',
+        icon: icon,
+        badge: icon,
         dir: 'rtl',
         lang: 'he',
         tag: payload.tag || 'schedule-update',

@@ -117,7 +117,7 @@ app.delete('/api/superuser/clubs/:slug', requireSuperuser, (req, res) => {
 app.post('/api/push/send', async (req, res) => {
     if (!pushReady) return res.status(503).json({ error: 'push not configured' });
 
-    const { secret, title, body, url, subscriptions } = req.body || {};
+    const { secret, title, body, url, icon, subscriptions } = req.body || {};
     if (secret !== PUSH_SECRET) return res.status(403).json({ error: 'forbidden' });
     if (!Array.isArray(subscriptions) || subscriptions.length === 0) {
         return res.json({ sent: 0, failed: 0, expired: [] });
@@ -127,6 +127,7 @@ app.post('/api/push/send', async (req, res) => {
         title: title || 'עירוני רעננה כדורסל',
         body: body || '',
         url: url || '/',
+        icon: icon || '/pwa-192x192.png',
     });
 
     let sent = 0;
