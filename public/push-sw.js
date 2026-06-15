@@ -31,11 +31,16 @@ self.addEventListener('notificationclick', (event) => {
     const target = (event.notification.data && event.notification.data.url) || '/';
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            // Only focus a window that's already on the target path — don't hijack the
+            // parent-app window and navigate it. Otherwise open the target fresh, which
+            // launches the matching installed app (e.g. the trainer PWA for /…/trainer).
+            const targetPath = target.split('?')[0];
             for (const client of clientList) {
-                if ('focus' in client) {
-                    client.navigate(target);
-                    return client.focus();
-                }
+                try {
+                    if (new URL(client.url).pathname.indexOf(targetPath) === 0 && 'focus' in client) {
+                        return client.focus();
+                    }
+                } catch (e) { /* ignore */ }
             }
             if (self.clients.openWindow) return self.clients.openWindow(target);
         })
