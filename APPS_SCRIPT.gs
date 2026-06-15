@@ -380,7 +380,15 @@ function handleApprove(reqRow) {
   else if (type === 'MOVE') msgDesc = `האימון שהיה ב${oldDayName} הוזז ליום ${newDay}, שעה ${newTime}, ${newLoc}.`;
   
   notifySubscribers(team, "שים לב! בוצע שינוי בלוח הזמנים של הקבוצה:<br/>" + msgDesc);
-  sendPushForTeam(team, "עדכון לו\"ז — " + team, msgDesc);
+  sendPushForTeam(team, "עדכון לו\"ז — " + team, msgDesc);                 // legacy team-label push subscribers
+  sendPushForTeam('team:' + team, "עדכון לו\"ז — " + team, msgDesc);        // registered members of this team
+
+  // Operators care about HALL availability — notify them only when a hall is involved
+  // (move / cancel / a change that sets a new location), not on time-only tweaks.
+  const hallAffected = (type === 'MOVE' || type === 'CANCEL' || (type === 'CHANGE' && newLoc && newLoc.toString().trim()));
+  if (hallAffected) {
+    sendPushForTeam('__OPERATOR__', "שינוי אולם בלו\"ז", team + " — " + msgDesc);
+  }
 
   return HtmlService.createHtmlOutput("<h1 style='color:green'>Request Approved & Updated!</h1>");
 }
