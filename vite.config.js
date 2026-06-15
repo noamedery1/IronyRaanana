@@ -32,7 +32,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2,webmanifest}'],
         // Pull our Web Push handlers into the generated service worker.
-        importScripts: ['push-sw.js'],
+        // Bump the ?v when push-sw.js changes to force the SW (and the imported script) to update.
+        importScripts: ['push-sw.js?v=2'],
         navigateFallbackDenylist: [/^\/calendar\.ics/, /^\/sales-landing/],
         runtimeCaching: [
           {
