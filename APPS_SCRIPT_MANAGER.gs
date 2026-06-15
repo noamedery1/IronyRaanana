@@ -87,9 +87,9 @@ function doPost(e) {
 // Writes each proposed slot into (row, day-column) of the manager's schedule sheet,
 // colored by the trainer and marked "(הצעה)". The manager then approves or relocates.
 function handleProposeSlots(data, ss) {
-  const sheetName = data.sheetName || "Sheet1";
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return jsonOut({ error: "Sheet not found: " + sheetName });
+  // Default to the first (gid=0) sheet — the planning board — when no name is given.
+  const sheet = data.sheetName ? ss.getSheetByName(data.sheetName) : ss.getSheets()[0];
+  if (!sheet) return jsonOut({ error: "Sheet not found" });
 
   const targetRow = Number(data.row);
   if (isNaN(targetRow) || targetRow < 2) return jsonOut({ error: "Invalid row" });

@@ -9,11 +9,12 @@ const TrainerPortal = () => {
     // Read the SAME live board the manager works on, so proposed-slot rows line up.
     // --------------------------------------------------------------------------
     const LIVE_SHEET_API = getActiveClub().sheetApi;
-    const CSV_URL = getActiveClub().dataUrl;
-    // Trainer schedule PROPOSALS must write to the manager's planning file (its own
-    // Apps Script), NOT the live board. Set this to the manager file's /exec URL.
-    // Empty = proposing is disabled (guard against writing to the wrong file).
-    const MANAGER_PROPOSE_URL = '';
+    const CSV_URL = getActiveClub().dataUrl; // live board — used for change-requests
+    // Trainer schedule PROPOSALS go to the manager's planning file (its own Apps Script),
+    // NOT the live board. Read its board for row alignment + write proposals to its script.
+    const MANAGER_FILE_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
+    const MANAGER_CSV = `https://docs.google.com/spreadsheets/d/${MANAGER_FILE_ID}/export?format=csv&gid=0`;
+    const MANAGER_PROPOSE_URL = 'https://script.google.com/macros/s/AKfycbzXzCDHLFUb2jZlBwrgsxaN_4Q_IAnPaFcGL9rEtL5pLScKxwPpyaV2Xo2Yn-iOoUYB/exec';
 
     // --------------------------------------------------------------------------
     // STATE
@@ -57,7 +58,8 @@ const TrainerPortal = () => {
         setTrainer({ name: data.trainerName, teams: data.teams || [], color: data.color, token: data.token });
         if (data.token) localStorage.setItem('trainerToken', data.token);
         setView('dashboard');
-        fetchSchedule(data.trainerName);
+        fetchSchedule(data.trainerName);      // live board → requests
+        fetchManagerBoard(data.trainerName);  // manager board → proposals
     };
 
     const logout = () => {
@@ -104,29 +106,19 @@ const TrainerPortal = () => {
         }
     };
 
-    const fetchSchedule = (trainerName) => {
-        setLoading(true);
-        Papa.parse(CSV_URL, {
+    // Parse a board CSV → the trainer's sessions, team rows (absolute sheet row),
+    // day headers and halls. Used for both the live board and the manager board.
+    const parseBoard = (url, trainerName, onDone) => {
+        Papa.parse(url, {
             download: true,
             header: false,
             complete: (results) => {
                 const rows = results.data;
-                // Reuse logic from HallView/WomenDashboard to parse
-                // For brevity, simple parsing logic here focusing on the Trainer
-
-                // Find headers
                 let headerRowIndex = -1;
                 for (let i = 0; i < rows.length; i++) {
-                    if (rows[i][0] && rows[i][0].includes('קבוצות')) {
-                        headerRowIndex = i;
-                        break;
-                    }
+                    if (rows[i][0] && rows[i][0].includes('קבוצות')) { headerRowIndex = i; break; }
                 }
-
-                if (headerRowIndex === -1) {
-                    setLoading(false);
-                    return;
-                }
+                if (headerRowIndex === -1) { onDone({ mySessions: [], teamRows: [], dayHdrs: [], locs: [] }); return; }
 
                 const headers = rows[headerRowIndex];
                 const dayStartIndex = headers.findIndex(h => h && h.includes('ראשון'));
@@ -135,8 +127,6 @@ const TrainerPortal = () => {
                 const mySessions = [];
                 const locSet = new Set();
                 const teamRows = [];
-
-                // The 7 day headers (name + 1-based column) for the proposal grid.
                 const dayHdrs = [];
                 for (let d = 0; d < 7; d++) {
                     const colIdx = dayStartIndex + d;
@@ -146,9 +136,8 @@ const TrainerPortal = () => {
                 rows.slice(headerRowIndex + 1).forEach((row, rIdx) => {
                     const teamName = row[0];
                     const coach = coachIndex !== -1 ? row[coachIndex] : '';
-                    const absRow = headerRowIndex + rIdx + 2; // 1-based sheet row (header at headerRowIndex)
+                    const absRow = headerRowIndex + rIdx + 2; // 1-based sheet row
 
-                    // Collect Locations from all valid cells
                     for (let d = 0; d < 7; d++) {
                         const colIdx = dayStartIndex + d;
                         const cell = row[colIdx];
@@ -159,7 +148,6 @@ const TrainerPortal = () => {
                     }
 
                     const isMyCoach = coach && coach.trim().toLowerCase() === trainerName.toLowerCase();
-
                     if (isMyCoach) {
                         const days = {};
                         for (let d = 0; d < 7; d++) {
@@ -168,13 +156,9 @@ const TrainerPortal = () => {
                             const dayName = headers[colIdx];
                             if (cell && cell.trim()) {
                                 mySessions.push({
-                                    id: `${rIdx}-${colIdx}`,
-                                    team: teamName,
-                                    day: dayName,
-                                    date: (dayName || '').split(' ')[1] || '',
-                                    raw: cell,
-                                    originalrow: absRow, // absolute 1-based sheet row
-                                    originalcol: colIdx + 1
+                                    id: `${rIdx}-${colIdx}`, team: teamName, day: dayName,
+                                    date: (dayName || '').split(' ')[1] || '', raw: cell,
+                                    originalrow: absRow, originalcol: colIdx + 1,
                                 });
                             }
                             if (dayName) days[dayName] = cell || '';
@@ -183,13 +167,22 @@ const TrainerPortal = () => {
                     }
                 });
 
-                setLocations(Array.from(locSet).sort());
-                setSchedule(mySessions);
-                setDayHeaders(dayHdrs);
-                setMyTeamRows(teamRows);
-                setLoading(false);
-            }
+                onDone({ mySessions, teamRows, dayHdrs, locs: Array.from(locSet).sort() });
+            },
         });
+    };
+
+    const mergeLocations = (locs) => setLocations((prev) => Array.from(new Set([...prev, ...locs])).sort());
+
+    // Requests tab → LIVE board (change-requests approve on the live file).
+    const fetchSchedule = (trainerName) => {
+        setLoading(true);
+        parseBoard(CSV_URL, trainerName, (r) => { setSchedule(r.mySessions); mergeLocations(r.locs); setLoading(false); });
+    };
+
+    // Propose tab → MANAGER planning board (proposals write there, so rows line up).
+    const fetchManagerBoard = (trainerName) => {
+        parseBoard(MANAGER_CSV, trainerName, (r) => { setDayHeaders(r.dayHdrs); setMyTeamRows(r.teamRows); mergeLocations(r.locs); });
     };
 
     const handleEditClick = (session) => {
