@@ -53,6 +53,7 @@ const DICT = {
         cal_hint: 'אייפון = מנוי מתעדכן · אנדרואיד = הוספה מיידית · Google = הדבק את הקישור (שהועתק) בהגדרות › הוספת יומן › מכתובת',
         install_title: 'התקינו את האפליקציה 🏀', install_btn: 'התקנה', install_later: 'אחר כך', install_ios: 'להתקנה: הקישו על שיתוף ⬆ ואז "הוסף למסך הבית"',
         install_desc: 'הוסיפו את הלו"ז למסך הבית — נפתח כמו אפליקציה, במסך מלא וזמין במהירות.',
+        install_manual: 'להתקנה: פתחו את תפריט הדפדפן (⋮ / שיתוף) ובחרו "הוסף למסך הבית".',
     },
     ar: {
         brand_sub: 'قسم كرة السلة · الجدول الأسبوعي', men: 'رجال', women: 'نساء', admin: 'الإدارة',
@@ -67,6 +68,7 @@ const DICT = {
         cal_hint: 'آيفون = اشتراك محدّث · أندرويد = إضافة فورية · Google = الصق الرابط (المنسوخ) في الإعدادات › إضافة تقويم › من الرابط',
         install_title: 'ثبّت التطبيق 🏀', install_btn: 'تثبيت', install_later: 'لاحقاً', install_ios: 'للتثبيت: اضغط مشاركة ⬆ ثم "إضافة إلى الشاشة الرئيسية"',
         install_desc: 'أضِف الجدول إلى الشاشة الرئيسية — يُفتح كتطبيق بملء الشاشة ووصول سريع.',
+        install_manual: 'للتثبيت: افتح قائمة المتصفح (⋮ / مشاركة) واختر "إضافة إلى الشاشة الرئيسية".',
     },
     ru: {
         brand_sub: 'Баскетбол · Недельное расписание', men: 'Мужчины', women: 'Женщины', admin: 'Админ',
@@ -81,6 +83,7 @@ const DICT = {
         cal_hint: 'iPhone = авто-подписка · Android = добавить сейчас · Google = вставьте ссылку в Настройки › Добавить календарь › по URL',
         install_title: 'Установите приложение 🏀', install_btn: 'Установить', install_later: 'Позже', install_ios: 'Чтобы установить: нажмите Поделиться ⬆ и «На экран «Домой»»',
         install_desc: 'Добавьте расписание на главный экран — откроется как приложение, на весь экран и под рукой.',
+        install_manual: 'Чтобы установить: откройте меню браузера (⋮ / Поделиться) и выберите «На экран «Домой»».',
     },
     en: {
         brand_sub: 'Basketball Dept · Weekly Schedule', men: 'Men', women: 'Women', admin: 'Admin',
@@ -95,6 +98,7 @@ const DICT = {
         cal_hint: 'iPhone = live subscription · Android = add now · Google = paste the copied link in Settings › Add calendar › From URL',
         install_title: 'Install the app 🏀', install_btn: 'Install', install_later: 'Later', install_ios: 'To install: tap Share ⬆ then "Add to Home Screen"',
         install_desc: 'Add the schedule to your home screen — opens like an app, full-screen and a tap away.',
+        install_manual: 'To install: open the browser menu (⋮ / Share) and choose "Add to Home Screen".',
     },
 };
 

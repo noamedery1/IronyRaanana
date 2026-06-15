@@ -1,27 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useI18n } from '../i18n.jsx';
-import { canInstall, hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall } from '../installState.js';
+import { hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall } from '../installState.js';
 
-// Install affordances:
+// Install affordances (shown on every screen until the app is installed):
 // - First visit (not dismissed): a prominent centered modal.
-// - After dismissal: a small persistent pill so users can still install later.
-// - iOS (no beforeinstallprompt): shows "Share → Add to Home Screen" instructions.
+// - Always: a persistent pill. Native prompt if available, otherwise manual instructions
+//   (⋮ → Add to Home Screen) — so an install option is present even when Chrome won't
+//   auto-prompt (e.g. desktop, in-app browsers).
 export default function InstallPrompt() {
     const { t } = useI18n();
     const [, force] = useState(0);
     const [dismissed, setDismissed] = useState(localStorage.getItem('pwaPromptDismissed') === '1');
-    const [showIosTip, setShowIosTip] = useState(false);
+    const [showTip, setShowTip] = useState(false);
 
     // Re-render when the install prompt becomes available / the app gets installed.
     useEffect(() => subscribe(() => force((n) => n + 1)), []);
 
-    if (isStandalone() || !canInstall()) return null;
+    if (isStandalone()) return null; // already installed → nothing to do
 
-    const ios = isIOS() && !hasNativePrompt();
+    const ios = isIOS();
+    const tipText = ios ? t('install_ios') : t('install_manual');
 
     const doInstall = async () => {
-        if (hasNativePrompt()) await promptInstall();
-        else if (ios) setShowIosTip(true);
+        if (hasNativePrompt()) { await promptInstall(); return; }
+        setShowTip(true); // no native prompt → show manual steps
     };
     const dismiss = () => { setDismissed(true); localStorage.setItem('pwaPromptDismissed', '1'); };
 
@@ -70,6 +72,7 @@ export default function InstallPrompt() {
                             borderRadius: '13px', cursor: 'pointer',
                         }}>{t('install_btn')}</button>
                     )}
+                    {showTip && <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', lineHeight: 1.6, marginTop: '0.7rem' }}>{tipText}</div>}
                     <button onClick={dismiss} style={{
                         width: '100%', marginTop: '0.6rem', border: 'none', background: 'transparent',
                         color: 'var(--text-dim)', fontWeight: 600, fontFamily: 'inherit', fontSize: '0.9rem',
@@ -80,15 +83,15 @@ export default function InstallPrompt() {
         );
     }
 
-    // ===== Persistent pill (after dismissal) =====
+    // ===== Persistent pill (always, until installed) =====
     return (
         <div style={{ position: 'fixed', insetInlineEnd: '20px', bottom: '20px', zIndex: 998, fontFamily: 'Rubik, sans-serif' }}>
-            {ios && showIosTip && (
+            {showTip && (
                 <div style={{
                     maxWidth: 240, marginBottom: 8, background: 'rgba(10,17,32,0.95)', color: '#fff',
                     border: '1px solid rgba(255,255,255,0.16)', borderRadius: 12, padding: '0.6rem 0.8rem',
                     fontSize: '0.78rem', lineHeight: 1.5, boxShadow: '0 12px 30px -10px rgba(0,0,0,0.7)',
-                }}>{t('install_ios')}</div>
+                }}>{tipText}</div>
             )}
             <button onClick={doInstall} style={{
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
