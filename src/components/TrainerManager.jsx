@@ -17,7 +17,12 @@ export default function TrainerManager({ liveApi }) {
     }).then((r) => r.json()), [liveApi, pw]);
 
     const load = useCallback(() => {
-        post('listTrainers', {}).then((d) => { if (d.trainers) setTrainers(d.trainers); }).catch(() => {});
+        post('listTrainers', {})
+            .then((d) => {
+                if (d.trainers) { setTrainers(d.trainers); if (d.trainers.length === 0) setMsg('אין מאמנים בגיליון Trainers עדיין.'); }
+                else if (d.error) setMsg('שגיאה בטעינה: ' + d.error);
+            })
+            .catch(() => setMsg('שגיאת תקשורת בטעינת הרשימה'));
     }, [post]);
 
     useEffect(() => { load(); }, [load]);

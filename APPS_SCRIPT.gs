@@ -187,7 +187,8 @@ function managerOk(data) {
 }
 
 function handleListTrainers(data) {
-  if (!managerOk(data)) return createErrorResponse("Wrong manager password");
+  // Reading the trainer list (names + teams only, no codes) is unguarded so the
+  // management screen always loads what's in the sheet. Add/delete stay guarded.
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const s = getTrainersSheet(ss);
   const v = s.getDataRange().getValues();
