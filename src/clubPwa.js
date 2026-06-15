@@ -26,6 +26,17 @@ function setMeta(name, content) {
 export function setupClubPwa() {
     const club = getActiveClub();
 
+    // On the trainer portal, install as a SEPARATE app with its own name + icon.
+    const isTrainer = /\/trainer(\/|$)/.test(window.location.pathname);
+    if (isTrainer) {
+        setLink('manifest', '/trainer.webmanifest');
+        document.title = 'פורטל מאמנים — ' + club.shortName;
+        setMeta('theme-color', club.themeColor);
+        setMeta('apple-mobile-web-app-title', 'מאמנים');
+        setLink('apple-touch-icon', '/icons/trainer.svg');
+        return;
+    }
+
     // Point the manifest at the per-club file (overrides the build-time default).
     setLink('manifest', `/clubs/${club.slug}.webmanifest`);
 

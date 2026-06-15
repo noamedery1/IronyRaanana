@@ -1,0 +1,18 @@
+{
+  "id": "/raanana/trainer",
+  "name": "פורטל מאמנים — רעננה",
+  "short_name": "מאמנים",
+  "description": "פורטל המאמנים של מחלקת הכדורסל — לו\"ז, בקשות והזנת אימונים",
+  "lang": "he",
+  "dir": "rtl",
+  "theme_color": "#ff7a18",
+  "background_color": "#070b16",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/raanana/trainer",
+  "scope": "/raanana/trainer",
+  "icons": [
+    { "src": "/icons/trainer.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/trainer.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
