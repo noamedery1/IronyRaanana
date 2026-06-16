@@ -9,6 +9,8 @@ import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
     registerUser, authUser, listTeams, upsertTeam, deleteTeam,
 } from './server/people.js';
+import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
+import { createRequest, listRequests, approveRequest, rejectRequest } from './server/requests.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveIcon, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -137,6 +139,44 @@ app.post('/api/:club/teams', async (req, res) => {
 });
 app.delete('/api/:club/teams/:id', async (req, res) => {
     try { ok(res, await deleteTeam(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
+});
+
+// Push subscriptions + broadcast (DB-backed)
+app.post('/api/:club/push', async (req, res) => {
+    try { ok(res, await registerPush(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/:club/push', async (req, res) => {
+    try { ok(res, await unregisterPush(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/broadcast', async (req, res) => {
+    try { ok(res, await broadcast(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+
+// Email subscribers
+app.post('/api/:club/email-subscribers', async (req, res) => {
+    try { ok(res, await addEmailSubscriber(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/:club/email-subscribers', async (req, res) => {
+    try { ok(res, await removeEmailSubscriber(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+
+// Feedback
+app.post('/api/:club/feedback', async (req, res) => {
+    try { ok(res, await saveFeedback(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Change requests + manager approval
+app.post('/api/:club/requests', async (req, res) => {
+    try { ok(res, await createRequest(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/:club/requests', async (req, res) => {
+    try { ok(res, { requests: await listRequests(req.params.club, req.query.status || 'pending') }); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/requests/:id/approve', async (req, res) => {
+    try { ok(res, await approveRequest(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/:club/requests/:id/reject', async (req, res) => {
+    try { ok(res, await rejectRequest(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
 });
 
 // Dynamic per-club Web App Manifest (must be registered before the dist static handler).

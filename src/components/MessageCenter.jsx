@@ -1,39 +1,27 @@
 import { useState, useEffect } from 'react';
-import Papa from 'papaparse';
 import { getActiveClub } from '../clubConfig.js';
 
 // Manager messaging hub: send a push to any audience — whole club, all trainers, all
-// operators, a specific team's members, or one trainer. Goes through the live Apps
-// Script (sendBroadcast), which holds the push subscriptions + secret.
-export default function MessageCenter({ liveApi }) {
+// operators, a specific team's members, or one trainer. DB-backed (server broadcast
+// reads push_subscriptions and delivers via web-push).
+export default function MessageCenter() {
     const [target, setTarget] = useState('club'); // club|trainers|operators|team|trainer
     const [teams, setTeams] = useState([]);
     const [trainers, setTrainers] = useState([]);
     const [team, setTeam] = useState('');
     const [trainer, setTrainer] = useState('');
     const [body, setBody] = useState('');
-    const [pw, setPw] = useState(() => localStorage.getItem('managerPushPw') || '');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
 
+    const slug = getActiveClub().slug;
+
     useEffect(() => {
-        // Teams from the public board.
-        Papa.parse(getActiveClub().dataUrl, {
-            download: true,
-            complete: (res) => {
-                const rows = res.data;
-                let h = -1;
-                for (let i = 0; i < rows.length; i++) if (rows[i][0] && rows[i][0].includes('קבוצות')) { h = i; break; }
-                if (h === -1) return;
-                const set = new Set();
-                rows.slice(h + 1).forEach((r) => { const n = (r[0] || '').toString().trim(); if (n && !n.toLowerCase().includes('xxx')) set.add(n); });
-                setTeams([...set]);
-            },
-        });
-        // Trainers from the live script.
-        fetch(liveApi, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'getTrainers' }) })
-            .then((r) => r.json()).then((d) => setTrainers(d.trainers || [])).catch(() => {});
-    }, [liveApi]);
+        fetch(`/api/${slug}/teams`).then((r) => r.json())
+            .then((d) => { if (d.teams) setTeams(d.teams.map((t) => t.name)); }).catch(() => {});
+        fetch(`/api/${slug}/trainers`).then((r) => r.json())
+            .then((d) => setTrainers((d.trainers || []).map((t) => t.name))).catch(() => {});
+    }, [slug]);
 
     const segment = () => {
         if (target === 'club') return '';
@@ -48,15 +36,15 @@ export default function MessageCenter({ liveApi }) {
         if (!body.trim()) { setMsg('הקלד הודעה'); return; }
         const seg = segment();
         if (seg === null) { setMsg('בחר קבוצה / מאמן'); return; }
-        setBusy(true); setMsg(''); localStorage.setItem('managerPushPw', pw);
+        setBusy(true); setMsg('');
         try {
-            const r = await fetch(liveApi, {
-                method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'sendBroadcast', password: pw, title: 'הודעה מהנהלת המועדון', body, segment: seg }),
+            const r = await fetch(`/api/${slug}/broadcast`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, segment: seg }),
             });
             const d = await r.json().catch(() => ({}));
             if (d.error) setMsg('שגיאה: ' + d.error);
-            else { setMsg('✓ ההודעה נשלחה'); setBody(''); }
+            else { setMsg(`✓ נשלח (${d.sent || 0} מכשירים${d.failed ? ', ' + d.failed + ' נכשלו' : ''})`); setBody(''); }
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
     };
 
@@ -96,9 +84,6 @@ export default function MessageCenter({ liveApi }) {
 
             <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>תוכן ההודעה</label>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} placeholder="לדוגמה: אימון מחר יתקיים כרגיל" style={{ ...input, resize: 'vertical' }} />
-
-            <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>סיסמת מנהל (אם הוגדרה בשרת)</label>
-            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="השאר ריק אם לא הוגדרה" style={input} />
 
             <button onClick={send} disabled={busy} style={{ marginTop: '1rem', background: '#ff7a18', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: busy ? 'wait' : 'pointer' }}>
                 {busy ? 'שולח...' : '🔔 שלח הודעה'}

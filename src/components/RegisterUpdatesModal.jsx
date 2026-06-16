@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { pushSupported, subscribeToPush, unsubscribeFromPush } from '../push.js';
+import { getActiveClub } from '../clubConfig.js';
 
 const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
     const [name, setName] = useState('');
@@ -26,10 +27,10 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
         if (!unsubEmail) return;
         setUnsubMsg('');
         try {
-            await fetch(sheetUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'unregisterSubscriber', email: unsubEmail, team: teamName }),
+            await fetch(`/api/${getActiveClub().slug}/email-subscribers`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: unsubEmail, team: teamName }),
             });
             setUnsubMsg('✓ הוסרת מרשימת התפוצה במייל.');
             setUnsubEmail('');
@@ -73,15 +74,10 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
         setIsError(false);
 
         try {
-            const response = await fetch(sheetUrl, {
+            const response = await fetch(`/api/${getActiveClub().slug}/email-subscribers`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'registerSubscriber',
-                    name: name,
-                    email: email,
-                    team: teamName
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, team: teamName }),
             });
 
             const data = await response.json();

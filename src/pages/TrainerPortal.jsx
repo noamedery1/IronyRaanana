@@ -253,7 +253,6 @@ const TrainerPortal = () => {
         setLoading(true);
         try {
             const payload = {
-                action: 'submitRequest',
                 trainerName: trainer.name,
                 team: selectedSession.team,
                 day: selectedSession.day,
@@ -262,20 +261,13 @@ const TrainerPortal = () => {
                 newTime: (editType === 'CHANGE' || editType === 'MOVE') ? newTime : '',
                 newLocation: (editType === 'CHANGE' || editType === 'MOVE') ? newLocation : '',
                 newDay: editType === 'MOVE' ? newDay : '',
-                details: editType === 'CANCEL'
-                    ? `ביטול אימון. סיבה: ${changeReason}`
-                    : (editType === 'MOVE'
-                        ? `הזזה ליום ${newDay}, שעה ${newTime}, ${newLocation}. סיבה: ${changeReason}`
-                        : `שינוי ל: ${newTime} ב-${newLocation}. סיבה: ${changeReason}`),
-                // Metadata for admin
-                row: selectedSession.originalrow,
-                col: selectedSession.originalcol
+                reason: changeReason,
             };
 
-            await fetch(LIVE_SHEET_API, {
+            await fetch(`/api/${getActiveClub().slug}/requests`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
             });
 
             alert('הבקשה נשלחה לאישור המנהל!');
@@ -300,20 +292,17 @@ const TrainerPortal = () => {
             })
             .filter((s) => s.time);
         if (!slots.length) { setProposalMsg('מלא לפחות יום אחד עם שעה.'); return; }
-        if (!MANAGER_PROPOSE_URL) { setProposalMsg('הזנת לו"ז עדיין בהגדרה — בקרוב.'); return; }
         setLoading(true);
         setProposalMsg('');
         try {
-            await fetch(MANAGER_PROPOSE_URL, {
+            await fetch(`/api/${getActiveClub().slug}/requests`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    action: 'proposeSlots',
-                    token: trainer.token,
                     trainerName: trainer.name,
-                    color: trainer.color,
-                    row: teamRow.row,
-                    slots,
+                    team: teamRow.team,
+                    type: 'propose',
+                    reason: 'הצעת שיבוץ: ' + slots.map((s) => `${s.day} ${s.time} ${s.location}`.trim()).join(' · '),
                 }),
             });
             setProposalMsg(`✓ נשלחו ${slots.length} הצעות למנהל עבור ${teamRow.team}. ימתינו לאישורו בלוח.`);

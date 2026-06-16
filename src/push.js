@@ -2,6 +2,8 @@
 // Asks for notification permission, subscribes via the service worker's PushManager,
 // and registers the subscription with the backend (stored per-team in the Google Sheet).
 
+import { getActiveClub } from './clubConfig.js';
+
 // Public VAPID key — safe to ship to the client. The matching private key lives only on the server.
 const VAPID_PUBLIC_KEY = 'BHRSmWUH9tdilK-Xh31VGoEMGb9jMZayZSk8znHbbPz-1ZdNswqttSUjXWEBrxsgg5KmEqT8xgm5s-QqPG5RCcw';
 
@@ -36,14 +38,10 @@ export async function subscribeToPush(team, sheetUrl) {
         });
     }
 
-    const res = await fetch(sheetUrl, {
+    const res = await fetch(`/api/${getActiveClub().slug}/push`, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-            action: 'registerPushSubscription',
-            team,
-            subscription: sub.toJSON(),
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segment: team, subscription: sub.toJSON() }),
     });
     const data = await res.json().catch(() => ({}));
     if (data.error) return { ok: false, reason: data.error };
@@ -61,10 +59,10 @@ export async function unsubscribeFromPush(sheetUrl) {
     const endpoint = sub.endpoint;
     await sub.unsubscribe().catch(() => {});
     try {
-        await fetch(sheetUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'unregisterPushSubscription', endpoint }),
+        await fetch(`/api/${getActiveClub().slug}/push`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endpoint }),
         });
     } catch { /* best effort */ }
     return { ok: true };

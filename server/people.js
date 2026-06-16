@@ -10,7 +10,7 @@ const newToken = () => crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 const splitTeams = (s) => (s || '').split(/[,;\n]/).map((t) => t.trim()).filter(Boolean);
 
 // Resolve (and lazily create) the club row; trainers/users may exist before any publish.
-async function clubId(slug, cx = pool) {
+export async function clubId(slug, cx = pool) {
     const r = await cx.query('SELECT id FROM clubs WHERE slug=$1', [slug]);
     if (r.rows.length) return r.rows[0].id;
     const c = getClub(slug);

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getActiveClub } from '../clubConfig.js';
 
 const FeedbackModal = ({
     isOpen,
@@ -10,10 +11,6 @@ const FeedbackModal = ({
     const [message, setMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
 
-    // This URL should be the LIVE sheet's Web App URL
-    // Ideally this comes from ENV or a config file
-    const SHEET_URL = "https://script.google.com/macros/s/AKfycbxZBUPujrqGRHOgX7Vb8JXdGuivho-FiMqGoshZxLTvqIumLDKGUzyc1mM9-W4jVC0/exec";
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!message) return;
@@ -21,21 +18,12 @@ const FeedbackModal = ({
         setIsSending(true);
 
         try {
-            const payload = {
-                action: 'sendFeedback',
-                name: name,
-                email: email,
-                message: message
-            };
-
-            await fetch(SHEET_URL, {
+            await fetch(`/api/${getActiveClub().slug}/feedback`, {
                 method: 'POST',
-                mode: 'no-cors', // Important for Apps Script
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, message }),
             });
 
-            // Since no-cors returns opaque response, we assume success if no network error
             alert('תודה על המשוב! נשלח בהצלחה.');
             setName('');
             setEmail('');

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { getActiveClub } from '../clubConfig.js';
 
 const TrainerEditModal = ({
     isOpen,
     onClose,
     sessionData, // { team, coach, day, time, raw, row, col }
-    sheetUrl, // LIVE_SHEET_API
+    sheetUrl, // unused (kept for prop compatibility) — now DB-backed
     availableLocations = [] // Optional: List of halls/locations to choose from
 }) => {
     const [step, setStep] = useState('AUTH'); // 'AUTH', 'EDIT'
@@ -43,14 +44,10 @@ const TrainerEditModal = ({
         setError('');
 
         try {
-            const response = await fetch(sheetUrl, {
+            const response = await fetch(`/api/${getActiveClub().slug}/trainers/auth`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'trainerLogin',
-                    name: sessionData.coach,
-                    code: password
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: sessionData.coach, code: password }),
             });
 
             const data = await response.json();
@@ -77,7 +74,6 @@ const TrainerEditModal = ({
         setLoading(true);
         try {
             const payload = {
-                action: 'submitRequest',
                 trainerName: sessionData.coach,
                 team: sessionData.team,
                 day: sessionData.day,
@@ -86,20 +82,13 @@ const TrainerEditModal = ({
                 newTime: (editType === 'CHANGE' || editType === 'MOVE') ? newTime : '',
                 newLocation: (editType === 'CHANGE' || editType === 'MOVE') ? newLocation : '',
                 newDay: editType === 'MOVE' ? newDay : '',
-                details: editType === 'CANCEL'
-                    ? `ביטול אימון. סיבה: ${reason}`
-                    : (editType === 'MOVE'
-                        ? `הזזה ליום ${newDay}, שעה ${newTime}, ${newLocation}. סיבה: ${reason}`
-                        : `שינוי ל: ${newTime} ב-${newLocation}. סיבה: ${reason}`),
                 reason: reason,
-                row: sessionData.row,
-                col: sessionData.col
             };
 
-            await fetch(sheetUrl, {
+            await fetch(`/api/${getActiveClub().slug}/requests`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
             });
 
             alert('הבקשה נשלחה לאישור המנהל!');

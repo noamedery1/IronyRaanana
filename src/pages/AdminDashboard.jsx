@@ -9,6 +9,7 @@ import MessageCenter from '../components/MessageCenter';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
 import PublishPanel from '../components/PublishPanel';
+import ApprovalsPanel from '../components/ApprovalsPanel';
 import { getActiveClub } from '../clubConfig.js';
 
 const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
@@ -528,13 +529,15 @@ const AdminDashboard = () => {
                     />
                 );
             case 'trainerPush':
-                return <MessageCenter liveApi={LIVE_SCRIPT_API} />;
+                return <MessageCenter />;
             case 'invites':
                 return <InviteLinks />;
             case 'trainersAdmin':
                 return <TrainerManager />;
             case 'publish':
                 return <PublishPanel clubSlug={getActiveClub().slug} />;
+            case 'approvals':
+                return <ApprovalsPanel clubSlug={getActiveClub().slug} />;
             default:
                 return null;
         }
@@ -595,6 +598,12 @@ const AdminDashboard = () => {
                             onClick={() => setActiveTab('publish')}
                         >
                             🚀 פרסם לוז
+                        </button>
+                        <button
+                            style={menuButtonStyle(activeTab === 'approvals')}
+                            onClick={() => setActiveTab('approvals')}
+                        >
+                            ✅ בקשות לאישור
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'preview')}
