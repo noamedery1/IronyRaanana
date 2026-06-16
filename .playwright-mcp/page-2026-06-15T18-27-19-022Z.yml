@@ -1,0 +1,115 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - navigation [ref=e4]:
+      - generic [ref=e5]:
+        - img "עירוני קריית ים" [ref=e6]
+        - generic [ref=e7]:
+          - generic [ref=e8]: עירוני קריית ים
+          - generic [ref=e9]: מחלקת הכדורגל — לו"ז שבועי
+      - generic [ref=e10]:
+        - button "🌐 EN" [active] [ref=e12] [cursor=pointer]:
+          - text: 🌐
+          - generic [ref=e13]: EN
+        - link "⚙" [ref=e14] [cursor=pointer]:
+          - /url: /admin
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - combobox [ref=e17] [cursor=pointer]:
+          - option "Select a team" [disabled]
+          - option "טרום א1" [selected]
+          - option "טרום א2"
+          - option "טרום ב1"
+          - option "טרום ב2"
+          - option "טרום ג"
+          - option "ילדים א1"
+          - option "ילדים א2"
+          - option "ילדים ב1"
+          - option "ילדים ב2"
+          - option "ילדים ג1"
+          - option "ילדים ג2"
+          - option "בית ספר"
+          - option "השכרה"
+          - option "טקס סיום"
+        - generic [ref=e18]:
+          - button "Team schedule" [ref=e19] [cursor=pointer]
+          - button "📍 Venues" [ref=e20] [cursor=pointer]
+          - button "📅 Daily" [ref=e21] [cursor=pointer]
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: Next training · טרום א1
+          - generic [ref=e25]: 15:00
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e28]: Tuesday
+              - text: 16/6
+            - generic [ref=e29]:
+              - generic [ref=e30]: מגרש ראשי צפוני
+              - text: Training
+            - generic [ref=e31]:
+              - generic [ref=e32]: —
+              - text: Coach
+          - generic [ref=e33]:
+            - button "Share on WhatsApp 💬" [ref=e34] [cursor=pointer]:
+              - generic [ref=e35]: Share on WhatsApp
+              - generic [ref=e36]: 💬
+            - button "Auto calendar 📲" [ref=e37] [cursor=pointer]:
+              - generic [ref=e38]: Auto calendar
+              - generic [ref=e39]: 📲
+            - button "Save to calendar 📅" [ref=e40] [cursor=pointer]:
+              - generic [ref=e41]: Save to calendar
+              - generic [ref=e42]: 📅
+            - button "Updates 🔔" [ref=e43] [cursor=pointer]:
+              - generic [ref=e44]: Updates
+              - generic [ref=e45]: 🔔
+        - generic [ref=e47]:
+          - generic [ref=e48]: 📍 Location
+          - heading "מגרש ראשי צפוני" [level=4] [ref=e49]
+          - paragraph [ref=e50]: Tuesday 16/6 · 15:00
+          - link "Open in maps ‹" [ref=e52] [cursor=pointer]:
+            - /url: "#"
+      - heading "Full weekly schedule" [level=2] [ref=e55]
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - button "✏️ Coach" [ref=e58] [cursor=pointer]
+          - generic [ref=e59]:
+            - generic [ref=e60]: Sunday
+            - generic [ref=e61]: 14/6
+          - generic [ref=e63]:
+            - generic [ref=e64]: 19:30
+            - generic [ref=e65]: מגרש ראשי צפוני
+        - generic [ref=e66]:
+          - button "✏️ Coach" [ref=e67] [cursor=pointer]
+          - generic [ref=e68]:
+            - generic [ref=e69]: Tuesday
+            - generic [ref=e70]: 16/6
+          - generic [ref=e72]:
+            - generic [ref=e73]: 15:00
+            - generic [ref=e74]: מגרש ראשי צפוני
+        - generic [ref=e75]:
+          - button "✏️ Coach" [ref=e76] [cursor=pointer]
+          - generic [ref=e77]:
+            - generic [ref=e78]: Thursday
+            - generic [ref=e79]: 18/6
+          - generic [ref=e81]:
+            - generic [ref=e82]: 19:30
+            - generic [ref=e83]: מגרש ראשי צפוני
+        - generic [ref=e84]:
+          - button "✏️ Coach" [ref=e85] [cursor=pointer]
+          - generic [ref=e86]:
+            - generic [ref=e87]: Friday
+            - generic [ref=e88]: 19/6
+          - generic [ref=e90]:
+            - generic [ref=e91]: 15:30
+            - generic [ref=e92]: רודמן
+  - button "💡 Suggest improvement" [ref=e93] [cursor=pointer]:
+    - generic [ref=e94]: 💡
+    - text: Suggest improvement
+  - button "📲 Install" [ref=e107] [cursor=pointer]
+  - generic [ref=e102]:
+    - generic [ref=e103]: מנהל
+    - link "👨‍👩‍👧 הורים" [ref=e104] [cursor=pointer]:
+      - /url: /kiryatyam
+    - link "🏀 מאמן" [ref=e105] [cursor=pointer]:
+      - /url: /kiryatyam/trainer
+    - link "🗂️ ניהול" [ref=e106] [cursor=pointer]:
+      - /url: /admin/dashboard

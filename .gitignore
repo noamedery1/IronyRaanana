@@ -11,6 +11,11 @@ node_modules
 dist
 dist-ssr
 
+# Local env (DB URL, secrets) — never in git
+.env
+.env.*
+!.env.example
+
 # Superuser club store (lives on the Railway volume, never in git)
 data
 data_test

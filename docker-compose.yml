@@ -1,0 +1,21 @@
+# Local dev database for Phase 1 (DB migration).
+# Port 5433 avoids clashing with a locally-installed PostgreSQL on 5432.
+# On Railway, the Postgres plugin injects DATABASE_URL — same env var, no code branch.
+services:
+  db:
+    image: postgres:18
+    container_name: raanana-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: raanana
+      POSTGRES_PASSWORD: raanana_local_dev
+      POSTGRES_DB: raanana
+    ports:
+      # 5432 = another docker pg, 5433 = the locally-installed PostgreSQL 18 → use 5434.
+      - "5434:5432"
+    volumes:
+      # postgres:18+ stores data in a version subdir; mount the parent (not /data).
+      - raanana_pgdata:/var/lib/postgresql
+
+volumes:
+  raanana_pgdata:

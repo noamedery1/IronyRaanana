@@ -1,0 +1,56 @@
+- generic [ref=e2]:
+  - generic [ref=e23]:
+    - banner [ref=e24]:
+      - generic [ref=e25]:
+        - button "☰" [ref=e26] [cursor=pointer]
+        - generic [ref=e27]:
+          - img "Logo" [ref=e28]
+          - generic [ref=e29]:
+            - heading "מערכת ניהול · פורטל ראשי" [level=2] [ref=e30]
+            - text: ניהול גברים ונשים (משותף)
+      - generic [ref=e31]:
+        - link "פתח אתר 🔗" [ref=e32] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e33]: שלום, Admin
+        - button "התנתק" [ref=e34] [cursor=pointer]
+    - generic [ref=e35]:
+      - complementary [ref=e36]:
+        - navigation [ref=e37]:
+          - button "⚙️ הגדרות מערכת" [ref=e38] [cursor=pointer]
+          - button "📅 בניית שבוע" [disabled] [ref=e39] [cursor=pointer]
+          - button "👁️ תצוגה מקדימה" [disabled] [ref=e40] [cursor=pointer]
+          - button "🏟️ הגדרת אולמות" [disabled] [ref=e41] [cursor=pointer]
+          - button "📣 הודעות צפות" [disabled] [ref=e42] [cursor=pointer]
+          - button "📢 הודעות" [ref=e43] [cursor=pointer]
+          - button "🔗 לינקי הזמנה" [ref=e44] [cursor=pointer]
+          - button "👤 ניהול מאמנים" [ref=e45] [cursor=pointer]
+      - main [ref=e46]:
+        - generic [ref=e47]:
+          - heading "הגדרות חיבור לגיליון" [level=3] [ref=e48]
+          - paragraph [ref=e49]: הדבק את כתובת ה-Google Sheet שפורסמה כ-CSV (קובץ - שתף - פרסם באינטרנט - CSV).
+          - generic [ref=e50]:
+            - textbox "https://docs.google.com/spreadsheets/d/.../export?format=csv..." [disabled] [ref=e51]: https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/edit?gid=0#gid=0
+            - button "טוען..." [disabled] [ref=e63] [cursor=pointer]
+          - generic [ref=e53]:
+            - text: "Admin is locked to:"
+            - code [ref=e54]: https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/edit?gid=0#gid=0
+          - generic [ref=e55]:
+            - heading "הגדרות שמירה (Admin)" [level=4] [ref=e56]
+            - paragraph [ref=e57]: כדי למנוע שמירה לקובץ שגוי, יש להגדיר כתובת Web App ייעודית של Apps Script עבור גיליון ה-Admin.
+            - generic [ref=e58]: כתובת ה-API לשמירה (Web App URL)
+            - textbox "https://script.google.com/macros/s/.../exec" [ref=e59]: https://script.google.com/macros/s/AKfycbzXzCDHLFUb2jZlBwrgsxaN_4Q_IAnPaFcGL9rEtL5pLScKxwPpyaV2Xo2Yn-iOoUYB/exec
+            - generic [ref=e60]:
+              - generic [ref=e61]: שם הגיליון (Tab) לשמירה
+              - textbox [ref=e62]: גיליון1
+  - button "💡 הצעה לשיפור" [ref=e14] [cursor=pointer]:
+    - generic [ref=e15]: 💡
+    - text: הצעה לשיפור
+  - button "📲 התקנה" [ref=e17] [cursor=pointer]
+  - generic [ref=e18]:
+    - generic [ref=e19]: מנהל
+    - link "👨‍👩‍👧 הורים" [ref=e20] [cursor=pointer]:
+      - /url: /raanana
+    - link "🏀 מאמן" [ref=e21] [cursor=pointer]:
+      - /url: /raanana/trainer
+    - link "🗂️ ניהול" [ref=e22] [cursor=pointer]:
+      - /url: /admin/dashboard

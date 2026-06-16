@@ -1,0 +1,826 @@
+- generic [ref=e2]:
+  - generic [ref=e23]:
+    - banner [ref=e24]:
+      - generic [ref=e25]:
+        - button "☰" [ref=e26] [cursor=pointer]
+        - generic [ref=e27]:
+          - img "Logo" [ref=e28]
+          - generic [ref=e29]:
+            - heading "מערכת ניהול · פורטל ראשי" [level=2] [ref=e30]
+            - text: ניהול גברים ונשים (משותף)
+      - generic [ref=e31]:
+        - link "פתח אתר 🔗" [ref=e32] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e33]: שלום, Admin
+        - button "התנתק" [ref=e34] [cursor=pointer]
+    - generic [ref=e35]:
+      - complementary [ref=e36]:
+        - navigation [ref=e37]:
+          - button "⚙️ הגדרות מערכת ✅" [ref=e64] [cursor=pointer]
+          - button "📅 בניית שבוע" [active] [ref=e39] [cursor=pointer]
+          - button "👁️ תצוגה מקדימה" [ref=e40] [cursor=pointer]
+          - button "🏟️ הגדרת אולמות" [ref=e41] [cursor=pointer]
+          - button "📣 הודעות צפות" [ref=e42] [cursor=pointer]
+          - button "📢 הודעות" [ref=e43] [cursor=pointer]
+          - button "🔗 לינקי הזמנה" [ref=e44] [cursor=pointer]
+          - button "👤 ניהול מאמנים" [ref=e45] [cursor=pointer]
+      - main [ref=e46]:
+        - generic [ref=e47]:
+          - button "💾 שמור חוקים לענן (SavedRules)" [ref=e67] [cursor=pointer]
+          - generic [ref=e68]:
+            - heading "הגדרות שבועיות לאימון" [level=3] [ref=e69]
+            - generic [ref=e70]:
+              - generic [ref=e71]: קבוצה
+              - generic [ref=e72]: מגדר
+              - generic [ref=e73]: משך (דק')
+              - generic [ref=e74]: אימונים בשבוע
+              - generic [ref=e75]: אילוצים ושריון מגרשים
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - generic [ref=e78]:
+                  - generic [ref=e79]: בוגרים
+                  - generic [ref=e80]: יזרעאלי
+                - button "M" [ref=e82] [cursor=pointer]
+                - combobox [ref=e84]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e85]:
+                  - button "-" [ref=e86] [cursor=pointer]
+                  - generic [ref=e87]: "3"
+                  - button "+" [ref=e88] [cursor=pointer]
+                  - button "⚙️" [ref=e89] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e91] [cursor=pointer]
+              - generic [ref=e92]:
+                - generic [ref=e93]:
+                  - generic [ref=e94]: נוער על
+                  - generic [ref=e95]: רייכרט
+                - button "M" [ref=e97] [cursor=pointer]
+                - combobox [ref=e99]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e100]:
+                  - button "-" [ref=e101] [cursor=pointer]
+                  - generic [ref=e102]: "3"
+                  - button "+" [ref=e103] [cursor=pointer]
+                  - button "⚙️" [ref=e104] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e106] [cursor=pointer]
+              - generic [ref=e107]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]: נוער ארצית
+                  - generic [ref=e110]: דגן
+                - button "M" [ref=e112] [cursor=pointer]
+                - combobox [ref=e114]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e115]:
+                  - button "-" [ref=e116] [cursor=pointer]
+                  - generic [ref=e117]: "4"
+                  - button "+" [ref=e118] [cursor=pointer]
+                  - button "⚙️" [ref=e119] [cursor=pointer]
+                - generic [ref=e120]:
+                  - generic [ref=e121]:
+                    - text: "ראשון 17:30-19:00: תלי"
+                    - generic [ref=e122] [cursor=pointer]: ×
+                  - generic [ref=e123]:
+                    - text: "שני 19:00-20:30: זמר"
+                    - generic [ref=e124] [cursor=pointer]: ×
+                  - generic [ref=e125]:
+                    - text: "רביעי 19:00-20:30: מטרו אולם"
+                    - generic [ref=e126] [cursor=pointer]: ×
+                  - generic [ref=e127]:
+                    - text: "חמישי 17:30-19:00: מטרו אולם"
+                    - generic [ref=e128] [cursor=pointer]: ×
+                  - generic [ref=e129]:
+                    - text: "שלישי 17:00-18:00: אתלטיקה השרון"
+                    - generic [ref=e130] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e131] [cursor=pointer]
+              - generic [ref=e132]:
+                - generic [ref=e133]:
+                  - generic [ref=e134]: נוער מחוזית
+                  - generic [ref=e135]: אורי
+                - button "M" [ref=e137] [cursor=pointer]
+                - combobox [ref=e139]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e140]:
+                  - button "-" [ref=e141] [cursor=pointer]
+                  - generic [ref=e142]: "3"
+                  - button "+" [ref=e143] [cursor=pointer]
+                  - button "⚙️" [ref=e144] [cursor=pointer]
+                - generic [ref=e145]:
+                  - generic [ref=e146]:
+                    - text: "ראשון 15:30-17:00: פארק"
+                    - generic [ref=e147] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e148] [cursor=pointer]
+              - generic [ref=e149]:
+                - generic [ref=e150]:
+                  - generic [ref=e151]: נערים א ארצית
+                  - generic [ref=e152]: אבי
+                - button "M" [ref=e154] [cursor=pointer]
+                - combobox [ref=e156]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e157]:
+                  - button "-" [ref=e158] [cursor=pointer]
+                  - generic [ref=e159]: "4"
+                  - button "+" [ref=e160] [cursor=pointer]
+                  - button "⚙️" [ref=e161] [cursor=pointer]
+                - generic [ref=e162]:
+                  - generic [ref=e163]:
+                    - text: "ראשון 18:00-19:30: דקל"
+                    - generic [ref=e164] [cursor=pointer]: ×
+                  - generic [ref=e165]:
+                    - text: "שני 17:00-18:00: אתלטיקה השרון"
+                    - generic [ref=e166] [cursor=pointer]: ×
+                  - generic [ref=e167]:
+                    - text: "שלישי 19:00-20:30: מטרו אולם"
+                    - generic [ref=e168] [cursor=pointer]: ×
+                  - generic [ref=e169]:
+                    - text: "רביעי 18:30: משחק ק.אונו"
+                    - generic [ref=e170] [cursor=pointer]: ×
+                  - generic [ref=e171]:
+                    - text: "חמישי 19:00-20:30: תלי"
+                    - generic [ref=e172] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e173] [cursor=pointer]
+              - generic [ref=e174]:
+                - generic [ref=e175]:
+                  - generic [ref=e176]: נערים א מחוזית
+                  - generic [ref=e177]: אורי
+                - button "M" [ref=e179] [cursor=pointer]
+                - combobox [ref=e181]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e182]:
+                  - button "-" [ref=e183] [cursor=pointer]
+                  - generic [ref=e184]: "3"
+                  - button "+" [ref=e185] [cursor=pointer]
+                  - button "⚙️" [ref=e186] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e188] [cursor=pointer]
+              - generic [ref=e189]:
+                - generic [ref=e190]:
+                  - generic [ref=e191]: נערים ב לאומית
+                  - generic [ref=e192]: עודד
+                - button "M" [ref=e194] [cursor=pointer]
+                - combobox [ref=e196]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e197]:
+                  - button "-" [ref=e198] [cursor=pointer]
+                  - generic [ref=e199]: "4"
+                  - button "+" [ref=e200] [cursor=pointer]
+                  - button "⚙️" [ref=e201] [cursor=pointer]
+                - generic [ref=e202]:
+                  - generic [ref=e203]:
+                    - text: "שני 19:00-20:30: תלי"
+                    - generic [ref=e204] [cursor=pointer]: ×
+                  - generic [ref=e205]:
+                    - text: "שלישי 18:00-19:00: אתלטיקה השרון"
+                    - generic [ref=e206] [cursor=pointer]: ×
+                  - generic [ref=e207]:
+                    - text: "חמישי 20:30-22:00: תלי"
+                    - generic [ref=e208] [cursor=pointer]: ×
+                  - generic [ref=e209]:
+                    - text: "שישי 15:00: משחק כ.יונה"
+                    - generic [ref=e210] [cursor=pointer]: ×
+                  - generic [ref=e211]:
+                    - text: "שבת 19:30-21:00: זמר"
+                    - generic [ref=e212] [cursor=pointer]: ×
+                  - generic [ref=e213]:
+                    - text: "ראשון 17:30: משחק פארק"
+                    - generic [ref=e214] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e215] [cursor=pointer]
+              - generic [ref=e216]:
+                - generic [ref=e217]:
+                  - generic [ref=e218]: נערים ב מחוזית
+                  - generic [ref=e219]: אבי
+                - button "M" [ref=e221] [cursor=pointer]
+                - combobox [ref=e223]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e224]:
+                  - button "-" [ref=e225] [cursor=pointer]
+                  - generic [ref=e226]: "4"
+                  - button "+" [ref=e227] [cursor=pointer]
+                  - button "⚙️" [ref=e228] [cursor=pointer]
+                - generic [ref=e229]:
+                  - generic [ref=e230]:
+                    - text: "ראשון 16:30-18:00: דקל"
+                    - generic [ref=e231] [cursor=pointer]: ×
+                  - generic [ref=e232]:
+                    - text: "שלישי 17:30-19:00: מטרו אולם"
+                    - generic [ref=e233] [cursor=pointer]: ×
+                  - generic [ref=e234]:
+                    - text: "חמישי 17:30-19:00: תלי"
+                    - generic [ref=e235] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e236] [cursor=pointer]
+              - generic [ref=e237]:
+                - generic [ref=e238]:
+                  - generic [ref=e239]: נערים ב מחוזית
+                  - generic [ref=e240]: עדי
+                - button "M" [ref=e242] [cursor=pointer]
+                - combobox [ref=e244]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e245]:
+                  - button "-" [ref=e246] [cursor=pointer]
+                  - generic [ref=e247]: "3"
+                  - button "+" [ref=e248] [cursor=pointer]
+                  - button "⚙️" [ref=e249] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e251] [cursor=pointer]
+              - generic [ref=e252]:
+                - generic [ref=e253]:
+                  - generic [ref=e254]: ילדים א לאומית
+                  - generic [ref=e255]: לירון
+                - button "M" [ref=e257] [cursor=pointer]
+                - combobox [ref=e259]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e260]:
+                  - button "-" [ref=e261] [cursor=pointer]
+                  - generic [ref=e262]: "4"
+                  - button "+" [ref=e263] [cursor=pointer]
+                  - button "⚙️" [ref=e264] [cursor=pointer]
+                - generic [ref=e265]:
+                  - generic [ref=e266]:
+                    - text: "ראשון 17:30-19:00: יונתן"
+                    - generic [ref=e267] [cursor=pointer]: ×
+                  - generic [ref=e268]:
+                    - text: "חמישי 18:00: משחק זמר"
+                    - generic [ref=e269] [cursor=pointer]: ×
+                  - generic [ref=e270]:
+                    - text: "שלישי 17:00-18:30: זמר"
+                    - generic [ref=e271] [cursor=pointer]: ×
+                  - generic [ref=e272]:
+                    - text: "רביעי 17:30-19:00: פארק"
+                    - generic [ref=e273] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e274] [cursor=pointer]
+              - generic [ref=e275]:
+                - generic [ref=e276]:
+                  - generic [ref=e277]: ילדים א מחוזית
+                  - generic [ref=e278]: וייס
+                - button "M" [ref=e280] [cursor=pointer]
+                - combobox [ref=e282]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e283]:
+                  - button "-" [ref=e284] [cursor=pointer]
+                  - generic [ref=e285]: "3"
+                  - button "+" [ref=e286] [cursor=pointer]
+                  - button "⚙️" [ref=e287] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e289] [cursor=pointer]
+              - generic [ref=e290]:
+                - generic [ref=e291]:
+                  - generic [ref=e292]: ילדים א מחוזית
+                  - generic [ref=e293]: עדי
+                - button "M" [ref=e295] [cursor=pointer]
+                - combobox [ref=e297]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e298]:
+                  - button "-" [ref=e299] [cursor=pointer]
+                  - generic [ref=e300]: "3"
+                  - button "+" [ref=e301] [cursor=pointer]
+                  - button "⚙️" [ref=e302] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e304] [cursor=pointer]
+              - generic [ref=e305]:
+                - generic [ref=e306]:
+                  - generic [ref=e307]: ילדים ב
+                  - generic [ref=e308]: אורי
+                - button "M" [ref=e310] [cursor=pointer]
+                - combobox [ref=e312]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e313]:
+                  - button "-" [ref=e314] [cursor=pointer]
+                  - generic [ref=e315]: "3"
+                  - button "+" [ref=e316] [cursor=pointer]
+                  - button "⚙️" [ref=e317] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e319] [cursor=pointer]
+              - generic [ref=e320]:
+                - generic [ref=e321]:
+                  - generic [ref=e322]: ילדים ב
+                  - generic [ref=e323]: שוסטר
+                - button "M" [ref=e325] [cursor=pointer]
+                - combobox [ref=e327]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e328]:
+                  - button "-" [ref=e329] [cursor=pointer]
+                  - generic [ref=e330]: "3"
+                  - button "+" [ref=e331] [cursor=pointer]
+                  - button "⚙️" [ref=e332] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e334] [cursor=pointer]
+              - generic [ref=e335]:
+                - generic [ref=e336]:
+                  - generic [ref=e337]: ילדים ב
+                  - generic [ref=e338]: רותם
+                - button "M" [ref=e340] [cursor=pointer]
+                - combobox [ref=e342]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e343]:
+                  - button "-" [ref=e344] [cursor=pointer]
+                  - generic [ref=e345]: "3"
+                  - button "+" [ref=e346] [cursor=pointer]
+                  - button "⚙️" [ref=e347] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e349] [cursor=pointer]
+              - generic [ref=e350]:
+                - generic [ref=e351]:
+                  - generic [ref=e352]: קטסל א
+                  - generic [ref=e353]: אירנה
+                - button "M" [ref=e355] [cursor=pointer]
+                - combobox [ref=e357]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e358]:
+                  - button "-" [ref=e359] [cursor=pointer]
+                  - generic [ref=e360]: "3"
+                  - button "+" [ref=e361] [cursor=pointer]
+                  - button "⚙️" [ref=e362] [cursor=pointer]
+                - generic [ref=e363]:
+                  - generic [ref=e364]:
+                    - text: "ראשון 17:30-19:00: אוסטרו"
+                    - generic [ref=e365] [cursor=pointer]: ×
+                  - generic [ref=e366]:
+                    - text: "שלישי 17:00: משחק כפס"
+                    - generic [ref=e367] [cursor=pointer]: ×
+                  - generic [ref=e368]:
+                    - text: "חמישי 16:00-17:30: יונתן"
+                    - generic [ref=e369] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e370] [cursor=pointer]
+              - generic [ref=e371]:
+                - generic [ref=e372]:
+                  - generic [ref=e373]: קטסל א
+                  - generic [ref=e374]: שוסטר
+                - button "M" [ref=e376] [cursor=pointer]
+                - combobox [ref=e378]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e379]:
+                  - button "-" [ref=e380] [cursor=pointer]
+                  - generic [ref=e381]: "3"
+                  - button "+" [ref=e382] [cursor=pointer]
+                  - button "⚙️" [ref=e383] [cursor=pointer]
+                - generic [ref=e384]:
+                  - generic [ref=e385]:
+                    - text: "שלישי 18:30: משחק אליצור"
+                    - generic [ref=e386] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e387] [cursor=pointer]
+              - generic [ref=e388]:
+                - generic [ref=e389]:
+                  - generic [ref=e390]: קט סל א
+                  - generic [ref=e391]: וייס
+                - button "M" [ref=e393] [cursor=pointer]
+                - combobox [ref=e395]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e396]:
+                  - button "-" [ref=e397] [cursor=pointer]
+                  - generic [ref=e398]: "3"
+                  - button "+" [ref=e399] [cursor=pointer]
+                  - button "⚙️" [ref=e400] [cursor=pointer]
+                - generic [ref=e401]:
+                  - generic [ref=e402]:
+                    - text: "שלישי 18:30: משחק דקל"
+                    - generic [ref=e403] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e404] [cursor=pointer]
+              - generic [ref=e405]:
+                - generic [ref=e406]:
+                  - generic [ref=e407]: קטסל ב
+                  - generic [ref=e408]: רותם
+                - button "M" [ref=e410] [cursor=pointer]
+                - combobox [ref=e412]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e413]:
+                  - button "-" [ref=e414] [cursor=pointer]
+                  - generic [ref=e415]: "3"
+                  - button "+" [ref=e416] [cursor=pointer]
+                  - button "⚙️" [ref=e417] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e419] [cursor=pointer]
+              - generic [ref=e420]:
+                - generic [ref=e421]:
+                  - generic [ref=e422]: קטסל ב
+                  - generic [ref=e423]: חגי
+                - button "M" [ref=e425] [cursor=pointer]
+                - combobox [ref=e427]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e428]:
+                  - button "-" [ref=e429] [cursor=pointer]
+                  - generic [ref=e430]: "3"
+                  - button "+" [ref=e431] [cursor=pointer]
+                  - button "⚙️" [ref=e432] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e434] [cursor=pointer]
+              - generic [ref=e435]:
+                - generic [ref=e436]:
+                  - generic [ref=e437]: קטסל ב
+                  - generic [ref=e438]: עידו
+                - button "M" [ref=e440] [cursor=pointer]
+                - combobox [ref=e442]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e443]:
+                  - button "-" [ref=e444] [cursor=pointer]
+                  - generic [ref=e445]: "3"
+                  - button "+" [ref=e446] [cursor=pointer]
+                  - button "⚙️" [ref=e447] [cursor=pointer]
+                - generic [ref=e448]:
+                  - generic [ref=e449]:
+                    - text: "שני 18:00-19:30: פארק"
+                    - generic [ref=e450] [cursor=pointer]: ×
+                  - generic [ref=e451]:
+                    - text: "שישי 15:15-16:45: פארק"
+                    - generic [ref=e452] [cursor=pointer]: ×
+                  - generic [ref=e453]:
+                    - text: "שלישי 17:30-19:00: פארק"
+                    - generic [ref=e454] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e455] [cursor=pointer]
+              - generic [ref=e456]:
+                - generic [ref=e457]:
+                  - generic [ref=e458]: קטסל ב
+                  - generic [ref=e459]: רייכרט
+                - button "M" [ref=e461] [cursor=pointer]
+                - combobox [ref=e463]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e464]:
+                  - button "-" [ref=e465] [cursor=pointer]
+                  - generic [ref=e466]: "3"
+                  - button "+" [ref=e467] [cursor=pointer]
+                  - button "⚙️" [ref=e468] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e470] [cursor=pointer]
+              - generic [ref=e471]:
+                - generic [ref=e472]:
+                  - generic [ref=e473]: עתודה 1
+                  - generic [ref=e474]: אבי
+                - button "M" [ref=e476] [cursor=pointer]
+                - combobox [ref=e478]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e479]:
+                  - button "-" [ref=e480] [cursor=pointer]
+                  - generic [ref=e481]: "3"
+                  - button "+" [ref=e482] [cursor=pointer]
+                  - button "⚙️" [ref=e483] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e485] [cursor=pointer]
+              - generic [ref=e486]:
+                - generic [ref=e487]:
+                  - generic [ref=e488]: עתודה 2
+                  - generic [ref=e489]: אבי
+                - button "M" [ref=e491] [cursor=pointer]
+                - combobox [ref=e493]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e494]:
+                  - button "-" [ref=e495] [cursor=pointer]
+                  - generic [ref=e496]: "3"
+                  - button "+" [ref=e497] [cursor=pointer]
+                  - button "⚙️" [ref=e498] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e500] [cursor=pointer]
+              - generic [ref=e501]:
+                - generic [ref=e502]:
+                  - generic [ref=e503]: עתודה 3
+                  - generic [ref=e504]: אורי
+                - button "M" [ref=e506] [cursor=pointer]
+                - combobox [ref=e508]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e509]:
+                  - button "-" [ref=e510] [cursor=pointer]
+                  - generic [ref=e511]: "3"
+                  - button "+" [ref=e512] [cursor=pointer]
+                  - button "⚙️" [ref=e513] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e515] [cursor=pointer]
+              - generic [ref=e516]:
+                - generic [ref=e517]:
+                  - generic [ref=e518]: עתודה 4
+                  - generic [ref=e519]: אילון
+                - button "M" [ref=e521] [cursor=pointer]
+                - combobox [ref=e523]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e524]:
+                  - button "-" [ref=e525] [cursor=pointer]
+                  - generic [ref=e526]: "3"
+                  - button "+" [ref=e527] [cursor=pointer]
+                  - button "⚙️" [ref=e528] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e530] [cursor=pointer]
+              - generic [ref=e531]:
+                - generic [ref=e532]:
+                  - generic [ref=e533]: עתודה 5
+                  - generic [ref=e534]: שוסטר
+                - button "M" [ref=e536] [cursor=pointer]
+                - combobox [ref=e538]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e539]:
+                  - button "-" [ref=e540] [cursor=pointer]
+                  - generic [ref=e541]: "3"
+                  - button "+" [ref=e542] [cursor=pointer]
+                  - button "⚙️" [ref=e543] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e545] [cursor=pointer]
+              - generic [ref=e546]:
+                - generic [ref=e547]:
+                  - generic [ref=e548]: עתודה 6
+                  - generic [ref=e549]: רותם
+                - button "M" [ref=e551] [cursor=pointer]
+                - combobox [ref=e553]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e554]:
+                  - button "-" [ref=e555] [cursor=pointer]
+                  - generic [ref=e556]: "3"
+                  - button "+" [ref=e557] [cursor=pointer]
+                  - button "⚙️" [ref=e558] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e560] [cursor=pointer]
+              - generic [ref=e561]:
+                - generic [ref=e562]:
+                  - generic [ref=e563]: מכבי יאיר
+                  - generic [ref=e564]: תומי
+                - button "M" [ref=e566] [cursor=pointer]
+                - combobox [ref=e568]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e569]:
+                  - button "-" [ref=e570] [cursor=pointer]
+                  - generic [ref=e571]: "2"
+                  - button "+" [ref=e572] [cursor=pointer]
+                  - button "⚙️" [ref=e573] [cursor=pointer]
+                - generic [ref=e574]:
+                  - generic [ref=e575]:
+                    - text: "רביעי 20:30: משחק פארק"
+                    - generic [ref=e576] [cursor=pointer]: ×
+                  - generic [ref=e577]:
+                    - text: "שני 20:00-21:30: פארק"
+                    - generic [ref=e578] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e579] [cursor=pointer]
+              - generic [ref=e580]:
+                - generic [ref=e581]:
+                  - generic [ref=e582]: מכבי יובל
+                  - generic [ref=e583]: טל
+                - button "M" [ref=e585] [cursor=pointer]
+                - combobox [ref=e587]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e588]:
+                  - button "-" [ref=e589] [cursor=pointer]
+                  - generic [ref=e590]: "2"
+                  - button "+" [ref=e591] [cursor=pointer]
+                  - button "⚙️" [ref=e592] [cursor=pointer]
+                - generic [ref=e593]:
+                  - generic [ref=e594]:
+                    - text: "ראשון 20:30-22:00: תלי"
+                    - generic [ref=e595] [cursor=pointer]: ×
+                  - generic [ref=e596]:
+                    - text: "שלישי 20:30-22:00: תלי"
+                    - generic [ref=e597] [cursor=pointer]: ×
+                  - button "+ הוסף אילוץ" [ref=e598] [cursor=pointer]
+              - generic [ref=e599]:
+                - generic [ref=e600]:
+                  - generic [ref=e601]: בוגרות
+                  - generic [ref=e602]: טל
+                - button "W" [ref=e604] [cursor=pointer]
+                - combobox [ref=e606]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e607]:
+                  - button "-" [ref=e608] [cursor=pointer]
+                  - generic [ref=e609]: "3"
+                  - button "+" [ref=e610] [cursor=pointer]
+                  - button "⚙️" [ref=e611] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e613] [cursor=pointer]
+              - generic [ref=e614]:
+                - generic [ref=e615]:
+                  - generic [ref=e616]: נערות א על
+                  - generic [ref=e617]: עמרי
+                - button "W" [ref=e619] [cursor=pointer]
+                - combobox [ref=e621]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e622]:
+                  - button "-" [ref=e623] [cursor=pointer]
+                  - generic [ref=e624]: "3"
+                  - button "+" [ref=e625] [cursor=pointer]
+                  - button "⚙️" [ref=e626] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e628] [cursor=pointer]
+              - generic [ref=e629]:
+                - generic [ref=e630]:
+                  - generic [ref=e631]: נערות ב על
+                  - generic [ref=e632]: טל
+                - button "W" [ref=e634] [cursor=pointer]
+                - combobox [ref=e636]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e637]:
+                  - button "-" [ref=e638] [cursor=pointer]
+                  - generic [ref=e639]: "3"
+                  - button "+" [ref=e640] [cursor=pointer]
+                  - button "⚙️" [ref=e641] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e643] [cursor=pointer]
+              - generic [ref=e644]:
+                - generic [ref=e645]:
+                  - generic [ref=e646]: נערות ב לאומית
+                  - generic [ref=e647]: עמית
+                - button "W" [ref=e649] [cursor=pointer]
+                - combobox [ref=e651]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e652]:
+                  - button "-" [ref=e653] [cursor=pointer]
+                  - generic [ref=e654]: "3"
+                  - button "+" [ref=e655] [cursor=pointer]
+                  - button "⚙️" [ref=e656] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e658] [cursor=pointer]
+              - generic [ref=e659]:
+                - generic [ref=e660]:
+                  - generic [ref=e661]: ילדות א
+                  - generic [ref=e662]: עמית
+                - button "W" [ref=e664] [cursor=pointer]
+                - combobox [ref=e666]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e667]:
+                  - button "-" [ref=e668] [cursor=pointer]
+                  - generic [ref=e669]: "3"
+                  - button "+" [ref=e670] [cursor=pointer]
+                  - button "⚙️" [ref=e671] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e673] [cursor=pointer]
+              - generic [ref=e674]:
+                - generic [ref=e675]:
+                  - generic [ref=e676]: ילדות ב
+                  - generic [ref=e677]: רותם
+                - button "W" [ref=e679] [cursor=pointer]
+                - combobox [ref=e681]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e682]:
+                  - button "-" [ref=e683] [cursor=pointer]
+                  - generic [ref=e684]: "3"
+                  - button "+" [ref=e685] [cursor=pointer]
+                  - button "⚙️" [ref=e686] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e688] [cursor=pointer]
+              - generic [ref=e689]:
+                - generic [ref=e690]:
+                  - generic [ref=e691]: קטסל א
+                  - generic [ref=e692]: אילון
+                - button "W" [ref=e694] [cursor=pointer]
+                - combobox [ref=e696]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e697]:
+                  - button "-" [ref=e698] [cursor=pointer]
+                  - generic [ref=e699]: "3"
+                  - button "+" [ref=e700] [cursor=pointer]
+                  - button "⚙️" [ref=e701] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e703] [cursor=pointer]
+              - generic [ref=e704]:
+                - generic [ref=e705]:
+                  - generic [ref=e706]: קטסל ב
+                  - generic [ref=e707]: אירנה
+                - button "W" [ref=e709] [cursor=pointer]
+                - combobox [ref=e711]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e712]:
+                  - button "-" [ref=e713] [cursor=pointer]
+                  - generic [ref=e714]: "3"
+                  - button "+" [ref=e715] [cursor=pointer]
+                  - button "⚙️" [ref=e716] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e718] [cursor=pointer]
+              - generic [ref=e719]:
+                - generic [ref=e720]:
+                  - generic [ref=e721]: קטסל ב
+                  - generic [ref=e722]: רוני
+                - button "W" [ref=e724] [cursor=pointer]
+                - combobox [ref=e726]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e727]:
+                  - button "-" [ref=e728] [cursor=pointer]
+                  - generic [ref=e729]: "3"
+                  - button "+" [ref=e730] [cursor=pointer]
+                  - button "⚙️" [ref=e731] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e733] [cursor=pointer]
+              - generic [ref=e734]:
+                - generic [ref=e735]:
+                  - generic [ref=e736]: עתודה
+                  - generic [ref=e737]: אירנה
+                - button "W" [ref=e739] [cursor=pointer]
+                - combobox [ref=e741]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e742]:
+                  - button "-" [ref=e743] [cursor=pointer]
+                  - generic [ref=e744]: "3"
+                  - button "+" [ref=e745] [cursor=pointer]
+                  - button "⚙️" [ref=e746] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e748] [cursor=pointer]
+              - generic [ref=e749]:
+                - generic [ref=e750]:
+                  - generic [ref=e751]: עתודה
+                  - generic [ref=e752]: עמית
+                - button "W" [ref=e754] [cursor=pointer]
+                - combobox [ref=e756]:
+                  - option "45 דק'"
+                  - option "60 דק'"
+                  - option "90 דק'" [selected]
+                  - option "120 דק'"
+                - generic [ref=e757]:
+                  - button "-" [ref=e758] [cursor=pointer]
+                  - generic [ref=e759]: "3"
+                  - button "+" [ref=e760] [cursor=pointer]
+                  - button "⚙️" [ref=e761] [cursor=pointer]
+                - button "+ הוסף אילוץ" [ref=e763] [cursor=pointer]
+  - button "💡 הצעה לשיפור" [ref=e14] [cursor=pointer]:
+    - generic [ref=e15]: 💡
+    - text: הצעה לשיפור
+  - button "📲 התקנה" [ref=e17] [cursor=pointer]
+  - generic [ref=e18]:
+    - generic [ref=e19]: מנהל
+    - link "👨‍👩‍👧 הורים" [ref=e20] [cursor=pointer]:
+      - /url: /raanana
+    - link "🏀 מאמן" [ref=e21] [cursor=pointer]:
+      - /url: /raanana/trainer
+    - link "🗂️ ניהול" [ref=e22] [cursor=pointer]:
+      - /url: /admin/dashboard

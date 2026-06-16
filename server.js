@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
 import { buildTeamICSFromCsv } from './server/scheduleCore.js';
+import { publishClub, getLiveSchedule, listPublications } from './server/publish.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveIcon, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -64,6 +65,37 @@ app.get('/api/clubs/:slug', (req, res) => {
     const club = getClub(req.params.slug);
     if (!club) return res.status(404).json({ error: 'not found' });
     res.json(club);
+});
+
+// ===== Phase 1: schedule in the DB (publish from the manager's Sheet + live reads) =====
+// Publish: snapshot the club's Google Sheet into the DB as the live week.
+app.post('/api/:club/publish', async (req, res) => {
+    try {
+        const result = await publishClub(req.params.club, req.body || {});
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Live schedule from the DB (latest live publication, or ?week=YYYY-MM-DD).
+app.get('/api/:club/schedule', async (req, res) => {
+    try {
+        const data = await getLiveSchedule(req.params.club, req.query.week);
+        if (!data) return res.status(404).json({ error: 'club not found' });
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Publication history.
+app.get('/api/:club/publications', async (req, res) => {
+    try {
+        res.json(await listPublications(req.params.club));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Dynamic per-club Web App Manifest (must be registered before the dist static handler).
