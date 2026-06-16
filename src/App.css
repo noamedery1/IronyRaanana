@@ -796,3 +796,82 @@
   .vtab { flex: 1; padding: 0.6rem 0.6rem; font-size: 0.8rem; }
   .hero-ball { display: none; }
 }
+
+/* ============================================================
+   REDESIGN v2 — "Stadium Board": sharp, editorial, professional
+   Scoped under .app-container so the admin dashboard is untouched.
+   ============================================================ */
+.app-container{
+  --acc:#ff5a1f; --acc2:#ffd166; --line:rgba(255,255,255,.08);
+  --surface:#0d121e; --surface2:#111827; --ink0:#070a12;
+  font-family:'Heebo',sans-serif;
+  background:
+    radial-gradient(120% 60% at 100% -10%, rgba(255,90,31,.10), transparent 55%),
+    linear-gradient(180deg,#080b14,#070a12 60%);
+}
+.app-container::before{ /* faint court-line texture */
+  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(120% 80% at 50% 0,#000,transparent 75%);
+}
+
+/* topbar — solid + hairline, no heavy blur */
+.app-container .topbar{
+  background:rgba(8,11,18,.85);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);padding:1rem 1.25rem;
+}
+.app-container .brand-logo{border-radius:11px;box-shadow:none;border:1px solid var(--line)}
+.app-container .brand-name{font-weight:900;letter-spacing:-.02em;font-size:1.15rem}
+.app-container .brand-sub{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.18em;font-size:.6rem;color:var(--acc2)}
+
+/* segmented controls / tabs — crisp */
+.app-container .team-select{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;font-weight:700;
+}
+.app-container .view-tabs{background:var(--ink0);border:1px solid var(--line);border-radius:13px;padding:4px;gap:2px}
+.app-container .vtab{border-radius:9px;font-weight:700;color:var(--text-dim);letter-spacing:0}
+.app-container .vtab.on{background:var(--acc);color:#fff;box-shadow:none}
+
+/* hero — scoreboard card */
+.app-container .hero-card,.app-container .map-card{
+  background:linear-gradient(180deg,var(--surface2),var(--surface));
+  border:1px solid var(--line);border-radius:16px;backdrop-filter:none;
+  box-shadow:0 18px 50px -28px rgba(0,0,0,.9);
+}
+.app-container .hero-card{border-top:3px solid var(--acc)}
+.app-container .hero-label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.16em;color:var(--acc2);font-size:.72rem}
+.app-container .hero-time{
+  font-family:'Oswald',sans-serif;font-weight:700;font-size:3.5rem;letter-spacing:0;
+  background:none;-webkit-text-fill-color:#fff;color:#fff;line-height:1;margin:.35rem 0 .3rem;
+}
+.app-container .hero-meta .m b{font-weight:800}
+.app-container .hero-meta .m span{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:.66rem;color:var(--text-dim)}
+.app-container .hero-ball{opacity:.16;filter:saturate(.7);width:90px;height:90px}
+
+/* section title — editorial rule */
+.app-container .section-title{
+  font-weight:900;letter-spacing:-.02em;font-size:1.4rem;display:flex;align-items:center;gap:.7rem;
+  margin:1.6rem 0 1rem;
+}
+.app-container .section-title::before{background:var(--acc);width:5px;height:1.3em;border-radius:2px}
+
+/* schedule cards — crisp, clear hierarchy, status accent bar */
+.app-container .schedule-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  box-shadow:none;transition:transform .15s,border-color .15s;
+}
+.app-container .schedule-card::after{height:100%;width:4px;top:0;bottom:0;left:auto;right:0;background:var(--acc)}
+.app-container .schedule-card:hover{transform:translateY(-3px);border-color:rgba(255,90,31,.45)}
+.app-container .day-header{border-bottom:1px solid var(--line);padding-bottom:.55rem;margin-bottom:.6rem}
+.app-container .day-name{font-weight:900;font-size:1.05rem}
+.app-container .day-date{font-family:'Oswald',sans-serif;color:var(--text-dim);letter-spacing:.05em}
+.app-container .event-time{font-family:'Oswald',sans-serif;font-weight:700;font-size:1.35rem;color:#fff}
+.app-container .event-location{font-size:.92rem;color:var(--text-dim);font-weight:600}
+
+/* hall view + daily — consistent panels */
+.app-container .rv-title,.app-container .dv-title{font-weight:900;letter-spacing:-.01em}
+.app-container .hall-box,.app-container .rv-day,.app-container .dv-day{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;
+}
+.app-container .sess{border-bottom:1px solid var(--line)}
+.app-container .sess-time{font-family:'Oswald',sans-serif;font-weight:600}
