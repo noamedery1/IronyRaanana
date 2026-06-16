@@ -143,6 +143,44 @@ export async function deleteTeam(slug, id) {
     return { ok: true };
 }
 
+// ===== Managers (manager-app login) =====
+function hashPw(pw) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(String(pw), salt, 32).toString('hex');
+    return `${salt}:${hash}`;
+}
+function verifyPw(pw, stored) {
+    const [salt, hash] = (stored || '').split(':');
+    if (!salt || !hash) return false;
+    const test = crypto.scryptSync(String(pw), salt, 32).toString('hex');
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(test, 'hex'));
+}
+
+export async function createManager(slug, { username, password, name }) {
+    const u = (username || '').trim();
+    if (!u || !password) throw new Error('חסר שם משתמש או סיסמה');
+    const cid = await clubId(slug);
+    await pool.query(
+        `INSERT INTO managers (club_id, username, password, name) VALUES ($1,$2,$3,$4)
+         ON CONFLICT (club_id, lower(username)) DO UPDATE SET password=excluded.password, name=excluded.name`,
+        [cid, u, hashPw(password), name || u],
+    );
+    return { ok: true, username: u };
+}
+
+export async function authManager(slug, { username, password }) {
+    const cid = await clubId(slug);
+    const r = await pool.query('SELECT username, password, name FROM managers WHERE club_id=$1 AND lower(username)=lower($2) LIMIT 1', [cid, (username || '').trim()]);
+    if (!r.rows.length || !verifyPw(password, r.rows[0].password)) return { valid: false };
+    return { valid: true, name: r.rows[0].name || r.rows[0].username, token: newToken() };
+}
+
+export async function listManagers(slug) {
+    const cid = await clubId(slug);
+    const r = await pool.query('SELECT username, name, created_at FROM managers WHERE club_id=$1 ORDER BY created_at', [cid]);
+    return r.rows;
+}
+
 // Called from publish: seed/refresh the teams table from the published sessions.
 export async function seedTeamsFromSessions(cx, clubIdVal, publicationId) {
     // One row per team name (a name may appear with varying gender/coach across sessions).

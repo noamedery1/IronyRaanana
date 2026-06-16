@@ -8,6 +8,7 @@ import { publishClub, getLiveSchedule, listPublications } from './server/publish
 import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
     registerUser, authUser, listTeams, upsertTeam, deleteTeam,
+    createManager, authManager, listManagers,
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
@@ -130,6 +131,11 @@ app.post('/api/:club/users/auth', async (req, res) => {
     try { ok(res, await authUser(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 
+// Manager-app login (per club).
+app.post('/api/:club/managers/auth', async (req, res) => {
+    try { ok(res, await authManager(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+
 // Teams (add / update / list / delete)
 app.get('/api/:club/teams', async (req, res) => {
     try { ok(res, { teams: await listTeams(req.params.club) }); } catch (e) { fail(res, e); }
@@ -212,17 +218,21 @@ app.post('/api/superuser/clubs', requireSuperuser, (req, res) => {
     if (!club || !club.slug || !/^[a-z0-9-]+$/.test(club.slug)) {
         return res.status(400).json({ error: 'invalid slug (use lowercase letters, digits, hyphens)' });
     }
-    if (!club.name || !club.dataUrl || !club.sheetApi) {
-        return res.status(400).json({ error: 'name, dataUrl and sheetApi are required' });
+    if (!club.name) {
+        return res.status(400).json({ error: 'name is required' });
     }
     const record = {
         slug: club.slug,
         name: club.name,
         shortName: club.shortName || club.name,
+        sport: club.sport || '',
+        publishUrl: club.publishUrl || '',
+        managerEmails: Array.isArray(club.managerEmails) ? club.managerEmails
+            : (club.managerEmails || '').split(/[,;\s]+/).filter(Boolean),
         themeColor: club.themeColor || '#ff7a18',
         backgroundColor: club.backgroundColor || '#070b16',
-        dataUrl: club.dataUrl,
-        sheetApi: club.sheetApi,
+        dataUrl: club.dataUrl || '',
+        sheetApi: club.sheetApi || '',
         icon192: club.icon192 || '',
         icon512: club.icon512 || '',
         appleIcon: club.appleIcon || '',
@@ -233,6 +243,16 @@ app.post('/api/superuser/clubs', requireSuperuser, (req, res) => {
         if (icons.apple) record.appleIcon = saveIcon(club.slug, 'apple', icons.apple);
     }
     res.json(upsertClub(record));
+});
+
+// Manager accounts for a club (superuser creates the invite: username + initial password).
+app.post('/api/superuser/clubs/:slug/managers', requireSuperuser, async (req, res) => {
+    try { res.json(await createManager(req.params.slug, req.body || {})); }
+    catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/superuser/clubs/:slug/managers', requireSuperuser, async (req, res) => {
+    try { res.json({ managers: await listManagers(req.params.slug) }); }
+    catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/superuser/clubs/:slug', requireSuperuser, (req, res) => {

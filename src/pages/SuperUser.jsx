@@ -12,7 +12,7 @@ const FILE_TO_DATAURL = (file) => new Promise((resolve, reject) => {
 
 const EMPTY = {
     slug: '', name: '', shortName: '', themeColor: '#ff7a18', backgroundColor: '#070b16',
-    dataUrl: '', sheetApi: '',
+    dataUrl: '', publishUrl: '', sheetApi: '', sport: '', managerEmails: '',
 };
 
 const inputStyle = {
@@ -30,6 +30,8 @@ export default function SuperUser() {
     const [icons, setIcons] = useState({});
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
+    const [mgr, setMgr] = useState({ slug: '', username: '', password: '', name: '' });
+    const [mgrMsg, setMgrMsg] = useState('');
 
     const loadClubs = useCallback(async () => {
         const res = await fetch('/api/clubs');
@@ -67,7 +69,9 @@ export default function SuperUser() {
     const editClub = (c) => {
         setForm({
             slug: c.slug, name: c.name, shortName: c.shortName || '', themeColor: c.themeColor || '#ff7a18',
-            backgroundColor: c.backgroundColor || '#070b16', dataUrl: c.dataUrl || '', sheetApi: c.sheetApi || '',
+            backgroundColor: c.backgroundColor || '#070b16', dataUrl: c.dataUrl || '', publishUrl: c.publishUrl || '',
+            sheetApi: c.sheetApi || '', sport: c.sport || '',
+            managerEmails: Array.isArray(c.managerEmails) ? c.managerEmails.join(', ') : (c.managerEmails || ''),
         });
         setIcons({});
         setMsg('');
@@ -94,6 +98,20 @@ export default function SuperUser() {
         } finally {
             setBusy(false);
         }
+    };
+
+    const createManagerInvite = async (e) => {
+        e.preventDefault();
+        setMgrMsg('');
+        if (!mgr.slug || !mgr.username || !mgr.password) { setMgrMsg('בחר מועדון, שם משתמש וסיסמה'); return; }
+        const res = await fetch(`/api/superuser/clubs/${mgr.slug}/managers`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-superuser-token': token },
+            body: JSON.stringify({ username: mgr.username, password: mgr.password, name: mgr.name }),
+        });
+        if (res.status === 401) { logout(); return; }
+        const d = await res.json().catch(() => ({}));
+        setMgrMsg(res.ok ? `✓ נוצר מנהל "${mgr.username}" למועדון ${mgr.slug}` : '❌ ' + (d.error || 'נכשל'));
+        if (res.ok) setMgr({ slug: mgr.slug, username: '', password: '', name: '' });
     };
 
     const removeClub = async (slug) => {
@@ -145,7 +163,12 @@ export default function SuperUser() {
                         </div>
                     </div>
                     <div><label style={labelStyle}>קישור לנתונים (Google Sheet CSV)</label><input value={form.dataUrl} onChange={(e) => setForm({ ...form, dataUrl: e.target.value })} placeholder="https://docs.google.com/.../export?format=csv&gid=0" style={{ ...inputStyle, direction: 'ltr' }} /></div>
-                    <div><label style={labelStyle}>כתובת Apps Script (/exec)</label><input value={form.sheetApi} onChange={(e) => setForm({ ...form, sheetApi: e.target.value })} placeholder="https://script.google.com/macros/s/.../exec" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                    <div><label style={labelStyle}>קישור לוז המנהל לפרסום (publishUrl — אם שונה ממקור הנתונים)</label><input value={form.publishUrl} onChange={(e) => setForm({ ...form, publishUrl: e.target.value })} placeholder="https://docs.google.com/.../export?format=csv&gid=0" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.8rem' }}>
+                        <div><label style={labelStyle}>ענף</label><input value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} placeholder="football / basketball" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                        <div><label style={labelStyle}>מיילים של מנהל/ים לאישור בקשות (מופרד בפסיק)</label><input value={form.managerEmails} onChange={(e) => setForm({ ...form, managerEmails: e.target.value })} placeholder="manager@club.com, second@club.com" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                    </div>
+                    <div><label style={labelStyle}>כתובת Apps Script (/exec) — אופציונלי (לוז טיוטה בלבד)</label><input value={form.sheetApi} onChange={(e) => setForm({ ...form, sheetApi: e.target.value })} placeholder="https://script.google.com/macros/s/.../exec" style={{ ...inputStyle, direction: 'ltr' }} /></div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
                         <div><label style={labelStyle}>אייקון 192px</label><input type="file" accept="image/png" onChange={(e) => onIcon('i192', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
@@ -171,6 +194,24 @@ export default function SuperUser() {
                         </div>
                     ))}
                 </div>
+
+                <h3 style={{ marginTop: '2rem', marginBottom: '0.6rem', fontSize: '1rem', color: '#94a3b8' }}>הקמת מנהל למועדון (כניסה לאפליקציית מנהל)</h3>
+                <form onSubmit={createManagerInvite} style={{ display: 'grid', gap: '0.6rem' }}>
+                    <select value={mgr.slug} onChange={(e) => setMgr({ ...mgr, slug: e.target.value })} style={inputStyle}>
+                        <option value="">בחר מועדון…</option>
+                        {clubs.map((c) => <option key={c.slug} value={c.slug}>{c.name} (/{c.slug})</option>)}
+                    </select>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                        <input value={mgr.username} onChange={(e) => setMgr({ ...mgr, username: e.target.value })} placeholder="שם משתמש" style={{ ...inputStyle, direction: 'ltr' }} />
+                        <input value={mgr.password} onChange={(e) => setMgr({ ...mgr, password: e.target.value })} placeholder="סיסמה ראשונית" style={{ ...inputStyle, direction: 'ltr' }} />
+                    </div>
+                    <input value={mgr.name} onChange={(e) => setMgr({ ...mgr, name: e.target.value })} placeholder="שם המנהל (אופציונלי)" style={inputStyle} />
+                    <button type="submit" style={{ padding: '0.7rem', border: 'none', borderRadius: '10px', background: '#2563eb', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>➕ צור מנהל</button>
+                    {mgrMsg && <div style={{ textAlign: 'center', fontSize: '0.9rem', color: mgrMsg.startsWith('✓') ? '#34d399' : '#f87171' }}>{mgrMsg}</div>}
+                </form>
+                <p style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
+                    המנהל יתחבר ב-<code>/admin</code> עם הפרטים, וילחץ "🔔 התראות מנהל" כדי לקבל בקשות שינוי ולאשר ישירות מההתראה.
+                </p>
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getActiveClub } from '../clubConfig.js';
 import '../ActionStyles.css'; // Re-use button styles
 
 const AdminLogin = () => {
@@ -8,14 +9,30 @@ const AdminLogin = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
+        setError('');
+        // 1) DB manager account for the active club (created via the superuser console).
+        try {
+            const res = await fetch(`/api/${getActiveClub().slug}/managers/auth`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.valid) {
+                localStorage.setItem('isAdmin', 'true');
+                localStorage.setItem('managerName', data.name || username);
+                navigate('/admin/dashboard');
+                return;
+            }
+        } catch { /* fall through to built-in */ }
+
+        // 2) Built-in fallback (legacy).
         if (username === 'Admin' && password === 'Passw0rd') {
-            // In a real app, use a proper auth token
             localStorage.setItem('isAdmin', 'true');
             navigate('/admin/dashboard');
         } else {
-            setError('Invalid credentials');
+            setError('שם משתמש או סיסמה שגויים');
         }
     };
 

@@ -15,8 +15,12 @@ export const verifyId = (id, token) => Boolean(token) && signId(id) === token;
 // Email the manager that a request arrived, with one-click approve/reject links.
 async function notifyManager(slug, id, p) {
     const club = getClub(slug);
-    const to = process.env.MANAGER_EMAIL || club?.managerEmail;
-    if (!to) return;
+    const emails = [];
+    if (process.env.MANAGER_EMAIL) emails.push(process.env.MANAGER_EMAIL);
+    if (Array.isArray(club?.managerEmails)) emails.push(...club.managerEmails);
+    else if (club?.managerEmail) emails.push(club.managerEmail);
+    const to = [...new Set(emails.filter(Boolean))];
+    if (!to.length) return;
     const base = process.env.APP_BASE_URL || '';
     const tok = signId(id);
     const approve = `${base}/api/${slug}/requests/${id}/approve?token=${tok}`;
