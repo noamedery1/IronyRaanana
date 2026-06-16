@@ -18,6 +18,9 @@ dist-ssr
 
 # Playwright MCP scratch artifacts (manual verification screenshots/snapshots)
 .playwright-mcp
+# Local verification screenshots at repo root
+/db-*.png
+/ky-*.png
 
 # Superuser club store (lives on the Railway volume, never in git)
 data

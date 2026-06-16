@@ -4,6 +4,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Dev: forward API calls to the Express server (server.js) running on :3001.
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3001',
+      '/calendar.ics': 'http://localhost:3001',
+    },
+  },
   plugins: [
     react(),
     VitePWA({

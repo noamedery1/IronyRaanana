@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { Link } from 'react-router-dom';
 import '../App.css';
-import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile, parseCellContent } from '../utils/scheduleUtils';
+import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile, parseCellContent, sessionsToRows } from '../utils/scheduleUtils';
 import LeagueGamesBanner from '../components/LeagueGamesBanner';
 import HallView from '../components/HallView';
 import DailyView from '../components/DailyView';
@@ -45,126 +45,109 @@ function PublicSchedule() {
     const { t, localizeDay, localizeHall } = useI18n();
 
     useEffect(() => {
+        // Shared: take an array-of-arrays sheet model (from the DB or from CSV) and
+        // populate all the view state. Identical logic for both data sources.
+        const processRows = (rows) => {
+            let headerRowIndex = -1;
+            for (let i = 0; i < rows.length; i++) {
+                if (rows[i][0] && rows[i][0].includes('קבוצות')) { headerRowIndex = i; break; }
+            }
+            if (headerRowIndex === -1) return;
+
+            const headerRow = rows[headerRowIndex];
+            const dataRows = rows.slice(headerRowIndex + 1);
+
+            // Dynamic Column Detection
+            const teamIndex = 0;
+            let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
+            let typeIndex = headerRow.findIndex(h => h && (h.toLowerCase() === 'type' || h.includes('סוג') || h.includes('מגדר')));
+            let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
+            if (dayStartIndex === -1) {
+                dayStartIndex = (coachIndex !== -1) ? coachIndex + 1 : 1;
+            }
+            setDayStart(dayStartIndex);
+
+            // Extract Halls
+            const locSet = new Set();
+            dataRows.forEach(r => {
+                for (let d = dayStartIndex; d < dayStartIndex + 7; d++) {
+                    const c = r[d];
+                    if (c && c.trim() && !c.toLowerCase().includes('xxx')) {
+                        c.split('\n').forEach(p => {
+                            const { location } = parseCellContent(p);
+                            if (location && location.trim().length > 1) locSet.add(location.trim());
+                        });
+                    }
+                }
+            });
+            setLocations(Array.from(locSet).sort());
+
+            // Extract teams with unique identifiers
+            const teamObjects = [];
+            dataRows.forEach((row, rowIndex) => {
+                const name = row[teamIndex];
+                if (!name || name.trim() === '') return;
+                if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
+
+                const typeVal = (typeIndex !== -1 && row[typeIndex]) ? row[typeIndex].trim().toUpperCase() : 'M';
+                const coach = (coachIndex !== -1) ? row[coachIndex] : '';
+                const label = coach ? `${name} - ${coach}` : name;
+                const absoluteRow = headerRowIndex + 2 + rowIndex;
+
+                teamObjects.push({
+                    label, value: rowIndex.toString(), name: name.trim(),
+                    coach: coach ? coach.trim() : '', type: typeVal,
+                    row, rowIndex, absoluteRow,
+                });
+            });
+
+            setHeaders(headerRow);
+            setTeams(teamObjects);
+            setData(dataRows);
+
+            const menTeams = teamObjects.filter(t => t.type !== 'W');
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedTeam = urlParams.get('team');
+            let defaultTeamId = '';
+            if (memberTeam) {
+                const found = teamObjects.find(t => t.label === memberTeam || t.name === memberTeam);
+                if (found) defaultTeamId = found.value;
+            }
+            if (!defaultTeamId && sharedTeam) {
+                const found = teamObjects.find(t => t.label === sharedTeam || t.name === sharedTeam);
+                if (found) defaultTeamId = found.value;
+            }
+            if (!defaultTeamId && !memberTeam && menTeams.length > 0) {
+                defaultTeamId = menTeams[0].value;
+            }
+            setSelectedTeamId(defaultTeamId);
+        };
+
         const fetchData = async () => {
             try {
+                // 1) Prefer the DB-backed live schedule (published via the manager screen).
+                try {
+                    const apiRes = await fetch(`/api/${club.slug}/schedule`);
+                    if (apiRes.ok) {
+                        const payload = await apiRes.json();
+                        if (payload && Array.isArray(payload.sessions) && payload.sessions.length) {
+                            processRows(sessionsToRows(payload.sessions, payload.publication?.week_start));
+                            setLoading(false);
+                            return;
+                        }
+                    }
+                } catch { /* DB/API unavailable — fall back to CSV */ }
+
+                // 2) Fallback: the live Google Sheet CSV (legacy / not-yet-published clubs).
                 const response = await fetch(DATA_URL);
                 const reader = response.body.getReader();
-                const result = await reader.read(); // Read raw bytes
+                const result = await reader.read();
                 const decoder = new TextDecoder('utf-8');
-                const csv = decoder.decode(result.value); // Decode to string
-
+                const csv = decoder.decode(result.value);
                 Papa.parse(csv, {
                     header: false,
-                    complete: (results) => {
-                        const rows = results.data;
-                        let headerRowIndex = -1;
-
-                        for (let i = 0; i < rows.length; i++) {
-                            if (rows[i][0] && rows[i][0].includes('קבוצות')) {
-                                headerRowIndex = i;
-                                break;
-                            }
-                        }
-
-                        if (headerRowIndex !== -1) {
-                            const headerRow = rows[headerRowIndex];
-                            const dataRows = rows.slice(headerRowIndex + 1);
-
-                            // Dynamic Column Detection
-                            const teamIndex = 0;
-                            let coachIndex = headerRow.findIndex(h => h && (h.includes('מאמן') || h.toLowerCase().includes('coach') || h.toLowerCase().includes('trainer')));
-                            let typeIndex = headerRow.findIndex(h => h && (h.toLowerCase() === 'type' || h.includes('סוג'))); // Exact match preferred for 'type'
-                            let dayStartIndex = headerRow.findIndex(h => h && h.includes('ראשון'));
-
-                            // Fallbacks
-                            if (dayStartIndex === -1) {
-                                dayStartIndex = (coachIndex !== -1) ? coachIndex + 1 : 1;
-                            }
-                            setDayStart(dayStartIndex);
-
-                            // Extract Halls
-                            const locSet = new Set();
-                            dataRows.forEach(r => {
-                                for (let d = dayStartIndex; d < dayStartIndex + 7; d++) {
-                                    const c = r[d];
-                                    if (c && c.trim() && !c.toLowerCase().includes('xxx')) {
-                                        const parts = c.split('\n');
-                                        parts.forEach(p => {
-                                            const { location } = parseCellContent(p);
-                                            if (location && location.trim().length > 1) locSet.add(location.trim());
-                                        });
-                                    }
-                                }
-                            });
-                            setLocations(Array.from(locSet).sort());
-
-
-                            // Extract teams with unique identifiers
-                            const teamObjects = [];
-
-                            dataRows.forEach((row, rowIndex) => {
-                                const name = row[teamIndex];
-                                if (!name || name.trim() === '') return;
-
-                                // Filter out Banner rows
-                                if (['באנר', 'banner'].some(b => name.trim().toLowerCase().includes(b))) return;
-
-                                const typeVal = (typeIndex !== -1 && row[typeIndex]) ? row[typeIndex].trim().toUpperCase() : 'M'; // Default to M
-
-                                const coach = (coachIndex !== -1) ? row[coachIndex] : '';
-                                // Form unique label
-                                const label = coach ? `${name} - ${coach}` : name;
-
-                                // Calculate absolute row index (1-based for Sheet)
-                                const absoluteRow = headerRowIndex + 2 + rowIndex;
-
-                                teamObjects.push({
-                                    label: label,
-                                    value: rowIndex.toString(),
-                                    name: name.trim(),
-                                    coach: coach ? coach.trim() : '',
-                                    type: typeVal,
-                                    row: row,
-                                    rowIndex: rowIndex,
-                                    absoluteRow: absoluteRow
-                                });
-                            });
-
-                            setHeaders(headerRow);
-                            setTeams(teamObjects);
-                            setData(dataRows);
-
-                            // Set default team from Men's list if available
-                            const menTeams = teamObjects.filter(t => t.type !== 'W');
-
-                            // Check URL Params for deep linking
-                            const urlParams = new URLSearchParams(window.location.search);
-                            const sharedTeam = urlParams.get('team');
-                            let defaultTeamId = '';
-
-                            // A member is locked to their assigned team.
-                            if (memberTeam) {
-                                const found = teamObjects.find(t => t.label === memberTeam || t.name === memberTeam);
-                                if (found) defaultTeamId = found.value;
-                            }
-
-                            if (!defaultTeamId && sharedTeam) {
-                                const found = teamObjects.find(t => t.label === sharedTeam || t.name === sharedTeam);
-                                if (found) defaultTeamId = found.value;
-                            }
-
-                            if (!defaultTeamId && !memberTeam && menTeams.length > 0) {
-                                defaultTeamId = menTeams[0].value;
-                            }
-
-                            setSelectedTeamId(defaultTeamId);
-                        }
-                        setLoading(false);
-                    },
-                    error: (error) => {
-                        console.error('Error parsing CSV:', error);
-                        setLoading(false);
-                    }
+                    complete: (results) => { processRows(results.data); setLoading(false); },
+                    error: (error) => { console.error('Error parsing CSV:', error); setLoading(false); },
                 });
             } catch (error) {
                 console.error('Error fetching data:', error);

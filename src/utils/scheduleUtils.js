@@ -128,6 +128,40 @@ export const normalizeLocation = (loc) => {
     return loc.trim().toLowerCase().replace(/['"]+/g, '');
 };
 
+// --- DB sessions -> the same row/header model the UI already consumes ---
+// Lets the public views read from the DB (Phase 1) without rewriting their parsing.
+export const HEB_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+export const sessionsToRows = (sessions, weekStart) => {
+    const base = weekStart ? new Date(weekStart + 'T00:00:00') : null;
+    const dayHeader = (i) => {
+        if (!base) return HEB_DAYS[i];
+        const d = new Date(base); d.setDate(d.getDate() + i);
+        return `${HEB_DAYS[i]} ${d.getDate()}/${d.getMonth() + 1}`;
+    };
+    const header = ['קבוצות', 'מאמן', 'מגדר', ...Array.from({ length: 7 }, (_, i) => dayHeader(i))];
+
+    const map = new Map();
+    const order = [];
+    for (const s of sessions) {
+        const key = `${s.team || ''}||${s.coach || ''}`;
+        if (!map.has(key)) {
+            map.set(key, { team: s.team || '', coach: s.coach || '', gender: s.gender || 'M', days: Array.from({ length: 7 }, () => []) });
+            order.push(key);
+        }
+        const rec = map.get(key);
+        const idx = Number.isInteger(s.day_of_week) ? s.day_of_week : 0;
+        // Prefer the original cell text (note) so parseCellContent round-trips exactly.
+        const line = s.note || [s.start_time, s.hall].filter(Boolean).join(' ');
+        rec.days[idx].push(line);
+    }
+    const rows = order.map((k) => {
+        const r = map.get(k);
+        return [r.team, r.coach, r.gender, ...r.days.map((lines) => lines.join('\n'))];
+    });
+    return [header, ...rows];
+};
+
 // Helper: Parse Hebrew Date header "Sunday 25.1" to Date object
 export const parseHeaderDate = (header) => {
     // header format: "Name DD.MM" or "Name DD.MM.YY"

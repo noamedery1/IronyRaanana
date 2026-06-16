@@ -8,6 +8,8 @@ import ClubMessages from '../components/ClubMessages';
 import MessageCenter from '../components/MessageCenter';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
+import PublishPanel from '../components/PublishPanel';
+import { getActiveClub } from '../clubConfig.js';
 
 const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
 const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID}/edit?gid=0#gid=0`;
@@ -531,6 +533,8 @@ const AdminDashboard = () => {
                 return <InviteLinks />;
             case 'trainersAdmin':
                 return <TrainerManager liveApi={LIVE_SCRIPT_API} />;
+            case 'publish':
+                return <PublishPanel clubSlug={getActiveClub().slug} />;
             default:
                 return null;
         }
@@ -585,6 +589,12 @@ const AdminDashboard = () => {
                             title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
                         >
                             📅 בניית שבוע
+                        </button>
+                        <button
+                            style={menuButtonStyle(activeTab === 'publish')}
+                            onClick={() => setActiveTab('publish')}
+                        >
+                            🚀 פרסם לוז
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'preview')}
