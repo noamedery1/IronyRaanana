@@ -83,10 +83,13 @@ export default function SuperUser() {
         setBusy(true);
         setMsg('');
         try {
+            // One sheet field in the UI (publishUrl). Mirror it to dataUrl so the public
+            // CSV-fallback also has a source before the first publish.
+            const club = { ...form, dataUrl: form.publishUrl || form.dataUrl };
             const res = await fetch('/api/superuser/clubs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'x-superuser-token': token },
-                body: JSON.stringify({ club: form, icons }),
+                body: JSON.stringify({ club, icons }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.status === 401) { logout(); return; }
@@ -162,13 +165,11 @@ export default function SuperUser() {
                             <div style={{ flex: 1 }}><label style={labelStyle}>צבע רקע</label><input type="color" value={form.backgroundColor} onChange={(e) => setForm({ ...form, backgroundColor: e.target.value })} style={{ ...inputStyle, padding: '0.2rem', height: '42px' }} /></div>
                         </div>
                     </div>
-                    <div><label style={labelStyle}>קישור לנתונים (Google Sheet CSV)</label><input value={form.dataUrl} onChange={(e) => setForm({ ...form, dataUrl: e.target.value })} placeholder="https://docs.google.com/.../export?format=csv&gid=0" style={{ ...inputStyle, direction: 'ltr' }} /></div>
-                    <div><label style={labelStyle}>קישור לוז המנהל לפרסום (publishUrl — אם שונה ממקור הנתונים)</label><input value={form.publishUrl} onChange={(e) => setForm({ ...form, publishUrl: e.target.value })} placeholder="https://docs.google.com/.../export?format=csv&gid=0" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                    <div><label style={labelStyle}>קישור ללוז המנהל (Google Sheet CSV) — המערכת קוראת ממנו בלחיצת "פרסם לוז"</label><input value={form.publishUrl} onChange={(e) => setForm({ ...form, publishUrl: e.target.value })} placeholder="https://docs.google.com/.../export?format=csv&gid=0" style={{ ...inputStyle, direction: 'ltr' }} /></div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.8rem' }}>
                         <div><label style={labelStyle}>ענף</label><input value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} placeholder="football / basketball" style={{ ...inputStyle, direction: 'ltr' }} /></div>
-                        <div><label style={labelStyle}>מיילים של מנהל/ים לאישור בקשות (מופרד בפסיק)</label><input value={form.managerEmails} onChange={(e) => setForm({ ...form, managerEmails: e.target.value })} placeholder="manager@club.com, second@club.com" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                        <div><label style={{ ...labelStyle, color: '#fbbf24' }}>📧 מיילי מנהלים לקבלת בקשות לאישור (מופרד בפסיק)</label><input value={form.managerEmails} onChange={(e) => setForm({ ...form, managerEmails: e.target.value })} placeholder="manager@club.com, second@club.com" style={{ ...inputStyle, direction: 'ltr', border: '1px solid #fbbf24' }} /></div>
                     </div>
-                    <div><label style={labelStyle}>כתובת Apps Script (/exec) — אופציונלי (לוז טיוטה בלבד)</label><input value={form.sheetApi} onChange={(e) => setForm({ ...form, sheetApi: e.target.value })} placeholder="https://script.google.com/macros/s/.../exec" style={{ ...inputStyle, direction: 'ltr' }} /></div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
                         <div><label style={labelStyle}>אייקון 192px</label><input type="file" accept="image/png" onChange={(e) => onIcon('i192', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
