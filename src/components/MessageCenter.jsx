@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 
 // Manager messaging hub: send a push to any audience — whole club, all trainers, all
-// operators, a specific team's members, or one trainer. DB-backed (server broadcast
-// reads push_subscriptions and delivers via web-push).
+// operators, OR a multi-selection of specific teams / specific trainers. DB-backed.
 export default function MessageCenter() {
     const [target, setTarget] = useState('club'); // club|trainers|operators|team|trainer
     const [teams, setTeams] = useState([]);
     const [trainers, setTrainers] = useState([]);
-    const [team, setTeam] = useState('');
-    const [trainer, setTrainer] = useState('');
+    const [selTeams, setSelTeams] = useState({});      // name -> bool (multi)
+    const [selTrainers, setSelTrainers] = useState({}); // name -> bool (multi)
     const [body, setBody] = useState('');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
@@ -23,28 +22,35 @@ export default function MessageCenter() {
             .then((d) => setTrainers((d.trainers || []).map((t) => t.name))).catch(() => {});
     }, [slug]);
 
-    const segment = () => {
-        if (target === 'club') return '';
-        if (target === 'trainers') return '__TRAINER';
-        if (target === 'operators') return '__OPERATOR__';
-        if (target === 'team') return team ? 'team:' + team : null;
-        if (target === 'trainer') return trainer ? '__TRAINER__:' + trainer : null;
-        return '';
+    const chosen = (map) => Object.keys(map).filter((k) => map[k]);
+
+    // Returns the list of push segments to send to (one broadcast per segment).
+    const segments = () => {
+        if (target === 'club') return [''];
+        if (target === 'trainers') return ['__TRAINER'];
+        if (target === 'operators') return ['__OPERATOR__'];
+        if (target === 'team') return chosen(selTeams).map((t) => 'team:' + t);
+        if (target === 'trainer') return chosen(selTrainers).map((t) => '__TRAINER__:' + t);
+        return [];
     };
 
     const send = async () => {
         if (!body.trim()) { setMsg('הקלד הודעה'); return; }
-        const seg = segment();
-        if (seg === null) { setMsg('בחר קבוצה / מאמן'); return; }
+        const segs = segments();
+        if (segs.length === 0) { setMsg('בחר לפחות קבוצה / מאמן אחד'); return; }
         setBusy(true); setMsg('');
+        let sent = 0, failed = 0, errs = 0;
         try {
-            const r = await fetch(`/api/${slug}/broadcast`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, segment: seg }),
-            });
-            const d = await r.json().catch(() => ({}));
-            if (d.error) setMsg('שגיאה: ' + d.error);
-            else { setMsg(`✓ נשלח (${d.sent || 0} מכשירים${d.failed ? ', ' + d.failed + ' נכשלו' : ''})`); setBody(''); }
+            for (const seg of segs) {
+                const r = await fetch(`/api/${slug}/broadcast`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, segment: seg }),
+                });
+                const d = await r.json().catch(() => ({ error: 'x' }));
+                if (d.error) errs++; else { sent += d.sent || 0; failed += d.failed || 0; }
+            }
+            if (errs) setMsg(`⚠️ נכשלו ${errs} שליחות`);
+            else { setMsg(`✓ נשלח ל-${segs.length} יעדים (${sent} מכשירים${failed ? `, ${failed} נכשלו` : ''})`); setBody(''); }
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
     };
 
@@ -53,6 +59,26 @@ export default function MessageCenter() {
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontWeight: 600 }}>
             <input type="radio" checked={target === val} onChange={() => setTarget(val)} /> {label}
         </label>
+    );
+
+    // Multi-select checkbox grid with select-all / clear.
+    const picker = (items, map, setMap, emptyLabel) => (
+        <div style={{ marginTop: '0.6rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <button type="button" onClick={() => setMap(Object.fromEntries(items.map((i) => [i, true])))}
+                    style={{ ...chipBtn }}>בחר הכל</button>
+                <button type="button" onClick={() => setMap({})} style={{ ...chipBtn }}>נקה</button>
+                <span style={{ color: '#64748b', fontSize: '0.85rem', alignSelf: 'center' }}>נבחרו {chosen(map).length}</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.3rem', maxHeight: 200, overflowY: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.6rem' }}>
+                {items.length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{emptyLabel}</span>}
+                {items.map((name) => (
+                    <label key={name} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.9rem' }}>
+                        <input type="checkbox" checked={!!map[name]} onChange={() => setMap((m) => ({ ...m, [name]: !m[name] }))} /> {name}
+                    </label>
+                ))}
+            </div>
+        </div>
     );
 
     return (
@@ -65,22 +91,12 @@ export default function MessageCenter() {
                 {radio('club', '🏛️ כל המועדון')}
                 {radio('trainers', '🏀 כל המאמנים')}
                 {radio('operators', '🔑 כל המפעילים')}
-                {radio('team', '👥 קבוצה מסוימת')}
-                {radio('trainer', '👤 מאמן מסוים')}
+                {radio('team', '👥 קבוצות (בחירה מרובה)')}
+                {radio('trainer', '👤 מאמנים (בחירה מרובה)')}
             </div>
 
-            {target === 'team' && (
-                <select value={team} onChange={(e) => setTeam(e.target.value)} style={{ ...input, marginTop: '0.6rem' }}>
-                    <option value="">בחר קבוצה...</option>
-                    {teams.map((tm) => <option key={tm} value={tm}>{tm}</option>)}
-                </select>
-            )}
-            {target === 'trainer' && (
-                <select value={trainer} onChange={(e) => setTrainer(e.target.value)} style={{ ...input, marginTop: '0.6rem' }}>
-                    <option value="">בחר מאמן...</option>
-                    {trainers.map((tn) => <option key={tn} value={tn}>{tn}</option>)}
-                </select>
-            )}
+            {target === 'team' && picker(teams, selTeams, setSelTeams, 'אין קבוצות — פרסם לו"ז תחילה')}
+            {target === 'trainer' && picker(trainers, selTrainers, setSelTrainers, 'אין מאמנים')}
 
             <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>תוכן ההודעה</label>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} placeholder="לדוגמה: אימון מחר יתקיים כרגיל" style={{ ...input, resize: 'vertical' }} />
@@ -92,3 +108,5 @@ export default function MessageCenter() {
         </div>
     );
 }
+
+const chipBtn = { background: '#eef2f7', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 };
