@@ -37,4 +37,5 @@ data_test
 *.njsproj
 *.sln
 *.sw?
-/squadio-*.png
+/squadio-sales*.png
+/squadio-sales*.jpeg
