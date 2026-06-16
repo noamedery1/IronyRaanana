@@ -1,21 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" width="360" height="96" role="img" aria-label="Squadio">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100" width="360" height="100" role="img" aria-label="Squadio">
   <defs>
-    <linearGradient id="sq-g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6366f1"/>
-      <stop offset="0.55" stop-color="#8b5cf6"/>
-      <stop offset="1" stop-color="#a855f7"/>
+    <linearGradient id="sq-shield" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#0d9488"/>
     </linearGradient>
   </defs>
-  <!-- icon mark: gradient tile + schedule rows in an S flow + live dot -->
-  <rect x="8" y="16" width="64" height="64" rx="18" fill="url(#sq-g)"/>
-  <g fill="#ffffff">
-    <rect x="22" y="32" width="34" height="9" rx="4.5"/>
-    <rect x="30" y="43.5" width="26" height="9" rx="4.5" opacity="0.92"/>
-    <rect x="22" y="55" width="34" height="9" rx="4.5" opacity="0.82"/>
+  <!-- club crest / shield -->
+  <path d="M50 12 L86 23 V49 C86 71 70 84 50 90 C30 84 14 71 14 49 V23 Z"
+        fill="url(#sq-shield)"/>
+  <path d="M50 12 L86 23 V49 C86 71 70 84 50 90 C30 84 14 71 14 49 V23 Z"
+        fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="2"/>
+  <!-- upward chevrons = momentum / progress -->
+  <g fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M34 54 L50 40 L66 54"/>
+    <path d="M34 66 L50 52 L66 66" stroke-opacity="0.55"/>
   </g>
-  <circle cx="64" cy="24" r="7" fill="#22d3ee" stroke="#0b1020" stroke-width="3"/>
+  <!-- live dot -->
+  <circle cx="78" cy="22" r="7" fill="#38bdf8" stroke="#0b1220" stroke-width="3"/>
   <!-- wordmark -->
-  <text x="88" y="62" font-family="Poppins, Heebo, Arial, sans-serif" font-size="40" font-weight="800" letter-spacing="-1" fill="#0b1020">
-    Squad<tspan fill="#6366f1">io</tspan>
+  <text x="104" y="64" font-family="Poppins, Heebo, Arial, sans-serif" font-size="42" font-weight="800" letter-spacing="-1" fill="#0b1220">
+    Squad<tspan fill="#0d9488">io</tspan>
   </text>
 </svg>
