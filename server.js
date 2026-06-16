@@ -6,6 +6,10 @@ import webpush from 'web-push';
 import { buildTeamICSFromCsv } from './server/scheduleCore.js';
 import { publishClub, getLiveSchedule, listPublications } from './server/publish.js';
 import {
+    listTrainers, saveTrainer, deleteTrainer, authTrainer,
+    registerUser, authUser, listTeams, upsertTeam, deleteTeam,
+} from './server/people.js';
+import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveIcon, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
 
@@ -96,6 +100,43 @@ app.get('/api/:club/publications', async (req, res) => {
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
+});
+
+// ===== Phase 2: trainers / members / teams in the DB =====
+const ok = (res, p) => res.json(p);
+const fail = (res, e) => res.status(500).json({ error: e.message });
+
+// Trainers
+app.get('/api/:club/trainers', async (req, res) => {
+    try { ok(res, { trainers: await listTrainers(req.params.club) }); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/trainers', async (req, res) => {
+    try { ok(res, await saveTrainer(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/:club/trainers/:name', async (req, res) => {
+    try { ok(res, await deleteTrainer(req.params.club, req.params.name)); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/trainers/auth', async (req, res) => {
+    try { ok(res, await authTrainer(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+
+// Members / operators
+app.post('/api/:club/users', async (req, res) => {
+    try { ok(res, await registerUser(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/:club/users/auth', async (req, res) => {
+    try { ok(res, await authUser(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+
+// Teams (add / update / list / delete)
+app.get('/api/:club/teams', async (req, res) => {
+    try { ok(res, { teams: await listTeams(req.params.club) }); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/teams', async (req, res) => {
+    try { ok(res, await upsertTeam(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/:club/teams/:id', async (req, res) => {
+    try { ok(res, await deleteTeam(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
 });
 
 // Dynamic per-club Web App Manifest (must be registered before the dist static handler).

@@ -42,10 +42,10 @@ export async function loadIdentity() {
     const token = localStorage.getItem('userToken');
     if (!token) return null;
     try {
-        const res = await fetch(getActiveClub().sheetApi, {
+        const res = await fetch(`/api/${getActiveClub().slug}/users/auth`, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'userAuth', token }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
         });
         const data = await res.json();
         if (data.valid) {

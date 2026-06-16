@@ -119,10 +119,10 @@ const TrainerPortal = () => {
         }
         const token = localStorage.getItem('trainerToken') || new URLSearchParams(window.location.search).get('t');
         if (!token) return;
-        fetch(LIVE_SHEET_API, {
+        fetch(`/api/${getActiveClub().slug}/trainers/auth`, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'trainerAuth', token }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
         })
             .then((r) => r.json())
             .then((data) => {
@@ -138,10 +138,10 @@ const TrainerPortal = () => {
         setLoading(true);
         setError('');
         try {
-            const result = await fetch(LIVE_SHEET_API, {
+            const result = await fetch(`/api/${getActiveClub().slug}/trainers/auth`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 'text/plain' avoids CORS preflight
-                body: JSON.stringify({ action: 'trainerAuth', name: loginName, code: loginCode }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: loginName, code: loginCode }),
             });
             const data = await result.json();
             if (data.valid) applyAuth(data);

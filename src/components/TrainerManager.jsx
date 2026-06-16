@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import Papa from 'papaparse';
 import { getActiveClub } from '../clubConfig.js';
 
-// Manager tool: add / edit / delete trainers. One row per trainer (teams merged), search
-// + sort by name, and team selection from the board's team list (with a free-text extra).
-export default function TrainerManager({ liveApi }) {
+// Manager tool: add / edit / delete trainers (in the DB). One row per trainer (teams
+// merged), search + sort by name, team selection from the DB teams list (+ free-text extra).
+export default function TrainerManager() {
     const [trainers, setTrainers] = useState([]);
     const [boardTeams, setBoardTeams] = useState([]);
     const [search, setSearch] = useState('');
@@ -13,34 +12,24 @@ export default function TrainerManager({ liveApi }) {
     const [code, setCode] = useState('');
     const [sel, setSel] = useState({});   // selected team -> bool
     const [extra, setExtra] = useState(''); // free-text extra teams (comma separated)
-    const [pw, setPw] = useState(() => localStorage.getItem('managerPushPw') || '');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
 
-    const post = useCallback((action, extraBody) => fetch(liveApi, {
-        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, password: pw, ...extraBody }),
-    }).then((r) => r.json()), [liveApi, pw]);
+    const slug = getActiveClub().slug;
 
     const load = useCallback(() => {
-        post('listTrainers', {}).then((d) => { if (d.trainers) setTrainers(d.trainers); else if (d.error) setMsg('שגיאה: ' + d.error); }).catch(() => setMsg('שגיאת תקשורת'));
-    }, [post]);
+        fetch(`/api/${slug}/trainers`).then((r) => r.json())
+            .then((d) => { if (d.trainers) setTrainers(d.trainers); else if (d.error) setMsg('שגיאה: ' + d.error); })
+            .catch(() => setMsg('שגיאת תקשורת'));
+    }, [slug]);
 
     useEffect(() => { load(); }, [load]);
 
     useEffect(() => {
-        Papa.parse(getActiveClub().dataUrl, {
-            download: true,
-            complete: (res) => {
-                const rows = res.data; let h = -1;
-                for (let i = 0; i < rows.length; i++) if (rows[i][0] && rows[i][0].includes('קבוצות')) { h = i; break; }
-                if (h === -1) return;
-                const s = new Set();
-                rows.slice(h + 1).forEach((r) => { const n = (r[0] || '').toString().trim(); if (n && !n.toLowerCase().includes('xxx')) s.add(n); });
-                setBoardTeams([...s].sort((a, b) => a.localeCompare(b, 'he')));
-            },
-        });
-    }, []);
+        fetch(`/api/${slug}/teams`).then((r) => r.json())
+            .then((d) => { if (d.teams) setBoardTeams(d.teams.map((t) => t.name).sort((a, b) => a.localeCompare(b, 'he'))); })
+            .catch(() => { /* server may be down in dev */ });
+    }, [slug]);
 
     const resetForm = () => { setEditing(null); setName(''); setCode(''); setSel({}); setExtra(''); };
 
@@ -64,8 +53,11 @@ export default function TrainerManager({ liveApi }) {
         ];
         // de-dup
         const uniq = [...new Set(teams)].join(', ');
-        setBusy(true); setMsg(''); localStorage.setItem('managerPushPw', pw);
-        const d = await post('saveTrainer', { name, code, teams: uniq }).catch(() => ({ error: 'תקשורת' }));
+        setBusy(true); setMsg('');
+        const d = await fetch(`/api/${slug}/trainers`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, code, teams: uniq }),
+        }).then((r) => r.json()).catch(() => ({ error: 'תקשורת' }));
         if (d.error) setMsg('שגיאה: ' + d.error);
         else { setMsg('✓ נשמר ' + name); resetForm(); load(); }
         setBusy(false);
@@ -73,7 +65,8 @@ export default function TrainerManager({ liveApi }) {
 
     const remove = async (n) => {
         if (!confirm('למחוק את המאמן "' + n + '"?')) return;
-        const d = await post('deleteTrainer', { name: n }).catch(() => ({ error: 'תקשורת' }));
+        const d = await fetch(`/api/${slug}/trainers/${encodeURIComponent(n)}`, { method: 'DELETE' })
+            .then((r) => r.json()).catch(() => ({ error: 'תקשורת' }));
         if (d.error) setMsg('שגיאה: ' + d.error); else { if (editing === n) resetForm(); load(); }
     };
 
@@ -102,8 +95,6 @@ export default function TrainerManager({ liveApi }) {
                     ))}
                 </div>
                 <input value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="קבוצות נוספות (מופרדות בפסיק) — אם לא ברשימה" style={{ ...input, marginTop: '0.5rem' }} />
-
-                <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="סיסמת מנהל (אם הוגדרה בשרת)" style={{ ...input, marginTop: '0.6rem' }} />
 
                 <div style={{ marginTop: '0.8rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <button onClick={save} disabled={busy} style={{ background: '#ff7a18', color: 'white', border: 'none', padding: '0.6rem 1.3rem', borderRadius: '8px', fontWeight: 'bold', cursor: busy ? 'wait' : 'pointer' }}>

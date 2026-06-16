@@ -28,10 +28,10 @@ export default function Join() {
         setLoading(true);
         setError('');
         try {
-            const res = await fetch(getActiveClub().sheetApi, {
+            const res = await fetch(`/api/${slug}/users`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'registerUser', role, team, name, email, phone }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role, team, name, email, phone }),
             });
             const data = await res.json();
             if (!data.valid) { setError(data.error || 'הרשמה נכשלה'); return; }

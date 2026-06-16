@@ -532,7 +532,7 @@ const AdminDashboard = () => {
             case 'invites':
                 return <InviteLinks />;
             case 'trainersAdmin':
-                return <TrainerManager liveApi={LIVE_SCRIPT_API} />;
+                return <TrainerManager />;
             case 'publish':
                 return <PublishPanel clubSlug={getActiveClub().slug} />;
             default:

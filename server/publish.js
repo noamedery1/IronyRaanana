@@ -5,6 +5,7 @@ import Papa from 'papaparse';
 import { pool, withTx } from './db.js';
 import { parseCellContent, parseHeaderDate, parseTime } from './scheduleCore.js';
 import { getClub } from './clubsStore.js';
+import { seedTeamsFromSessions } from './people.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -122,6 +123,8 @@ export async function publishClub(slug, { weekStart: forced, publishedBy = 'admi
                 [pubId, clubId, s.team, s.coach || null, s.gender, s.hall, s.date, s.day_of_week, s.start_time, s.end_time, s.type, s.status, s.note],
             );
         }
+
+        await seedTeamsFromSessions(cx, clubId, pubId); // keep the teams table in sync
 
         await cx.query(
             `INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff)
