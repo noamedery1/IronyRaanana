@@ -12,6 +12,8 @@ self.addEventListener('push', (event) => {
 
     const title = payload.title || 'עירוני רעננה כדורסל';
     const icon = payload.icon || '/pwa-192x192.png';
+    const data = payload.data || {};
+    if (payload.url && !data.url) data.url = payload.url;
     const options = {
         body: payload.body || '',
         icon: icon,
@@ -20,7 +22,8 @@ self.addEventListener('push', (event) => {
         lang: 'he',
         tag: payload.tag || 'schedule-update',
         renotify: true,
-        data: { url: payload.url || '/' },
+        data: data,
+        actions: Array.isArray(payload.actions) ? payload.actions : [],
     };
 
     event.waitUntil(self.registration.showNotification(title, options));
@@ -28,7 +31,19 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const target = (event.notification.data && event.notification.data.url) || '/';
+    const data = event.notification.data || {};
+
+    // Manager approve/reject straight from the notification — hit the signed server link,
+    // no need to open the app or read email.
+    if ((event.action === 'approve' || event.action === 'reject') && data[event.action + 'Url']) {
+        const ok = event.action === 'approve';
+        event.waitUntil(fetch(data[event.action + 'Url']).then(() =>
+            self.registration.showNotification(ok ? '✅ הבקשה אושרה' : 'הבקשה נדחתה',
+                { body: data.label || '', icon: '/pwa-192x192.png', tag: 'req-result' })));
+        return;
+    }
+
+    const target = data.url || '/';
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             // Only focus a window that's already on the target path — don't hijack the

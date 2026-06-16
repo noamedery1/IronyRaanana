@@ -30,7 +30,7 @@ export async function unregisterPush(slug, { endpoint }) {
 
 // Deliver to a segment. '' = whole club; 'team:X' / '__TRAINER__:X' / '__OPERATOR__' match
 // exactly or by prefix (so '__TRAINER__' hits every '__TRAINER__:name').
-export async function broadcast(slug, { segment = '', title, body, url, icon }) {
+export async function broadcast(slug, { segment = '', title, body, url, icon, data, actions }) {
     const cid = await clubId(slug);
     const seg = (segment || '').toString();
     // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).
@@ -45,6 +45,7 @@ export async function broadcast(slug, { segment = '', title, body, url, icon }) 
     const payload = JSON.stringify({
         title: title || 'הודעה מהמועדון', body: body || '',
         url: url || `/${slug}`, icon: icon || '/pwa-192x192.png',
+        data: data || {}, actions: actions || [],
     });
     let sent = 0, failed = 0;
     const expired = [];

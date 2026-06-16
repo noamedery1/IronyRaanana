@@ -11,6 +11,7 @@ import TrainerManager from '../components/TrainerManager';
 import PublishPanel from '../components/PublishPanel';
 import ApprovalsPanel from '../components/ApprovalsPanel';
 import { getActiveClub } from '../clubConfig.js';
+import { subscribeToPush } from '../push.js';
 
 const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
 const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID}/edit?gid=0#gid=0`;
@@ -76,6 +77,12 @@ const AdminDashboard = () => {
     const handleLogout = () => {
         localStorage.removeItem('isAdmin');
         navigate('/admin');
+    };
+
+    // Subscribe THIS device to manager push (approve/reject from the notification).
+    const enableManagerPush = async () => {
+        const r = await subscribeToPush('__MANAGER__');
+        alert(r.ok ? '🔔 התראות מנהל הופעלו במכשיר זה' : 'לא הופעל: ' + (r.reason || 'דפדפן לא נתמך / נדרש build'));
     };
 
     const handleClearRules = () => {
@@ -566,6 +573,13 @@ const AdminDashboard = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <a href="/" target="_blank" style={{ textDecoration: 'none', color: 'var(--sky)', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>
                     <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>שלום, Admin</span>
+                    <button
+                        onClick={enableManagerPush}
+                        title="קבל התראות על בקשות שינוי ואשר ישירות מההתראה"
+                        style={{ background: 'var(--glass-bg)', color: 'var(--text)', border: '1px solid var(--glass-border)', padding: '0.5rem 0.9rem', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}
+                    >
+                        🔔 התראות מנהל
+                    </button>
                     <button
                         onClick={handleLogout}
                         style={{ background: 'var(--glass-bg)', color: 'var(--text)', border: '1px solid var(--glass-border)', padding: '0.5rem 1rem', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}

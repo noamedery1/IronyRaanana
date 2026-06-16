@@ -44,7 +44,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // Pull our Web Push handlers into the generated service worker.
         // Bump the ?v when push-sw.js changes to force the SW (and the imported script) to update.
-        importScripts: ['push-sw.js?v=3'],
+        importScripts: ['push-sw.js?v=4'],
         navigateFallbackDenylist: [/^\/calendar\.ics/, /^\/sales-landing/],
         runtimeCaching: [
           {

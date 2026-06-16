@@ -40,6 +40,28 @@ async function notifyManager(slug, id, p) {
     await sendEmail({ to, subject: `בקשת שינוי — ${p.team || ''} (${p.trainerName || ''})`, html });
 }
 
+// Push the manager(s) with one-tap approve/reject action buttons (handled in push-sw.js).
+async function pushManager(slug, id, p) {
+    const base = process.env.APP_BASE_URL || '';
+    const tok = signId(id);
+    const change = p.type === 'cancel' ? 'ביטול'
+        : p.type === 'move' ? `העברה ליום ${p.newDay || ''}`
+            : `שינוי ל-${p.newTime || ''} ${p.newLocation || ''}`;
+    await broadcast(slug, {
+        segment: '__MANAGER__',
+        title: `בקשת שינוי — ${p.team || ''}`,
+        body: `${p.trainerName || ''}: ${change}`,
+        url: `${base}/admin/dashboard`,
+        data: {
+            approveUrl: `${base}/api/${slug}/requests/${id}/approve?token=${tok}`,
+            rejectUrl: `${base}/api/${slug}/requests/${id}/reject?token=${tok}`,
+            label: `${p.team || ''} — ${change}`,
+            url: `${base}/admin/dashboard`,
+        },
+        actions: [{ action: 'approve', title: '✅ אשר' }, { action: 'reject', title: '❌ דחה' }],
+    });
+}
+
 const HEB_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 // Strip bidi control marks + normalize so day names match regardless of source encoding.
 const norm = (s) => (s || '').toString().replace(/[‎‏‪-‮⁦-⁩]/g, '').normalize('NFC').trim();
@@ -82,8 +104,10 @@ export async function createRequest(slug, body) {
         [cid, sessionId, trainerName || '', type.toString().toLowerCase(), proposed, reason || ''],
     );
     const id = r.rows[0].id;
-    // notify the manager by email (best-effort) with one-click approve/reject links
-    notifyManager(slug, id, { trainerName, team, day, time, type: type.toString().toLowerCase(), newTime, newLocation, newDay, reason }).catch(() => {});
+    // notify the manager: email with signed links + push with approve/reject action buttons
+    const info = { trainerName, team, day, time, type: type.toString().toLowerCase(), newTime, newLocation, newDay, reason };
+    notifyManager(slug, id, info).catch(() => {});
+    pushManager(slug, id, info).catch(() => {});
     return { ok: true, id };
 }
 
