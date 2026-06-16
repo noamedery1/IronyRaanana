@@ -868,3 +868,51 @@
 /* cohesion: gender switch + active pills follow the azure→cyan accent */
 .app-container .gender-btn.men.on,
 .app-container .gender-btn.women.on{background:var(--grad);color:#fff}
+
+/* ============================================================
+   REDESIGN v4 — break the grid: timeline, airy hero, motion
+   ============================================================ */
+@keyframes sqUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* hero — airy, borderless-ish, flowing glow + dynamic underline */
+.app-container .hero{gap:1rem}
+.app-container .hero-card,.app-container .map-card{border:1px solid rgba(255,255,255,.05);border-radius:26px;animation:sqUp .55s both}
+.app-container .hero-card{overflow:hidden}
+.app-container .hero-card::after{
+  content:'';position:absolute;width:360px;height:360px;border-radius:50%;
+  right:-130px;top:-150px;inset:auto;background:radial-gradient(circle,rgba(34,211,238,.32),transparent 70%);
+  z-index:0;pointer-events:none;animation:none;
+}
+.app-container .hero-time{font-size:2.7rem;display:inline-block;position:relative;padding-bottom:.18rem}
+.app-container .hero-time::after{content:'';position:absolute;right:0;bottom:0;width:2.2em;height:4px;border-radius:4px;background:var(--grad)}
+
+/* weekly schedule -> vertical TIMELINE (no boxes) */
+.app-container .schedule-grid{display:flex;flex-direction:column;gap:0;background:none;border:none;padding:.2rem 0 0}
+.app-container .schedule-card{
+  background:transparent;border:none;border-radius:0;box-shadow:none;overflow:visible;margin:0;
+  padding:.3rem 1.5rem 1.6rem;position:relative;border-right:2px solid rgba(34,211,238,.16);
+  animation:sqUp .5s both;
+}
+.app-container .schedule-card::after{display:none}
+.app-container .schedule-card::before{
+  content:'';position:absolute;right:-7px;top:.7rem;width:13px;height:13px;border-radius:50%;
+  background:var(--grad);box-shadow:0 0 0 4px #0a0f1b,0 0 14px rgba(34,211,238,.55);transition:transform .15s;
+}
+.app-container .schedule-card:hover{transform:none}
+.app-container .schedule-card:hover::before{transform:scale(1.3)}
+.app-container .day-header{border:none;padding:0;margin-bottom:.5rem}
+.app-container .day-name{font-size:1.18rem;font-weight:800}
+.app-container .events-container{display:flex;flex-direction:column;gap:.5rem}
+.app-container .event-item{background:rgba(255,255,255,.03);border:none;border-radius:13px;padding:.7rem .95rem;transition:background .15s}
+.app-container .event-item:hover{background:rgba(34,211,238,.07)}
+.app-container .schedule-card:nth-child(1){animation-delay:.04s}
+.app-container .schedule-card:nth-child(2){animation-delay:.10s}
+.app-container .schedule-card:nth-child(3){animation-delay:.16s}
+.app-container .schedule-card:nth-child(4){animation-delay:.22s}
+.app-container .schedule-card:nth-child(5){animation-delay:.28s}
+.app-container .schedule-card:nth-child(6){animation-delay:.34s}
+.app-container .schedule-card:nth-child(7){animation-delay:.40s}
+
+/* halls/daily — soften boxes, add lift */
+.app-container .hall-box,.app-container .rv-day,.app-container .dv-day{border-radius:18px;border-color:rgba(255,255,255,.05);transition:transform .15s,border-color .15s}
+.app-container .hall-box:hover{transform:translateY(-3px);border-color:rgba(34,211,238,.35)}
