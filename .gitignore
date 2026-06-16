@@ -16,6 +16,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# Playwright MCP scratch artifacts (manual verification screenshots/snapshots)
+.playwright-mcp
+
 # Superuser club store (lives on the Railway volume, never in git)
 data
 data_test
