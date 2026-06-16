@@ -5,7 +5,9 @@
 import { getActiveClub } from './clubConfig.js';
 
 // Public VAPID key — safe to ship to the client. The matching private key lives only on the server.
-const VAPID_PUBLIC_KEY = 'BHRSmWUH9tdilK-Xh31VGoEMGb9jMZayZSk8znHbbPz-1ZdNswqttSUjXWEBrxsgg5KmEqT8xgm5s-QqPG5RCcw';
+// Dev override (VITE_VAPID_PUBLIC_KEY) lets local push match the local server keypair.
+const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
+    || 'BHRSmWUH9tdilK-Xh31VGoEMGb9jMZayZSk8znHbbPz-1ZdNswqttSUjXWEBrxsgg5KmEqT8xgm5s-QqPG5RCcw';
 
 export function pushSupported() {
     return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
