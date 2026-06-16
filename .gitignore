@@ -39,3 +39,4 @@ data_test
 *.sw?
 /squadio-sales*.png
 /squadio-sales*.jpeg
+/db-*.jpeg

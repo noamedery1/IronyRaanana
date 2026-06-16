@@ -35,6 +35,7 @@ function PublicSchedule() {
     const [dayStart, setDayStart] = useState(1);
 
     const [selectedTeamId, setSelectedTeamId] = useState('');
+    const [floatingMsg, setFloatingMsg] = useState(null);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -156,6 +157,15 @@ function PublicSchedule() {
         };
 
         fetchData();
+    }, []);
+
+    // Club settings: floating banner + hall addresses (bridged to localStorage for nav).
+    useEffect(() => {
+        fetch(`/api/${club.slug}/settings/floatingMessage`).then((r) => r.json())
+            .then((d) => setFloatingMsg(d.value || null)).catch(() => { });
+        fetch(`/api/${club.slug}/halls`).then((r) => r.json())
+            .then((d) => { if (d.config) localStorage.setItem('raananaHallConfig', JSON.stringify(d.config)); })
+            .catch(() => { });
     }, []);
 
     const getTeamObj = () => {
@@ -339,6 +349,12 @@ function PublicSchedule() {
                     {!memberTeam && <Link to="/admin" className="admin-gear" title={t('admin')}>⚙</Link>}
                 </div>
             </nav>
+
+            {floatingMsg?.enabled && floatingMsg.text && (
+                <div style={{ background: 'linear-gradient(135deg,#34d399,#0d9488)', color: '#06231c', fontWeight: 700, textAlign: 'center', padding: '0.6rem 1rem', fontSize: '0.95rem' }}>
+                    📣 {floatingMsg.text}
+                </div>
+            )}
 
             <LeagueGamesBanner data={data} headers={headers} targetGender="M" />
 

@@ -12,6 +12,7 @@ import {
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
+import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveIcon, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -169,6 +170,22 @@ app.delete('/api/:club/email-subscribers', async (req, res) => {
 // Feedback
 app.post('/api/:club/feedback', async (req, res) => {
     try { ok(res, await saveFeedback(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Halls config (DB-backed; list derived from the live schedule)
+app.get('/api/:club/halls', async (req, res) => {
+    try { ok(res, await listHalls(req.params.club)); } catch (e) { fail(res, e); }
+});
+app.put('/api/:club/halls', async (req, res) => {
+    try { ok(res, await saveHalls(req.params.club, (req.body || {}).config || {})); } catch (e) { fail(res, e); }
+});
+
+// Generic per-club settings (e.g. floatingMessage)
+app.get('/api/:club/settings/:key', async (req, res) => {
+    try { ok(res, { value: await getSetting(req.params.club, req.params.key) }); } catch (e) { fail(res, e); }
+});
+app.put('/api/:club/settings/:key', async (req, res) => {
+    try { ok(res, await setSetting(req.params.club, req.params.key, (req.body || {}).value)); } catch (e) { fail(res, e); }
 });
 
 // Change requests + manager approval

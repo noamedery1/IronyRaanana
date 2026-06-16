@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 import WeekBuilder from '../components/WeekBuilder';
 import Preview from '../components/Preview';
 import HallsConfig from '../components/HallsConfig';
-import ClubMessages from '../components/ClubMessages';
+import FloatingMessage from '../components/FloatingMessage';
 import MessageCenter from '../components/MessageCenter';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
@@ -514,27 +514,9 @@ const AdminDashboard = () => {
                     />
                 );
             case 'halls':
-                return (
-                    <HallsConfig
-                        rawRows={sheetData?.rawRows || []}
-                        indices={sheetData?.indices}
-                        hallConfig={hallConfig}
-                        setHallConfig={setHallConfig}
-                    />
-                );
+                return <HallsConfig clubSlug={getActiveClub().slug} />;
             case 'messages':
-                return (
-                    <ClubMessages
-                        rawRows={sheetData?.rawRows || []}
-                        currentSchedule={currentSchedule}
-                        setCurrentSchedule={setCurrentSchedule}
-                        headers={sheetData?.headers || []}
-                        indices={sheetData?.indices}
-                        saveUrl={saveUrl}
-                        sheetName={sheetName}
-                        sheetId={extractSheetId(sheetUrl)}
-                    />
-                );
+                return <FloatingMessage clubSlug={getActiveClub().slug} />;
             case 'trainerPush':
                 return <MessageCenter />;
             case 'invites':
@@ -629,18 +611,14 @@ const AdminDashboard = () => {
                         <button
                             style={menuButtonStyle(activeTab === 'halls')}
                             onClick={() => setActiveTab('halls')}
-                            disabled={!isConnected}
-                            title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
                         >
                             🏟️ הגדרת אולמות
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'messages')}
                             onClick={() => setActiveTab('messages')}
-                            disabled={!isConnected}
-                            title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
                         >
-                            📣 הודעות צפות
+                            📣 הודעה צפה
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'trainerPush')}

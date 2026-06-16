@@ -1,57 +1,51 @@
-import { useMemo } from 'react';
-import { cleanHallName } from '../utils/hallLocations';
+import { useEffect, useState, useCallback } from 'react';
 
 /**
- * Hall settings page.
- * Lets the admin define, per hall:
- *   - capacity type: FULL (1 team) | HALF (2 teams, half-court each) | MULTI (N courts)
- *   - exact address (used by the public map / navigation)
- * Stored in `hallConfig` (object keyed by cleaned hall name) and persisted to localStorage
- * by the parent dashboard. Drives conflict detection in the Preview board.
+ * Hall settings page (DB-backed). The hall list comes from the published live schedule,
+ * so it works without connecting the manager's Excel. Per hall: capacity type + address.
  */
-export default function HallsConfig({ rawRows, indices, hallConfig, setHallConfig }) {
-    const dayStart = indices?.dayStart || 1;
+export default function HallsConfig({ clubSlug }) {
+    const [halls, setHalls] = useState([]);
+    const [config, setConfig] = useState({});
+    const [msg, setMsg] = useState('');
+    const [busy, setBusy] = useState(false);
 
-    const halls = useMemo(() => {
-        const set = new Set();
-        (rawRows || []).forEach(row => {
-            for (let d = 0; d < 7; d++) {
-                const cell = row?.[dayStart + d];
-                if (!cell || typeof cell !== 'string') continue;
-                cell.split('\n').forEach(line => {
-                    const name = cleanHallName(line);
-                    if (name && name.length > 1) set.add(name);
-                });
-            }
-        });
-        return Array.from(set).sort((a, b) => a.localeCompare(b, 'he'));
-    }, [rawRows, dayStart]);
+    const load = useCallback(() => {
+        fetch(`/api/${clubSlug}/halls`).then((r) => r.json())
+            .then((d) => { if (d.halls) { setHalls(d.halls); setConfig(d.config || {}); } })
+            .catch(() => setMsg('שגיאת תקשורת'));
+    }, [clubSlug]);
 
-    const getCfg = (hall) => hallConfig[hall] || { type: 'FULL', courts: 2, address: '' };
+    useEffect(() => { load(); }, [load]);
 
-    const update = (hall, changes) => {
-        setHallConfig(prev => ({ ...prev, [hall]: { ...getCfg(hall), ...changes } }));
+    const getCfg = (hall) => config[hall] || { type: 'FULL', courts: 2, address: '' };
+    const update = (hall, changes) => setConfig((prev) => ({ ...prev, [hall]: { ...getCfg(hall), ...changes } }));
+
+    const save = async () => {
+        setBusy(true); setMsg('');
+        try {
+            const r = await fetch(`/api/${clubSlug}/halls`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ config }),
+            });
+            setMsg(r.ok ? '✓ נשמר' : '❌ שמירה נכשלה');
+        } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
     };
-
-    if (!rawRows || rawRows.length === 0) {
-        return <div style={{ color: 'var(--text-dim)' }}>התחבר לגיליון תחילה כדי לטעון את רשימת האולמות.</div>;
-    }
 
     return (
         <div className="cc">
             <div className="cc-toolbar">
                 <div className="cc-title">🏟️ הגדרת אולמות</div>
+                <button className="cc-btn green" onClick={save} disabled={busy}>{busy ? 'שומר…' : '💾 שמור'}</button>
             </div>
             <p style={{ color: 'var(--text-dim)', fontSize: '0.88rem', marginBottom: '1rem' }}>
-                הגדר לכל אולם את הקיבולת (כמה קבוצות יכולות להתאמן בו במקביל) ואת הכתובת המדויקת לניווט.
-                הקיבולת משפיעה ישירות על זיהוי ההתנגשויות בלוח.
+                הגדר לכל אולם את הקיבולת (כמה קבוצות במקביל) ואת הכתובת המדויקת לניווט. הרשימה נטענת מהלו"ז שפורסם.
+                {msg && <b style={{ marginInlineStart: '0.6rem', color: msg.startsWith('✓') ? '#10b981' : '#ef4444' }}>{msg}</b>}
             </p>
 
             <div className="hc-grid">
-                <div className="hc-head">
-                    <div>אולם</div><div>קיבולת</div><div>מגרשים</div><div>כתובת מדויקת (לניווט)</div>
-                </div>
-                {halls.map(hall => {
+                <div className="hc-head"><div>אולם</div><div>קיבולת</div><div>מגרשים</div><div>כתובת מדויקת (לניווט)</div></div>
+                {halls.map(({ name: hall }) => {
                     const cfg = getCfg(hall);
                     return (
                         <div key={hall} className="hc-row">
@@ -64,24 +58,19 @@ export default function HallsConfig({ rawRows, indices, hallConfig, setHallConfi
                             <div>
                                 {cfg.type === 'MULTI' ? (
                                     <input type="number" min="2" max="12" value={cfg.courts || 2}
-                                        onChange={e => update(hall, { courts: Math.max(2, parseInt(e.target.value) || 2) })}
+                                        onChange={(e) => update(hall, { courts: Math.max(2, parseInt(e.target.value) || 2) })}
                                         className="hc-input" style={{ width: '70px', textAlign: 'center' }} />
-                                ) : (
-                                    <span style={{ color: 'var(--text-muted)' }}>{cfg.type === 'HALF' ? '2' : '1'}</span>
-                                )}
+                                ) : (<span style={{ color: 'var(--text-muted)' }}>{cfg.type === 'HALF' ? '2' : '1'}</span>)}
                             </div>
                             <div>
                                 <input type="text" value={cfg.address || ''} placeholder={`${hall}, רעננה`}
-                                    onChange={e => update(hall, { address: e.target.value })} className="hc-input" style={{ width: '100%' }} />
+                                    onChange={(e) => update(hall, { address: e.target.value })} className="hc-input" style={{ width: '100%' }} />
                             </div>
                         </div>
                     );
                 })}
-                {halls.length === 0 && <div style={{ color: 'var(--text-dim)', padding: '1rem' }}>לא נמצאו אולמות בנתונים.</div>}
+                {halls.length === 0 && <div style={{ color: 'var(--text-dim)', padding: '1rem' }}>אין אולמות עדיין — פרסם לו"ז כדי לטעון את הרשימה.</div>}
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.8rem' }}>
-                ✓ ההגדרות נשמרות אוטומטית. כתובת שתוזן כאן תשמש את כפתורי הניווט (Waze / Google Maps) באתר במכשיר זה.
-            </p>
         </div>
     );
 }
