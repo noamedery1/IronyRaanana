@@ -797,81 +797,74 @@
   .hero-ball { display: none; }
 }
 
+
 /* ============================================================
-   REDESIGN v2 — "Stadium Board": sharp, editorial, professional
-   Scoped under .app-container so the admin dashboard is untouched.
+   REDESIGN v3 — clean · young · dynamic (azure→cyan)
+   Scoped under .app-container; admin dashboard untouched.
    ============================================================ */
 .app-container{
-  --acc:#ff5a1f; --acc2:#ffd166; --line:rgba(255,255,255,.08);
-  --surface:#0d121e; --surface2:#111827; --ink0:#070a12;
-  font-family:'Heebo',sans-serif;
+  --a1:#3b82f6; --a2:#22d3ee; --grad:linear-gradient(135deg,#3b82f6,#22d3ee);
+  --surf:#0f1726; --surf2:#152038; --hair:rgba(255,255,255,.07);
+  font-family:'Assistant',sans-serif;
   background:
-    radial-gradient(120% 60% at 100% -10%, rgba(255,90,31,.10), transparent 55%),
-    linear-gradient(180deg,#080b14,#070a12 60%);
+    radial-gradient(90% 50% at 80% -10%, rgba(34,211,238,.10), transparent 60%),
+    radial-gradient(80% 50% at 10% 0%, rgba(59,130,246,.12), transparent 55%),
+    #0a0f1b;
 }
-.app-container::before{ /* faint court-line texture */
-  content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
-  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
-  background-size:64px 64px;mask-image:radial-gradient(120% 80% at 50% 0,#000,transparent 75%);
-}
+.app-container::before{content:none}
 
-/* topbar — solid + hairline, no heavy blur */
-.app-container .topbar{
-  background:rgba(8,11,18,.85);backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--line);padding:1rem 1.25rem;
-}
-.app-container .brand-logo{border-radius:11px;box-shadow:none;border:1px solid var(--line)}
-.app-container .brand-name{font-weight:900;letter-spacing:-.02em;font-size:1.15rem}
-.app-container .brand-sub{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.18em;font-size:.6rem;color:var(--acc2)}
+/* topbar */
+.app-container .topbar{background:rgba(10,15,27,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair);padding:.9rem 1.25rem}
+.app-container .brand-logo{border-radius:12px;box-shadow:none;border:1px solid var(--hair)}
+.app-container .brand-name{font-weight:800;font-size:1.12rem;letter-spacing:-.01em}
+.app-container .brand-sub{text-transform:none;letter-spacing:.02em;font-size:.72rem;color:var(--a2)}
 
-/* segmented controls / tabs — crisp */
-.app-container .team-select{
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;font-weight:700;
-}
-.app-container .view-tabs{background:var(--ink0);border:1px solid var(--line);border-radius:13px;padding:4px;gap:2px}
-.app-container .vtab{border-radius:9px;font-weight:700;color:var(--text-dim);letter-spacing:0}
-.app-container .vtab.on{background:var(--acc);color:#fff;box-shadow:none}
+/* segmented tabs */
+.app-container .team-select{background:var(--surf);border:1px solid var(--hair);border-radius:12px;font-weight:600}
+.app-container .view-tabs{background:#0a0f1b;border:1px solid var(--hair);border-radius:13px;padding:4px;gap:2px}
+.app-container .vtab{border-radius:9px;font-weight:600;color:var(--text-dim)}
+.app-container .vtab.on{background:var(--grad);color:#fff;box-shadow:0 8px 20px -10px rgba(34,211,238,.6)}
 
-/* hero — scoreboard card */
+/* hero + map */
 .app-container .hero-card,.app-container .map-card{
-  background:linear-gradient(180deg,var(--surface2),var(--surface));
-  border:1px solid var(--line);border-radius:16px;backdrop-filter:none;
-  box-shadow:0 18px 50px -28px rgba(0,0,0,.9);
+  background:linear-gradient(180deg,var(--surf2),var(--surf));
+  border:1px solid var(--hair);border-radius:18px;backdrop-filter:none;
+  box-shadow:0 22px 50px -32px rgba(0,0,0,.9);
 }
-.app-container .hero-card{border-top:3px solid var(--acc)}
-.app-container .hero-label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.16em;color:var(--acc2);font-size:.72rem}
+.app-container .hero-card{position:relative}
+.app-container .hero-card::after{content:'';position:absolute;inset:0 0 auto 0;height:3px;border-radius:18px 18px 0 0;background:var(--grad)}
+.app-container .hero-label{font-weight:700;letter-spacing:.02em;color:var(--a2);font-size:.78rem}
 .app-container .hero-time{
-  font-family:'Oswald',sans-serif;font-weight:700;font-size:3.5rem;letter-spacing:0;
-  background:none;-webkit-text-fill-color:#fff;color:#fff;line-height:1;margin:.35rem 0 .3rem;
+  background:none;-webkit-text-fill-color:#fff;color:#fff;
+  font-weight:800;font-size:2.5rem;letter-spacing:-1px;margin:.25rem 0 .3rem;
 }
-.app-container .hero-meta .m b{font-weight:800}
-.app-container .hero-meta .m span{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:.66rem;color:var(--text-dim)}
-.app-container .hero-ball{opacity:.16;filter:saturate(.7);width:90px;height:90px}
+.app-container .hero-meta .m b{font-weight:700;font-size:1rem}
+.app-container .hero-meta .m span{font-size:.74rem;color:var(--text-dim);letter-spacing:0;text-transform:none}
+.app-container .hero-ball{display:none}
 
-/* section title — editorial rule */
-.app-container .section-title{
-  font-weight:900;letter-spacing:-.02em;font-size:1.4rem;display:flex;align-items:center;gap:.7rem;
-  margin:1.6rem 0 1rem;
-}
-.app-container .section-title::before{background:var(--acc);width:5px;height:1.3em;border-radius:2px}
+/* section heading */
+.app-container .section-title{font-weight:800;font-size:1.25rem;letter-spacing:-.01em;display:flex;align-items:center;gap:.6rem;margin:1.6rem 0 .9rem}
+.app-container .section-title::before{background:var(--grad);width:6px;height:1.1em;border-radius:3px}
 
-/* schedule cards — crisp, clear hierarchy, status accent bar */
+/* schedule cards */
 .app-container .schedule-card{
-  background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;
-  box-shadow:none;transition:transform .15s,border-color .15s;
+  background:var(--surf);border:1px solid var(--hair);border-radius:15px;overflow:hidden;
+  box-shadow:none;transition:transform .15s ease,border-color .15s,box-shadow .15s;
 }
-.app-container .schedule-card::after{height:100%;width:4px;top:0;bottom:0;left:auto;right:0;background:var(--acc)}
-.app-container .schedule-card:hover{transform:translateY(-3px);border-color:rgba(255,90,31,.45)}
-.app-container .day-header{border-bottom:1px solid var(--line);padding-bottom:.55rem;margin-bottom:.6rem}
-.app-container .day-name{font-weight:900;font-size:1.05rem}
-.app-container .day-date{font-family:'Oswald',sans-serif;color:var(--text-dim);letter-spacing:.05em}
-.app-container .event-time{font-family:'Oswald',sans-serif;font-weight:700;font-size:1.35rem;color:#fff}
+.app-container .schedule-card::after{height:100%;width:4px;top:0;bottom:0;left:auto;right:0;background:var(--grad)}
+.app-container .schedule-card.is-match::after{background:var(--amber)}
+.app-container .schedule-card:hover{transform:translateY(-3px);border-color:rgba(34,211,238,.4);box-shadow:0 18px 40px -28px rgba(34,211,238,.5)}
+.app-container .day-header{border-bottom:1px solid var(--hair);padding-bottom:.5rem;margin-bottom:.55rem}
+.app-container .day-name{font-weight:800;font-size:1rem}
+.app-container .day-date{color:var(--text-dim);font-weight:600}
+.app-container .event-time{font-weight:800;font-size:1.18rem;color:var(--a2)}
 .app-container .event-location{font-size:.92rem;color:var(--text-dim);font-weight:600}
 
-/* hall view + daily — consistent panels */
-.app-container .rv-title,.app-container .dv-title{font-weight:900;letter-spacing:-.01em}
-.app-container .hall-box,.app-container .rv-day,.app-container .dv-day{
-  background:var(--surface);border:1px solid var(--line);border-radius:14px;
-}
-.app-container .sess{border-bottom:1px solid var(--line)}
-.app-container .sess-time{font-family:'Oswald',sans-serif;font-weight:600}
+/* halls + daily — consistent */
+.app-container .rv-title,.app-container .dv-title{font-weight:800}
+.app-container .hall-box,.app-container .rv-day,.app-container .dv-day{background:var(--surf);border:1px solid var(--hair);border-radius:15px}
+.app-container .sess{border-bottom:1px solid var(--hair)}
+.app-container .sess-time{font-weight:700;color:var(--a2)}
+/* cohesion: gender switch + active pills follow the azure→cyan accent */
+.app-container .gender-btn.men.on,
+.app-container .gender-btn.women.on{background:var(--grad);color:#fff}
