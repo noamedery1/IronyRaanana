@@ -10,7 +10,7 @@ import {
     registerUser, authUser, listTeams, upsertTeam, deleteTeam,
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
-import { createRequest, listRequests, approveRequest, rejectRequest } from './server/requests.js';
+import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveIcon, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -177,6 +177,22 @@ app.post('/api/:club/requests/:id/approve', async (req, res) => {
 });
 app.post('/api/:club/requests/:id/reject', async (req, res) => {
     try { ok(res, await rejectRequest(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
+});
+
+// Signed one-click approve/reject from the manager's email link (runs the server command).
+const resultPage = (title, sub = '') => `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">`
+    + `<meta name="viewport" content="width=device-width,initial-scale=1"></head>`
+    + `<body style="font-family:Arial,sans-serif;text-align:center;padding:48px;background:#0b1220;color:#e8edf7">`
+    + `<h2>${title}</h2><p style="color:#94a3b8">${sub}</p></body></html>`;
+app.get('/api/:club/requests/:id/approve', async (req, res) => {
+    if (!verifyId(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
+    try { const r = await approveRequest(req.params.club, req.params.id); res.send(resultPage('✅ הבקשה אושרה', r.message || '')); }
+    catch (e) { res.send(resultPage('לא ניתן לאשר', e.message)); }
+});
+app.get('/api/:club/requests/:id/reject', async (req, res) => {
+    if (!verifyId(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
+    try { await rejectRequest(req.params.club, req.params.id); res.send(resultPage('הבקשה נדחתה')); }
+    catch (e) { res.send(resultPage('שגיאה', e.message)); }
 });
 
 // Dynamic per-club Web App Manifest (must be registered before the dist static handler).

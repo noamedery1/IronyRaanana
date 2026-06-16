@@ -1,8 +1,44 @@
 // Change requests (trainer -> manager) + approval, all in the DB.
 // Approval mutates the live session and pushes the affected team.
+import crypto from 'crypto';
 import { pool, withTx } from './db.js';
 import { clubId } from './people.js';
 import { broadcast } from './notify.js';
+import { sendEmail } from './mailer.js';
+import { getClub } from './clubsStore.js';
+
+// Signed approve/reject links: HMAC of the request id (no extra DB column needed).
+const SIGN_SECRET = process.env.REQUEST_SIGN_SECRET || process.env.PUSH_SECRET || 'dev-secret';
+export const signId = (id) => crypto.createHmac('sha256', SIGN_SECRET).update(String(id)).digest('hex').slice(0, 32);
+export const verifyId = (id, token) => Boolean(token) && signId(id) === token;
+
+// Email the manager that a request arrived, with one-click approve/reject links.
+async function notifyManager(slug, id, p) {
+    const club = getClub(slug);
+    const to = process.env.MANAGER_EMAIL || club?.managerEmail;
+    if (!to) return;
+    const base = process.env.APP_BASE_URL || '';
+    const tok = signId(id);
+    const approve = `${base}/api/${slug}/requests/${id}/approve?token=${tok}`;
+    const reject = `${base}/api/${slug}/requests/${id}/reject?token=${tok}`;
+    const change = p.type === 'cancel' ? 'ביטול'
+        : p.type === 'move' ? `העברה ליום ${p.newDay} ${p.newTime || ''} ${p.newLocation || ''}`
+            : `שינוי ל-${p.newTime || ''} ${p.newLocation || ''}`;
+    const html = `
+      <div dir="rtl" style="font-family:Arial,sans-serif">
+        <h3>בקשת שינוי לו"ז</h3>
+        <p><b>מאמן:</b> ${p.trainerName || ''} · <b>קבוצה:</b> ${p.team || ''}</p>
+        <p><b>אימון:</b> ${p.day || ''} ${p.time || ''}</p>
+        <p><b>מבוקש:</b> ${change}</p>
+        <p><b>סיבה:</b> ${p.reason || ''}</p>
+        <p style="margin-top:18px">
+          <a href="${approve}" style="background:#16a34a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">✅ אשר</a>
+          &nbsp;&nbsp;
+          <a href="${reject}" style="background:#dc2626;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">❌ דחה</a>
+        </p>
+      </div>`;
+    await sendEmail({ to, subject: `בקשת שינוי — ${p.team || ''} (${p.trainerName || ''})`, html });
+}
 
 const HEB_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 // Strip bidi control marks + normalize so day names match regardless of source encoding.
@@ -45,7 +81,10 @@ export async function createRequest(slug, body) {
          VALUES ($1,$2,$3,$4,$5,$6,'pending') RETURNING id`,
         [cid, sessionId, trainerName || '', type.toString().toLowerCase(), proposed, reason || ''],
     );
-    return { ok: true, id: r.rows[0].id };
+    const id = r.rows[0].id;
+    // notify the manager by email (best-effort) with one-click approve/reject links
+    notifyManager(slug, id, { trainerName, team, day, time, type: type.toString().toLowerCase(), newTime, newLocation, newDay, reason }).catch(() => {});
+    return { ok: true, id };
 }
 
 export async function listRequests(slug, status = 'pending') {
