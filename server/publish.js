@@ -86,9 +86,12 @@ export function parseSheetToSessions(csvText) {
 export async function publishClub(slug, { weekStart: forced, publishedBy = 'admin' } = {}) {
     const club = getClub(slug);
     if (!club) throw new Error('Unknown club: ' + slug);
-    if (!club.dataUrl) throw new Error('Club has no dataUrl');
+    // The manager edits the dashboard sheet ("his Excel"); publish reads that (publishUrl),
+    // falling back to dataUrl for clubs that edit the public sheet directly.
+    const sourceUrl = club.publishUrl || club.dataUrl;
+    if (!sourceUrl) throw new Error('Club has no publish source');
 
-    const res = await fetch(club.dataUrl);
+    const res = await fetch(sourceUrl);
     if (!res.ok) throw new Error('Failed to fetch sheet CSV: ' + res.status);
     const csv = await res.text();
 
@@ -112,7 +115,7 @@ export async function publishClub(slug, { weekStart: forced, publishedBy = 'admi
         const p = await cx.query(
             `INSERT INTO schedule_publications (club_id, week_start, status, source_url, published_by)
              VALUES ($1,$2,'live',$3,$4) RETURNING id`,
-            [clubId, weekStart, club.dataUrl, publishedBy],
+            [clubId, weekStart, sourceUrl, publishedBy],
         );
         const pubId = p.rows[0].id;
 
