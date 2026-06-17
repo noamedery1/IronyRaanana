@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { authHeaders } from '../adminApi.js';
 
 // Manager tool: take the current Google Sheet (the draft) and publish it to the DB
 // as the live schedule for its week. Shows the result + publication history.
@@ -23,7 +24,7 @@ export default function PublishPanel({ clubSlug }) {
         try {
             const res = await fetch(`/api/${clubSlug}/publish`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...authHeaders(clubSlug) },
                 body: JSON.stringify({}),
             });
             const d = await res.json();

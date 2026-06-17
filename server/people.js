@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { pool, withTx } from './db.js';
 import { getClub } from './clubsStore.js';
+import { signToken } from './auth.js';
 
 const TRAINER_COLORS = ['#FCE5CD', '#D9EAD3', '#CFE2F3', '#F4CCCC', '#FFF2CC', '#D9D2E9', '#D0E0E3', '#EAD1DC'];
 const newToken = () => crypto.randomUUID().replace(/-/g, '').slice(0, 16);
@@ -172,7 +173,8 @@ export async function authManager(slug, { username, password }) {
     const cid = await clubId(slug);
     const r = await pool.query('SELECT username, password, name FROM managers WHERE club_id=$1 AND lower(username)=lower($2) LIMIT 1', [cid, (username || '').trim()]);
     if (!r.rows.length || !verifyPw(password, r.rows[0].password)) return { valid: false };
-    return { valid: true, name: r.rows[0].name || r.rows[0].username, token: newToken() };
+    const name = r.rows[0].name || r.rows[0].username;
+    return { valid: true, name, token: signToken({ club: slug, role: 'manager', sub: r.rows[0].username }) };
 }
 
 export async function listManagers(slug) {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { authHeaders } from '../adminApi.js';
 
 /**
  * Hall settings page (DB-backed). The hall list comes from the published live schedule,
@@ -25,7 +26,7 @@ export default function HallsConfig({ clubSlug }) {
         setBusy(true); setMsg('');
         try {
             const r = await fetch(`/api/${clubSlug}/halls`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders(clubSlug) },
                 body: JSON.stringify({ config }),
             });
             setMsg(r.ok ? '✓ נשמר' : '❌ שמירה נכשלה');

@@ -13,6 +13,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
+import { requireManager } from './server/auth.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveIcon, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -77,7 +78,7 @@ app.get('/api/clubs/:slug', (req, res) => {
 
 // ===== Phase 1: schedule in the DB (publish from the manager's Sheet + live reads) =====
 // Publish: snapshot the club's Google Sheet into the DB as the live week.
-app.post('/api/:club/publish', async (req, res) => {
+app.post('/api/:club/publish', requireManager, async (req, res) => {
     try {
         const result = await publishClub(req.params.club, req.body || {});
         res.json(result);
@@ -130,10 +131,10 @@ const fail = (res, e) => res.status(500).json({ error: e.message });
 app.get('/api/:club/trainers', async (req, res) => {
     try { ok(res, { trainers: await listTrainers(req.params.club) }); } catch (e) { fail(res, e); }
 });
-app.post('/api/:club/trainers', async (req, res) => {
+app.post('/api/:club/trainers', requireManager, async (req, res) => {
     try { ok(res, await saveTrainer(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
 });
-app.delete('/api/:club/trainers/:name', async (req, res) => {
+app.delete('/api/:club/trainers/:name', requireManager, async (req, res) => {
     try { ok(res, await deleteTrainer(req.params.club, req.params.name)); } catch (e) { fail(res, e); }
 });
 app.post('/api/:club/trainers/auth', async (req, res) => {
@@ -157,10 +158,10 @@ app.post('/api/:club/managers/auth', async (req, res) => {
 app.get('/api/:club/teams', async (req, res) => {
     try { ok(res, { teams: await listTeams(req.params.club) }); } catch (e) { fail(res, e); }
 });
-app.post('/api/:club/teams', async (req, res) => {
+app.post('/api/:club/teams', requireManager, async (req, res) => {
     try { ok(res, await upsertTeam(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
 });
-app.delete('/api/:club/teams/:id', async (req, res) => {
+app.delete('/api/:club/teams/:id', requireManager, async (req, res) => {
     try { ok(res, await deleteTeam(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
 });
 
@@ -171,7 +172,7 @@ app.post('/api/:club/push', async (req, res) => {
 app.delete('/api/:club/push', async (req, res) => {
     try { ok(res, await unregisterPush(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
-app.post('/api/:club/broadcast', async (req, res) => {
+app.post('/api/:club/broadcast', requireManager, async (req, res) => {
     try { ok(res, await broadcast(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 
@@ -192,7 +193,7 @@ app.post('/api/:club/feedback', async (req, res) => {
 app.get('/api/:club/halls', async (req, res) => {
     try { ok(res, await listHalls(req.params.club)); } catch (e) { fail(res, e); }
 });
-app.put('/api/:club/halls', async (req, res) => {
+app.put('/api/:club/halls', requireManager, async (req, res) => {
     try { ok(res, await saveHalls(req.params.club, (req.body || {}).config || {})); } catch (e) { fail(res, e); }
 });
 
@@ -200,7 +201,7 @@ app.put('/api/:club/halls', async (req, res) => {
 app.get('/api/:club/settings/:key', async (req, res) => {
     try { ok(res, { value: await getSetting(req.params.club, req.params.key) }); } catch (e) { fail(res, e); }
 });
-app.put('/api/:club/settings/:key', async (req, res) => {
+app.put('/api/:club/settings/:key', requireManager, async (req, res) => {
     try { ok(res, await setSetting(req.params.club, req.params.key, (req.body || {}).value)); } catch (e) { fail(res, e); }
 });
 
@@ -208,13 +209,13 @@ app.put('/api/:club/settings/:key', async (req, res) => {
 app.post('/api/:club/requests', async (req, res) => {
     try { ok(res, await createRequest(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
 });
-app.get('/api/:club/requests', async (req, res) => {
+app.get('/api/:club/requests', requireManager, async (req, res) => {
     try { ok(res, { requests: await listRequests(req.params.club, req.query.status || 'pending') }); } catch (e) { fail(res, e); }
 });
-app.post('/api/:club/requests/:id/approve', async (req, res) => {
+app.post('/api/:club/requests/:id/approve', requireManager, async (req, res) => {
     try { ok(res, await approveRequest(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }
 });
-app.post('/api/:club/requests/:id/reject', async (req, res) => {
+app.post('/api/:club/requests/:id/reject', requireManager, async (req, res) => {
     try { ok(res, await rejectRequest(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
 });
 

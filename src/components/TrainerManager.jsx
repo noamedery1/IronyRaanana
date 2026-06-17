@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getActiveClub } from '../clubConfig.js';
+import { authHeaders } from '../adminApi.js';
 
 // Manager tool: add / edit / delete trainers (in the DB). One row per trainer (teams
 // merged), search + sort by name, team selection from the DB teams list (+ free-text extra).
@@ -55,7 +56,7 @@ export default function TrainerManager() {
         const uniq = [...new Set(teams)].join(', ');
         setBusy(true); setMsg('');
         const d = await fetch(`/api/${slug}/trainers`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
             body: JSON.stringify({ name, code, teams: uniq }),
         }).then((r) => r.json()).catch(() => ({ error: 'תקשורת' }));
         if (d.error) setMsg('שגיאה: ' + d.error);
@@ -65,7 +66,7 @@ export default function TrainerManager() {
 
     const remove = async (n) => {
         if (!confirm('למחוק את המאמן "' + n + '"?')) return;
-        const d = await fetch(`/api/${slug}/trainers/${encodeURIComponent(n)}`, { method: 'DELETE' })
+        const d = await fetch(`/api/${slug}/trainers/${encodeURIComponent(n)}`, { method: 'DELETE', headers: authHeaders(slug) })
             .then((r) => r.json()).catch(() => ({ error: 'תקשורת' }));
         if (d.error) setMsg('שגיאה: ' + d.error); else { if (editing === n) resetForm(); load(); }
     };

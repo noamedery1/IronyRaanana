@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { authHeaders } from '../adminApi.js';
 
 // Floating banner message shown at the top of the public site. DB-backed, with on/off.
 export default function FloatingMessage({ clubSlug }) {
@@ -19,7 +20,7 @@ export default function FloatingMessage({ clubSlug }) {
         setBusy(true); setMsg('');
         try {
             const r = await fetch(`/api/${clubSlug}/settings/floatingMessage`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders(clubSlug) },
                 body: JSON.stringify({ value: { enabled, text } }),
             });
             setMsg(r.ok ? '✓ נשמר ופורסם' : '❌ נכשל');

@@ -22,6 +22,7 @@ const AdminLogin = () => {
             if (data.valid) {
                 localStorage.setItem('isAdmin', 'true');
                 localStorage.setItem('managerName', data.name || username);
+                if (data.token) localStorage.setItem('mgrToken:' + getActiveClub().slug, data.token);
                 navigate(`/${getActiveClub().slug}/admin/dashboard`);
                 return;
             }

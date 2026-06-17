@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getActiveClub } from '../clubConfig.js';
+import { authHeaders } from '../adminApi.js';
 
 // Manager messaging hub: send a push to any audience — whole club, all trainers, all
 // operators, OR a multi-selection of specific teams / specific trainers. DB-backed.
@@ -43,7 +44,7 @@ export default function MessageCenter() {
         try {
             for (const seg of segs) {
                 const r = await fetch(`/api/${slug}/broadcast`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
                     body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, segment: seg }),
                 });
                 const d = await r.json().catch(() => ({ error: 'x' }));

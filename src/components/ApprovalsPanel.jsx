@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { authHeaders } from '../adminApi.js';
 
 // Manager tool: review trainer change-requests and approve/reject. Approval mutates
 // the live schedule in the DB and pushes the affected team.
@@ -10,7 +11,7 @@ export default function ApprovalsPanel({ clubSlug }) {
     const [busy, setBusy] = useState(false);
 
     const load = useCallback(() => {
-        fetch(`/api/${clubSlug}/requests?status=pending`).then((r) => r.json())
+        fetch(`/api/${clubSlug}/requests?status=pending`, { headers: authHeaders(clubSlug) }).then((r) => r.json())
             .then((d) => setRequests(d.requests || [])).catch(() => {});
     }, [clubSlug]);
 
@@ -19,7 +20,7 @@ export default function ApprovalsPanel({ clubSlug }) {
     const act = async (id, action) => {
         setBusy(true); setMsg('');
         try {
-            const r = await fetch(`/api/${clubSlug}/requests/${id}/${action}`, { method: 'POST' });
+            const r = await fetch(`/api/${clubSlug}/requests/${id}/${action}`, { method: 'POST', headers: authHeaders(clubSlug) });
             const d = await r.json();
             if (d.error) setMsg('שגיאה: ' + d.error);
             else setMsg(action === 'approve' ? ('✓ אושר' + (d.message ? ' — ' + d.message : '')) : '✓ נדחה');
