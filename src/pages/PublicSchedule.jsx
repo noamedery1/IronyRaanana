@@ -28,6 +28,13 @@ function PublicSchedule() {
     const identity = getIdentity();
     const memberTeam = identity.role === 'member' ? identity.team : '';
 
+    // Who is this device? Members are locked to their team; operators/managers/trainers
+    // get the full board. Anyone the system doesn't recognise is "anonymous" — they see
+    // an explainer with a link to the product page, not the club's schedule.
+    const isAdmin = localStorage.getItem('isAdmin') === 'true';
+    const isTrainer = !!localStorage.getItem('trainerToken');
+    const isAnonymous = !memberTeam && identity.role !== 'operator' && !isAdmin && !isTrainer;
+
     const [locations, setLocations] = useState([]); // Store active halls for dropdown
     const [data, setData] = useState([]);
     const [teams, setTeams] = useState([]); // Array of objects
@@ -326,6 +333,27 @@ function PublicSchedule() {
         const c = schedule[dayStart + i];
         return c && c.trim() && !c.toLowerCase().includes('xxx');
     });
+
+    // Unregistered visitor: don't expose the club board — show a welcome/explainer
+    // with a link to the product page. Parents reach their team via their invite link.
+    if (isAnonymous) {
+        return (
+            <div className="app-container">
+                <div className="welcome-gate">
+                    <img src="/men_logo.png" alt={club.name} className="welcome-logo" />
+                    <h1 className="welcome-title">{club.name}</h1>
+                    <p className="welcome-lead">
+                        כדי לצפות בלו"ז האימונים של הקבוצה שלך, יש להירשם דרך הקישור
+                        האישי שקיבלת מהמועדון. אחרי ההרשמה הדף נפתח ישירות על הקבוצה שלך.
+                    </p>
+                    <a className="welcome-cta" href="/sales-landing.html">
+                        מה זה Squadio? גלו עוד ←
+                    </a>
+                    <Link to={`/${club.slug}/admin`} className="welcome-admin">מנהל מועדון? כניסה ⚙</Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="app-container">
