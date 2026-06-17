@@ -35,6 +35,11 @@ function PublicSchedule() {
     const isTrainer = !!localStorage.getItem('trainerToken');
     const isAnonymous = !memberTeam && identity.role !== 'operator' && !isAdmin && !isTrainer;
 
+    // Per-club brand logo (falls back to the PWA icon, then the built-in crest).
+    const clubLogo = club.logo || club.icon512 || club.icon192 || '/men_logo.png';
+    // Header display name: drop any " — …" suffix (e.g. 'עירוני רעננה — לו"ז' -> 'עירוני רעננה').
+    const clubBrandName = (club.name || '').split('—')[0].trim() || club.name;
+
     const [locations, setLocations] = useState([]); // Store active halls for dropdown
     const [data, setData] = useState([]);
     const [teams, setTeams] = useState([]); // Array of objects
@@ -340,7 +345,7 @@ function PublicSchedule() {
         return (
             <div className="app-container">
                 <div className="welcome-gate">
-                    <img src="/men_logo.png" alt={club.name} className="welcome-logo" />
+                    <img src={clubLogo} alt={club.name} className="welcome-logo" />
                     <h1 className="welcome-title">{club.name}</h1>
                     <p className="welcome-lead">
                         כדי לצפות בלו"ז האימונים של הקבוצה שלך, יש להירשם דרך הקישור
@@ -360,9 +365,9 @@ function PublicSchedule() {
             {/* ===== top bar ===== */}
             <nav className="topbar">
                 <div className="brand">
-                    <img src="/men_logo.png" alt="עירוני רעננה" className="brand-logo" />
+                    <img src={clubLogo} alt={club.name} className="brand-logo" />
                     <div>
-                        <div className="brand-name">עירוני רעננה</div>
+                        <div className="brand-name">{clubBrandName}</div>
                         <div className="brand-sub">{t('brand_sub')}</div>
                     </div>
                 </div>

@@ -26,6 +26,7 @@ const RAANANA = {
         icon192: '/pwa-192x192.png',
         icon512: '/pwa-512x512.png',
         appleIcon: '/apple-touch-icon.png',
+        logo: '/men_logo.png',
         publishUrl: 'https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/export?format=csv&gid=0',
         sheetApi: 'https://script.google.com/macros/s/AKfycbxZBUPujrqGRHOgX7Vb8JXdGuivho-FiMqGoshZxLTvqIumLDKGUzyc1mM9-W4jVC0/exec',
         managerEmails: ['Dani.tankel@gmail.com'],

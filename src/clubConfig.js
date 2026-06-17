@@ -13,6 +13,7 @@ const BUILTIN = {
         icon192: '/pwa-192x192.png',
         icon512: '/pwa-512x512.png',
         appleIcon: '/apple-touch-icon.png',
+        logo: '/men_logo.png',
         dataUrl: 'https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0',
         sheetApi: 'https://script.google.com/macros/s/AKfycbxZBUPujrqGRHOgX7Vb8JXdGuivho-FiMqGoshZxLTvqIumLDKGUzyc1mM9-W4jVC0/exec',
     },
