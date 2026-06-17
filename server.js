@@ -25,7 +25,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 try {
-    ensureStore();
+    await ensureStore();
 } catch (e) {
     // Don't let a storage/volume hiccup take down the whole server — club features
     // degrade to the client's built-in fallback; push & schedule keep working.
@@ -69,9 +69,11 @@ app.post('/api/superuser/login', (req, res) => {
 });
 
 // ===== Clubs (public read) =====
-app.get('/api/clubs', (req, res) => res.json(listClubs()));
-app.get('/api/clubs/:slug', (req, res) => {
-    const club = getClub(req.params.slug);
+app.get('/api/clubs', async (req, res) => {
+    try { res.json(await listClubs()); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/clubs/:slug', async (req, res) => {
+    const club = await getClub(req.params.slug);
     if (!club) return res.status(404).json({ error: 'not found' });
     res.json(club);
 });
@@ -236,8 +238,8 @@ app.get('/api/:club/requests/:id/reject', async (req, res) => {
 });
 
 // Dynamic per-club Web App Manifest (must be registered before the dist static handler).
-app.get(/^\/clubs\/([a-z0-9-]+)\.webmanifest$/, (req, res) => {
-    const club = getClub(req.params[0]);
+app.get(/^\/clubs\/([a-z0-9-]+)\.webmanifest$/, async (req, res) => {
+    const club = await getClub(req.params[0]);
     if (!club) return res.status(404).json({ error: 'not found' });
     res.set('Content-Type', 'application/manifest+json; charset=utf-8');
     res.json(manifestFor(club));
@@ -247,7 +249,7 @@ app.get(/^\/clubs\/([a-z0-9-]+)\.webmanifest$/, (req, res) => {
 app.use('/clubicons', express.static(ICONS_DIR));
 
 // ===== Clubs (superuser write) =====
-app.post('/api/superuser/clubs', requireSuperuser, (req, res) => {
+app.post('/api/superuser/clubs', requireSuperuser, async (req, res) => {
     const { club, icons } = req.body || {};
     if (!club || !club.slug || !/^[a-z0-9-]+$/.test(club.slug)) {
         return res.status(400).json({ error: 'invalid slug (use lowercase letters, digits, hyphens)' });
@@ -276,7 +278,7 @@ app.post('/api/superuser/clubs', requireSuperuser, (req, res) => {
         if (icons.i512) record.icon512 = saveIcon(club.slug, '512', icons.i512);
         if (icons.apple) record.appleIcon = saveIcon(club.slug, 'apple', icons.apple);
     }
-    res.json(upsertClub(record));
+    try { res.json(await upsertClub(record)); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // Manager accounts for a club (superuser creates the invite: username + initial password).
@@ -289,9 +291,9 @@ app.get('/api/superuser/clubs/:slug/managers', requireSuperuser, async (req, res
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/superuser/clubs/:slug', requireSuperuser, (req, res) => {
+app.delete('/api/superuser/clubs/:slug', requireSuperuser, async (req, res) => {
     if (req.params.slug === 'raanana') return res.status(400).json({ error: 'cannot delete the default club' });
-    deleteClub(req.params.slug);
+    await deleteClub(req.params.slug);
     res.json({ ok: true });
 });
 

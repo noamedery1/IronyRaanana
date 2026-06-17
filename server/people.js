@@ -3,25 +3,17 @@
 // so the frontend only swaps the URL, not the logic.
 import crypto from 'crypto';
 import { pool, withTx } from './db.js';
-import { getClub } from './clubsStore.js';
 import { signToken } from './auth.js';
 
 const TRAINER_COLORS = ['#FCE5CD', '#D9EAD3', '#CFE2F3', '#F4CCCC', '#FFF2CC', '#D9D2E9', '#D0E0E3', '#EAD1DC'];
 const newToken = () => crypto.randomUUID().replace(/-/g, '').slice(0, 16);
 const splitTeams = (s) => (s || '').split(/[,;\n]/).map((t) => t.trim()).filter(Boolean);
 
-// Resolve (and lazily create) the club row; trainers/users may exist before any publish.
+// Resolve the club's id from the registry (clubs table). Club must exist (seeded / superuser).
 export async function clubId(slug, cx = pool) {
     const r = await cx.query('SELECT id FROM clubs WHERE slug=$1', [slug]);
-    if (r.rows.length) return r.rows[0].id;
-    const c = getClub(slug);
-    if (!c) throw new Error('Unknown club: ' + slug);
-    const ins = await cx.query(
-        `INSERT INTO clubs (slug, name, sport, data_url) VALUES ($1,$2,$3,$4)
-         ON CONFLICT (slug) DO UPDATE SET name=excluded.name RETURNING id`,
-        [c.slug, c.name, c.sport || null, c.dataUrl || null],
-    );
-    return ins.rows[0].id;
+    if (!r.rows.length) throw new Error('Unknown club: ' + slug);
+    return r.rows[0].id;
 }
 
 // ===== Trainers =====

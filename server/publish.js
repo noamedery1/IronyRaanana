@@ -84,7 +84,7 @@ export function parseSheetToSessions(csvText) {
 
 // Pull the club's sheet and snapshot it as a new live publication for its week.
 export async function publishClub(slug, { weekStart: forced, publishedBy = 'admin' } = {}) {
-    const club = getClub(slug);
+    const club = await getClub(slug);
     if (!club) throw new Error('Unknown club: ' + slug);
     // The manager edits the dashboard sheet ("his Excel"); publish reads that (publishUrl),
     // falling back to dataUrl for clubs that edit the public sheet directly.

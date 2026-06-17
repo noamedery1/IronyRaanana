@@ -1,79 +1,82 @@
-// Persistent club store backed by a Railway Volume (or a local ./data dir in dev).
-// Clubs live in clubs.json; uploaded icons live under <DATA_DIR>/icons and are
-// served at /clubicons/<file>. Set DATA_DIR to the volume mount path on Railway.
+// Club registry — DB-backed (table `clubs`, with a jsonb `config` for extra fields).
+// Uploaded icons still live on the volume (binary), referenced by URL inside config.
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { pool } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Prefer an explicit DATA_DIR, else Railway's auto-injected volume mount path,
-// else a local ./data dir (dev). Attaching a Railway Volume is enough — no manual env needed.
 export const DATA_DIR =
     process.env.DATA_DIR ||
     process.env.RAILWAY_VOLUME_MOUNT_PATH ||
     path.join(__dirname, '..', 'data');
 export const ICONS_DIR = path.join(DATA_DIR, 'icons');
-const CLUBS_FILE = path.join(DATA_DIR, 'clubs.json');
 
-// The built-in legacy club, seeded on first run so existing behavior is preserved.
-const SEED = [
-    {
-        slug: 'raanana',
-        name: 'עירוני רעננה — לו"ז',
+// Canonical seed for the default club (kept correct on every boot).
+const RAANANA = {
+    slug: 'raanana',
+    name: 'עירוני רעננה — לו"ז',
+    sport: 'basketball',
+    dataUrl: 'https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0',
+    config: {
         shortName: 'רעננה לו"ז',
         themeColor: '#ff7a18',
         backgroundColor: '#070b16',
         icon192: '/pwa-192x192.png',
         icon512: '/pwa-512x512.png',
         appleIcon: '/apple-touch-icon.png',
-        dataUrl: 'https://docs.google.com/spreadsheets/d/1rNKH9jFD6JEyUvToKKvpoffpCS-X_tcWeWFTPwH3m9o/export?format=csv&gid=0',
-        // The sheet the manager actually edits in the dashboard ("his Excel") — publish reads THIS.
         publishUrl: 'https://docs.google.com/spreadsheets/d/1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w/export?format=csv&gid=0',
-        managerEmails: ['Dani.tankel@gmail.com'], // where trainer change-requests are emailed (override via MANAGER_EMAIL)
         sheetApi: 'https://script.google.com/macros/s/AKfycbxZBUPujrqGRHOgX7Vb8JXdGuivho-FiMqGoshZxLTvqIumLDKGUzyc1mM9-W4jVC0/exec',
+        managerEmails: ['Dani.tankel@gmail.com'],
     },
-];
+};
 
-export function ensureStore() {
+// DB row -> the flat club object callers expect.
+const flatten = (row) => (row ? { slug: row.slug, name: row.name, sport: row.sport || '', dataUrl: row.data_url || '', ...(row.config || {}) } : null);
+
+export async function ensureStore() {
     fs.mkdirSync(ICONS_DIR, { recursive: true });
-    if (!fs.existsSync(CLUBS_FILE)) {
-        fs.writeFileSync(CLUBS_FILE, JSON.stringify(SEED, null, 2), 'utf8');
-    }
+    // Seed/refresh raanana: keep existing edits, fill any missing keys from the seed.
+    await pool.query(
+        `INSERT INTO clubs (slug, name, sport, data_url, config) VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (slug) DO UPDATE SET
+           name = excluded.name,
+           sport = COALESCE(NULLIF(clubs.sport,''), excluded.sport),
+           data_url = COALESCE(NULLIF(clubs.data_url,''), excluded.data_url),
+           config = excluded.config || clubs.config`,
+        [RAANANA.slug, RAANANA.name, RAANANA.sport, RAANANA.dataUrl, JSON.stringify(RAANANA.config)],
+    );
 }
 
-export function listClubs() {
-    try {
-        return JSON.parse(fs.readFileSync(CLUBS_FILE, 'utf8'));
-    } catch {
-        return [...SEED];
-    }
+export async function listClubs() {
+    const r = await pool.query('SELECT slug, name, sport, data_url, config FROM clubs ORDER BY created_at');
+    return r.rows.map(flatten);
 }
 
-export function getClub(slug) {
-    return listClubs().find((c) => c.slug === slug) || null;
+export async function getClub(slug) {
+    const r = await pool.query('SELECT slug, name, sport, data_url, config FROM clubs WHERE slug=$1', [slug]);
+    return flatten(r.rows[0]);
 }
 
-function writeClubs(clubs) {
-    fs.writeFileSync(CLUBS_FILE, JSON.stringify(clubs, null, 2), 'utf8');
+// Insert or update a club by slug. Columns: slug/name/sport/data_url; everything else -> config.
+export async function upsertClub(record) {
+    const { slug, name, sport, dataUrl, data_url, ...config } = record;
+    await pool.query(
+        `INSERT INTO clubs (slug, name, sport, data_url, config) VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (slug) DO UPDATE SET
+           name = excluded.name, sport = excluded.sport, data_url = excluded.data_url,
+           config = clubs.config || excluded.config`,
+        [slug, name, sport || '', dataUrl || data_url || '', JSON.stringify(config)],
+    );
+    return getClub(slug);
 }
 
-// Insert or update a club by slug. Returns the saved record.
-export function upsertClub(record) {
-    const clubs = listClubs();
-    const i = clubs.findIndex((c) => c.slug === record.slug);
-    if (i >= 0) clubs[i] = { ...clubs[i], ...record };
-    else clubs.push(record);
-    writeClubs(clubs);
-    return getClub(record.slug);
+export async function deleteClub(slug) {
+    await pool.query('DELETE FROM clubs WHERE slug=$1', [slug]);
 }
 
-export function deleteClub(slug) {
-    const clubs = listClubs().filter((c) => c.slug !== slug);
-    writeClubs(clubs);
-}
-
-// Save a base64 (data-URL or raw) PNG icon to the volume; returns its public URL.
+// Save a base64 PNG icon to the volume; returns its public URL.
 export function saveIcon(slug, kind, base64) {
     const data = base64.includes(',') ? base64.split(',')[1] : base64;
     const file = `${slug}-${kind}.png`;
@@ -81,21 +84,17 @@ export function saveIcon(slug, kind, base64) {
     return `/clubicons/${file}`;
 }
 
-// Build a Web App Manifest object from a club record.
 export function manifestFor(club) {
     return {
         id: `/${club.slug}`,
         name: club.name,
         short_name: club.shortName || club.name,
         description: club.description || '',
-        lang: 'he',
-        dir: 'rtl',
+        lang: 'he', dir: 'rtl',
         theme_color: club.themeColor || '#ff7a18',
         background_color: club.backgroundColor || '#070b16',
-        display: 'standalone',
-        orientation: 'portrait',
-        start_url: `/${club.slug}`,
-        scope: '/',
+        display: 'standalone', orientation: 'portrait',
+        start_url: `/${club.slug}`, scope: '/',
         icons: [
             { src: club.icon192, sizes: '192x192', type: 'image/png' },
             { src: club.icon512, sizes: '512x512', type: 'image/png' },
