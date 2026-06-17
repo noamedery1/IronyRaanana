@@ -196,6 +196,22 @@ export async function teamICS(slug, teamParam) {
     return buildICS(events, `לו"ז ${t}`);
 }
 
+// Sessions of a specific publication (for viewing an archived week).
+export async function getPublicationSessions(slug, pubId) {
+    const r = await pool.query(
+        `SELECT s.team, s.coach, s.hall, s.date::text, s.day_of_week,
+                to_char(s.start_time,'HH24:MI') AS start_time, to_char(s.end_time,'HH24:MI') AS end_time,
+                s.type, s.status
+         FROM sessions s
+         JOIN schedule_publications p ON p.id = s.publication_id
+         JOIN clubs c ON c.id = p.club_id
+         WHERE p.id = $1 AND c.slug = $2
+         ORDER BY s.date, s.start_time`,
+        [pubId, slug],
+    );
+    return { sessions: r.rows };
+}
+
 // Publication history (for the manager's "recent publications" panel / restore).
 export async function listPublications(slug) {
     const r = await pool.query(

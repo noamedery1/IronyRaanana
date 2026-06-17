@@ -69,7 +69,7 @@ const AdminLogin = () => {
                                 background: 'var(--ink2)',
                                 color: 'var(--text)',
                                 fontSize: '1rem',
-                                fontFamily: 'Rubik, sans-serif'
+                                fontFamily: 'Assistant, sans-serif'
                             }}
                         />
                     </div>
@@ -87,7 +87,7 @@ const AdminLogin = () => {
                                 background: 'var(--ink2)',
                                 color: 'var(--text)',
                                 fontSize: '1rem',
-                                fontFamily: 'Rubik, sans-serif'
+                                fontFamily: 'Assistant, sans-serif'
                             }}
                         />
                     </div>
@@ -95,7 +95,7 @@ const AdminLogin = () => {
                     {error && <p style={{ color: 'red', margin: 0 }}>{error}</p>}
 
                     <button type="submit" className="action-btn" style={{
-                        background: 'linear-gradient(135deg,var(--primary),var(--deep))',
+                        background: 'linear-gradient(135deg,#3b82f6,#0891b2)',
                         color: 'white',
                         width: '100%',
                         justifyContent: 'center',

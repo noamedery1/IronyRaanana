@@ -8,6 +8,16 @@ export default function PublishPanel({ clubSlug }) {
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
     const [pubs, setPubs] = useState([]);
+    const [viewing, setViewing] = useState(null); // { week, sessions } archive view
+
+    const HEB = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    const view = async (p) => {
+        try {
+            const r = await fetch(`/api/${clubSlug}/publications/${p.id}`, { headers: authHeaders(clubSlug) });
+            const d = await r.json();
+            setViewing({ week: p.week_start, status: p.status, sessions: d.sessions || [] });
+        } catch { /* ignore */ }
+    };
 
     const loadPubs = useCallback(() => {
         fetch(`/api/${clubSlug}/publications`)
@@ -82,10 +92,11 @@ export default function PublishPanel({ clubSlug }) {
                         <th style={{ padding: '0.5rem' }}>אימונים</th>
                         <th style={{ padding: '0.5rem' }}>פורסם</th>
                         <th style={{ padding: '0.5rem' }}>ע"י</th>
+                        <th style={{ padding: '0.5rem' }}></th>
                     </tr>
                 </thead>
                 <tbody>
-                    {pubs.length === 0 && <tr><td colSpan={5} style={{ padding: '0.8rem', color: '#94a3b8' }}>אין פרסומים עדיין.</td></tr>}
+                    {pubs.length === 0 && <tr><td colSpan={6} style={{ padding: '0.8rem', color: '#94a3b8' }}>אין פרסומים עדיין.</td></tr>}
                     {pubs.map((p) => (
                         <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '0.5rem' }}>{p.week_start}</td>
@@ -97,10 +108,42 @@ export default function PublishPanel({ clubSlug }) {
                             <td style={{ padding: '0.5rem' }}>{p.sessions}</td>
                             <td style={{ padding: '0.5rem' }}>{new Date(p.published_at).toLocaleString('he-IL')}</td>
                             <td style={{ padding: '0.5rem' }}>{p.published_by}</td>
+                            <td style={{ padding: '0.5rem' }}>
+                                <button onClick={() => view(p)} style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', borderRadius: 8, padding: '0.25rem 0.7rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}>👁️ צפה</button>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
+
+            {viewing && (
+                <div onClick={() => setViewing(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem' }}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', color: '#0f1b33', borderRadius: 16, width: 'min(640px,95vw)', maxHeight: '85vh', overflow: 'auto', padding: '1.3rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+                            <h3 style={{ margin: 0 }}>📋 ארכיון לו"ז · שבוע {viewing.week} {viewing.status !== 'live' ? '(ארכיון)' : '(חי)'}</h3>
+                            <button onClick={() => setViewing(null)} style={{ border: 'none', background: '#f1f5f9', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+                        </div>
+                        {viewing.sessions.length === 0 ? <div style={{ color: '#94a3b8' }}>אין אימונים.</div> : (
+                            HEB.map((day, di) => {
+                                const rows = viewing.sessions.filter((s) => s.day_of_week === di);
+                                if (!rows.length) return null;
+                                return (
+                                    <div key={di} style={{ marginBottom: '0.9rem' }}>
+                                        <div style={{ fontWeight: 800, color: '#3730a3', borderBottom: '1px solid #e2e8f0', paddingBottom: 4, marginBottom: 6 }}>{day}</div>
+                                        {rows.map((s, i) => (
+                                            <div key={i} style={{ display: 'flex', gap: '0.6rem', fontSize: '0.92rem', padding: '0.25rem 0', color: s.status === 'cancelled' ? '#b91c1c' : '#334155' }}>
+                                                <b style={{ minWidth: 96 }}>{s.start_time}{s.end_time ? '-' + s.end_time : ''}</b>
+                                                <span style={{ flex: 1 }}>{s.team}{s.coach ? ' · ' + s.coach : ''}</span>
+                                                <span style={{ color: '#64748b' }}>{s.hall}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

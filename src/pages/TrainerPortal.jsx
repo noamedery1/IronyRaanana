@@ -19,7 +19,6 @@ const TrainerPortal = () => {
     // NOT the live board. Read its board for row alignment + write proposals to its script.
     const MANAGER_FILE_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
     const MANAGER_CSV = `https://docs.google.com/spreadsheets/d/${MANAGER_FILE_ID}/export?format=csv&gid=0`;
-    const MANAGER_PROPOSE_URL = 'https://script.google.com/macros/s/AKfycbzXzCDHLFUb2jZlBwrgsxaN_4Q_IAnPaFcGL9rEtL5pLScKxwPpyaV2Xo2Yn-iOoUYB/exec';
 
     // --------------------------------------------------------------------------
     // STATE
@@ -325,9 +324,9 @@ const TrainerPortal = () => {
             fontSize: '0.95rem', textAlign: 'center',
         };
         return (
-            <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Rubik, sans-serif', padding: '1rem' }}>
+            <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Assistant, sans-serif', padding: '1rem' }}>
                 <div style={{ background: 'rgba(12,19,36,0.96)', backdropFilter: 'blur(20px)', padding: '2rem 1.6rem', borderRadius: '20px', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.08)', width: '90%', maxWidth: '360px', textAlign: 'center' }}>
-                    <div style={{ width: 64, height: 64, margin: '0 auto 1rem', borderRadius: 16, background: 'linear-gradient(135deg,#ff7a18,#c2410c)', display: 'grid', placeItems: 'center', fontSize: 30, boxShadow: '0 12px 30px -10px rgba(255,122,24,0.6)' }}>🏀</div>
+                    <div style={{ width: 64, height: 64, margin: '0 auto 1rem', borderRadius: 16, background: 'linear-gradient(135deg,#3b82f6,#0891b2)', display: 'grid', placeItems: 'center', fontSize: 30, boxShadow: '0 12px 30px -10px rgba(255,122,24,0.6)' }}>🏀</div>
                     <h2 style={{ color: '#fff', margin: '0 0 0.3rem', fontSize: '1.4rem', fontWeight: 800 }}>פורטל מאמנים</h2>
                     <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 1.5rem' }}>כניסה לניהול לוח האימונים שלך</p>
                     <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -348,7 +347,7 @@ const TrainerPortal = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            style={{ background: 'linear-gradient(135deg,#ff7a18,#c2410c)', color: 'white', border: 'none', padding: '0.85rem', borderRadius: '12px', fontWeight: 800, fontFamily: 'inherit', fontSize: '1rem', cursor: loading ? 'wait' : 'pointer', marginTop: '0.3rem' }}
+                            style={{ background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: 'white', border: 'none', padding: '0.85rem', borderRadius: '12px', fontWeight: 800, fontFamily: 'inherit', fontSize: '1rem', cursor: loading ? 'wait' : 'pointer', marginTop: '0.3rem' }}
                         >
                             {loading ? 'מתחבר...' : 'כניסה'}
                         </button>
@@ -360,7 +359,7 @@ const TrainerPortal = () => {
     }
 
     return (
-        <div dir="rtl" style={{ fontFamily: 'Rubik, sans-serif', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 60%)', color: '#e8edf7', paddingBottom: '2rem' }}>
+        <div dir="rtl" style={{ fontFamily: 'Assistant, sans-serif', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 60%)', color: '#e8edf7', paddingBottom: '2rem' }}>
             {/* Header */}
             <header style={{ background: 'rgba(12,19,36,0.96)', padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -378,15 +377,15 @@ const TrainerPortal = () => {
             <div style={{ maxWidth: 600, margin: '0.9rem auto 0', padding: '0 1rem' }}>
                 <div style={{ background: 'rgba(255,122,24,0.1)', border: '1px solid rgba(255,122,24,0.3)', borderRadius: 10, padding: '0.6rem 0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap' }}>
                     <span style={{ color: pushMsg2 && !pushMsg2.startsWith('✓') ? '#fca5a5' : '#fed7aa', fontSize: '0.82rem' }}>{pushMsg2 || '🔔 הפעל התראות כדי לקבל הודעות מהמנהל'}</span>
-                    <button onClick={enableTrainerPush} style={{ background: 'linear-gradient(135deg,#ff7a18,#c2410c)', color: '#fff', border: 'none', borderRadius: 8, padding: '0.4rem 0.9rem', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', fontSize: '0.82rem' }}>הפעל התראות</button>
+                    <button onClick={enableTrainerPush} style={{ background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', border: 'none', borderRadius: 8, padding: '0.4rem 0.9rem', fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', fontSize: '0.82rem' }}>הפעל התראות</button>
                 </div>
             </div>
             )}
 
             {/* Tabs */}
             <div style={{ maxWidth: 600, margin: '1rem auto 0', padding: '0 1rem', display: 'flex', gap: '0.4rem' }}>
-                <button onClick={() => setTab('requests')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'requests' ? '#ff9d3c' : '#94a3b8' }}>האימונים שלי</button>
-                <button onClick={() => setTab('propose')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'propose' ? '#ff9d3c' : '#94a3b8' }}>הזנת לו&quot;ז</button>
+                <button onClick={() => setTab('requests')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'requests' ? '#22d3ee' : '#94a3b8' }}>האימונים שלי</button>
+                <button onClick={() => setTab('propose')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'propose' ? '#22d3ee' : '#94a3b8' }}>הזנת לו&quot;ז</button>
             </div>
 
             {/* Schedule List */}
@@ -424,7 +423,7 @@ const TrainerPortal = () => {
                         <div key={session.id} style={{ background: '#121b30', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#e8edf7' }}>{session.team}</div>
-                                <div style={{ color: '#ff9d3c', fontWeight: '500' }}>{session.day}</div>
+                                <div style={{ color: '#22d3ee', fontWeight: '500' }}>{session.day}</div>
                                 <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.2rem' }}>{session.raw}</div>
                             </div>
                             <button
@@ -481,7 +480,7 @@ const TrainerPortal = () => {
                                 </div>
                             );
                         })}
-                        <button onClick={() => submitProposals(tr)} disabled={loading} style={{ marginTop: '0.6rem', width: '100%', padding: '0.7rem', border: 'none', borderRadius: 8, background: '#ff7a18', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>שלח הצעות למנהל</button>
+                        <button onClick={() => submitProposals(tr)} disabled={loading} style={{ marginTop: '0.6rem', width: '100%', padding: '0.7rem', border: 'none', borderRadius: 8, background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>שלח הצעות למנהל</button>
                     </div>
                 ))}
 
@@ -508,7 +507,7 @@ const TrainerPortal = () => {
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
                                     onClick={() => setEditType('CHANGE')}
-                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #ff7a18' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fff7ed' : 'white', color: editType === 'CHANGE' ? '#ff7a18' : '#64748b' }}
+                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #3b82f6' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fff7ed' : 'white', color: editType === 'CHANGE' ? '#3b82f6' : '#64748b' }}
                                 >
                                     שינוי פרטים
                                 </button>
@@ -577,7 +576,7 @@ const TrainerPortal = () => {
                                                     value={newLocation}
                                                     onChange={(e) => setNewLocation(e.target.value)}
                                                     placeholder="הקלד שם אולם חדש..."
-                                                    style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ff7a18', background: '#fff7ed' }}
+                                                    style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', border: '1px solid #3b82f6', background: '#fff7ed' }}
                                                     autoFocus
                                                 />
                                             )}
@@ -596,7 +595,7 @@ const TrainerPortal = () => {
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <button onClick={() => setEditModalOpen(false)} style={{ flex: 1, padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', cursor: 'pointer' }}>ביטול</button>
-                            <button onClick={submitRequest} disabled={loading} style={{ flex: 1, padding: '0.8rem', borderRadius: '6px', border: 'none', background: '#ff7a18', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>
+                            <button onClick={submitRequest} disabled={loading} style={{ flex: 1, padding: '0.8rem', borderRadius: '6px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 'bold', cursor: loading ? 'wait' : 'pointer' }}>
                                 {loading ? 'שולח...' : 'שלח לאישור'}
                             </button>
                         </div>
