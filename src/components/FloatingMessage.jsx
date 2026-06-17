@@ -34,7 +34,8 @@ export default function FloatingMessage({ clubSlug }) {
                 <button className="cc-btn green" onClick={save} disabled={busy}>{busy ? 'שומר…' : '💾 שמור ופרסם'}</button>
             </div>
             <p style={{ color: 'var(--text-dim)', fontSize: '0.88rem', marginBottom: '1rem' }}>
-                הודעה שרצה כבאנר בראש האתר לכל ההורים. אפשר להדליק/לכבות מתי שרוצים.
+                באנר נע בראש האתר לכל ההורים. אפשר להדליק/לכבות מתי שרוצים.
+                כל שורה = הודעה נפרדת, וההודעות ירוצו ברצף.
                 {msg && <b style={{ marginInlineStart: '0.6rem', color: msg.startsWith('✓') ? '#10b981' : '#ef4444' }}>{msg}</b>}
             </p>
 
@@ -46,8 +47,8 @@ export default function FloatingMessage({ clubSlug }) {
             <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                rows={3}
-                placeholder="לדוגמה: משחק בית מול הפועל ת״א — שבת 19:00 · הרשמה למחנה הקיץ נפתחה"
+                rows={4}
+                placeholder={"כל שורה היא הודעה נפרדת. לדוגמה:\nמשחק בית מול הפועל ת״א — שבת 19:00\nהרשמה למחנה הקיץ נפתחה"}
                 className="cm-textarea"
                 style={{ width: '100%', maxWidth: 720 }}
             />

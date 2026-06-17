@@ -57,7 +57,7 @@ export default function Join() {
                 <div style={{ width: 60, height: 60, margin: '0 auto 0.9rem', borderRadius: 16, background: 'linear-gradient(135deg,#3b82f6,#0891b2)', display: 'grid', placeItems: 'center', fontSize: 28 }}>🏀</div>
                 <h2 style={{ color: '#fff', margin: '0 0 0.3rem', fontSize: '1.3rem', fontWeight: 800 }}>הצטרפות למערכת</h2>
                 <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 0.4rem' }}>{getActiveClub().shortName}</p>
-                <div style={{ display: 'inline-block', background: 'rgba(255,122,24,0.15)', color: '#fed7aa', borderRadius: 20, padding: '0.25rem 0.9rem', fontSize: '0.82rem', fontWeight: 700, marginBottom: '1.3rem' }}>
+                <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.15)', color: '#a5f3fc', borderRadius: 20, padding: '0.25rem 0.9rem', fontSize: '0.82rem', fontWeight: 700, marginBottom: '1.3rem' }}>
                     {roleLabel}{team ? ' · ' + team : ''}
                 </div>
                 <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>

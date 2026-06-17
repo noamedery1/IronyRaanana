@@ -15,7 +15,7 @@ export default function AdminSwitcher() {
     const link = (active) => ({
         textDecoration: 'none', padding: '0.3rem 0.6rem', borderRadius: 8, fontWeight: 700,
         fontSize: '0.78rem', color: active ? '#0b1220' : '#e8edf7',
-        background: active ? '#ff9d3c' : 'rgba(255,255,255,0.08)',
+        background: active ? '#22d3ee' : 'rgba(255,255,255,0.08)',
     });
 
     const onParent = here === `/${slug}` || here === '/' || here === `/${slug}/women`;
@@ -30,7 +30,7 @@ export default function AdminSwitcher() {
             border: '1px solid rgba(255,255,255,0.16)', borderRadius: '30px', padding: '0.35rem 0.5rem',
             boxShadow: '0 12px 30px -10px rgba(0,0,0,0.7)', direction: 'rtl',
         }}>
-            <span style={{ color: '#fbbf24', fontWeight: 800, fontSize: '0.72rem', padding: '0 0.3rem' }}>{isManager ? 'מנהל' : 'מאמן'}</span>
+            <span style={{ color: '#22d3ee', fontWeight: 800, fontSize: '0.72rem', padding: '0 0.3rem' }}>{isManager ? 'מנהל' : 'מאמן'}</span>
             <a href={`/${slug}`} style={link(onParent)}>👨‍👩‍👧 הורים</a>
             <a href={`/${slug}/trainer`} style={link(onTrainer)}>🏀 מאמן</a>
             {isManager && <a href="/admin/dashboard" style={link(onAdmin)}>🗂️ ניהול</a>}

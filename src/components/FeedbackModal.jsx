@@ -75,7 +75,7 @@ const FeedbackModal = ({
                     }}
                 >✕</button>
 
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', color: '#BE185D' }}>שליחת משוב / הצעה</h3>
+                <h3 style={{ marginTop: 0, marginBottom: '1rem', color: '#0891b2' }}>שליחת משוב / הצעה</h3>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div>
@@ -115,7 +115,7 @@ const FeedbackModal = ({
                         type="submit"
                         disabled={isSending}
                         style={{
-                            background: '#BE185D',
+                            background: '#0891b2',
                             color: 'white',
                             border: 'none',
                             padding: '0.8rem',

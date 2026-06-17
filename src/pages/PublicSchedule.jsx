@@ -350,11 +350,19 @@ function PublicSchedule() {
                 </div>
             </nav>
 
-            {floatingMsg?.enabled && floatingMsg.text && (
-                <div style={{ background: 'linear-gradient(135deg,#34d399,#0d9488)', color: '#06231c', fontWeight: 700, textAlign: 'center', padding: '0.6rem 1rem', fontSize: '0.95rem' }}>
-                    📣 {floatingMsg.text}
-                </div>
-            )}
+            {floatingMsg?.enabled && floatingMsg.text && (() => {
+                const msgs = floatingMsg.text.split('\n').map((m) => m.trim()).filter(Boolean);
+                const loop = [...msgs, ...msgs]; // duplicate for a seamless marquee loop
+                return (
+                    <div className="club-ticker" dir="rtl" aria-label="הודעות מהמועדון">
+                        <div className="club-ticker-track">
+                            {loop.map((m, i) => (
+                                <span className="club-ticker-item" key={i}>📣 {m}</span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
 
             <LeagueGamesBanner data={data} headers={headers} targetGender="M" />
 

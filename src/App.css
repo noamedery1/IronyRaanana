@@ -916,3 +916,16 @@
 /* halls/daily — soften boxes, add lift */
 .app-container .hall-box,.app-container .rv-day,.app-container .dv-day{border-radius:18px;border-color:rgba(255,255,255,.05);transition:transform .15s,border-color .15s}
 .app-container .hall-box:hover{transform:translateY(-3px);border-color:rgba(34,211,238,.35)}
+
+/* floating club ticker — moving marquee; multiple messages run in sequence */
+.app-container .club-ticker{
+  overflow:hidden; white-space:nowrap; background:var(--grad); color:#04263a;
+  font-weight:800; box-shadow:0 6px 18px -10px rgba(34,211,238,.6);
+}
+.app-container .club-ticker-track{
+  display:inline-flex; align-items:center; gap:3.5rem; padding:.55rem 0;
+  animation:clubTicker 24s linear infinite; will-change:transform;
+}
+.app-container .club-ticker:hover .club-ticker-track{ animation-play-state:paused; }
+.app-container .club-ticker-item{ display:inline-flex; align-items:center; gap:.45rem; font-size:.95rem; }
+@keyframes clubTicker{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }

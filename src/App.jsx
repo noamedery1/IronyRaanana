@@ -96,8 +96,8 @@ function App() {
           bottom: '20px',
           left: '20px', // LTR public site? or RTL? Using left for now to avoid clash with chat widgets often on right
           zIndex: 999,
-          background: '#FCD34D', // Amber/Yellow
-          color: '#78350F',
+          background: '#3b82f6', // Amber/Yellow
+          color: '#ffffff',
           border: 'none',
           padding: '0.8rem 1.2rem',
           borderRadius: '30px',

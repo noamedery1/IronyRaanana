@@ -15,10 +15,10 @@
   --panel2: #18233f;
 
   /* brand */
-  --primary: #ff7a18;
-  --primary-2: #ff9d3c;
-  --primary-hover: #c2410c;
-  --deep: #c2410c;
+  --primary: #3b82f6;
+  --primary-2: #22d3ee;
+  --primary-hover: #0891b2;
+  --deep: #0891b2;
 
   /* accents */
   --sky: #22d3ee;
@@ -44,7 +44,7 @@
   --text-muted: rgba(238, 242, 251, 0.34);
 
   /* effects */
-  --glow-orange: 0 0 38px rgba(255, 122, 24, 0.35);
+  --glow-orange: 0 0 38px rgba(34, 211, 238, 0.30);
   --shadow: 0 24px 60px -22px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   --radius: 20px;
 
@@ -67,14 +67,14 @@ html {
 }
 
 body {
-  font-family: 'Rubik', sans-serif;
+  font-family: 'Assistant', sans-serif;
   /* direction is driven by the <html dir> attribute (set per language); don't hardcode here */
   color: var(--text-light);
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   background:
-    radial-gradient(ellipse 70% 55% at 82% -8%, rgba(255, 122, 24, 0.26), transparent 60%),
+    radial-gradient(ellipse 70% 55% at 82% -8%, rgba(34, 211, 238, 0.18), transparent 60%),
     radial-gradient(ellipse 60% 50% at 12% 6%, rgba(59, 130, 246, 0.20), transparent 58%),
     radial-gradient(ellipse 80% 70% at 50% 116%, rgba(34, 211, 238, 0.10), transparent 64%),
     linear-gradient(165deg, #070b16 0%, #0a1120 45%, #160a02 100%);
@@ -109,4 +109,4 @@ body::before {
 ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
 /* selection */
-::selection { background: rgba(255, 122, 24, 0.35); color: #fff; }
+::selection { background: rgba(34, 211, 238, 0.30); color: #fff; }

@@ -95,7 +95,7 @@ export default function InstallPrompt() {
             )}
             <button onClick={doInstall} style={{
                 display: 'flex', alignItems: 'center', gap: '0.4rem',
-                background: 'linear-gradient(135deg,#ff7a18,#c2410c)', color: '#fff', border: 'none',
+                background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', border: 'none',
                 padding: '0.6rem 1rem', borderRadius: '30px', fontWeight: 800, fontFamily: 'inherit',
                 fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 8px 22px -6px rgba(255,122,24,0.7)',
             }}>📲 {t('install_btn')}</button>
