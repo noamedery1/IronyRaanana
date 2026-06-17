@@ -12,6 +12,7 @@ import PublishPanel from '../components/PublishPanel';
 import ApprovalsPanel from '../components/ApprovalsPanel';
 import { getActiveClub } from '../clubConfig.js';
 import { subscribeToPush } from '../push.js';
+import { authHeaders } from '../adminApi.js';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -35,27 +36,12 @@ const AdminDashboard = () => {
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
 
-    // Load saved rules on mount
+    // Load saved rules (WeekBuilder constraints) from the DB on mount.
     useEffect(() => {
-        const savedConfig = localStorage.getItem('teamRulesConfig');
-        if (savedConfig) {
-            try {
-                const parsed = JSON.parse(savedConfig);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    setTeamConfig(parsed);
-                }
-            } catch (e) {
-                console.error("Failed to load saved rules", e);
-            }
-        }
-    }, []);
-
-    // Save rules on change
-    useEffect(() => {
-        if (teamConfig.length > 0) {
-            localStorage.setItem('teamRulesConfig', JSON.stringify(teamConfig));
-        }
-    }, [teamConfig]);
+        fetch(`/api/${club.slug}/settings/teamRules`).then((r) => r.json())
+            .then((d) => { if (Array.isArray(d.value) && d.value.length) setTeamConfig(d.value); })
+            .catch(() => { /* none yet */ });
+    }, [club.slug]);
 
     // Load hall config on mount
     useEffect(() => {
@@ -84,8 +70,11 @@ const AdminDashboard = () => {
     const handleClearRules = () => {
         if (window.confirm("Are you sure you want to clear all saved rules (constraints)?")) {
             setTeamConfig([]);
-            localStorage.removeItem('teamRulesConfig');
-            alert("Rules cleared. Re-connect to sheet to reset.");
+            fetch(`/api/${club.slug}/settings/teamRules`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+                body: JSON.stringify({ value: [] }),
+            }).catch(() => {});
+            alert("Rules cleared.");
         }
     };
 
@@ -94,68 +83,33 @@ const AdminDashboard = () => {
         return match ? match[1] : null;
     };
 
+    // WeekBuilder constraints are stored per-club in the DB (club_settings/teamRules).
     const loadRulesFromCloud = async () => {
-        if (!saveUrl) return null;
         try {
-            // Fetch from script with GET parameter
-            const response = await fetch(`${saveUrl}?sheet=SavedRules`);
-            if (!response.ok) return null;
-            const data = await response.json();
-
-            // Expecting array of arrays: [[Team, Coach, ConfigJSON], ...]
-            if (Array.isArray(data) && data.length > 0) {
-                const rulesMap = {};
-                data.forEach(row => {
-                    // skip header if strictly "Team"
-                    if (row[0] === 'Team' && row[2] === 'Config') return;
-
-                    try {
-                        if (row[2]) { // The JSON config
-                            const config = JSON.parse(row[2]);
-                            const key = `${row[0]}_${row[1] || ''}`;
-                            rulesMap[key] = config;
-                        }
-                    } catch (e) {
-                        // ignore parse error for row
-                    }
-                });
-                return rulesMap;
+            const r = await fetch(`/api/${club.slug}/settings/teamRules`);
+            const d = await r.json();
+            if (Array.isArray(d.value) && d.value.length) {
+                const map = {};
+                d.value.forEach((t) => { map[`${t.name}_${t.coach || ''}`] = t; });
+                return map;
             }
-        } catch (e) {
-            console.warn("Could not load rules from cloud:", e);
-        }
+        } catch { /* none yet */ }
         return null;
     };
 
     const saveRulesToCloud = async (currentConfig) => {
-        if (!saveUrl || !currentConfig) return;
-
-        const rows = [['Team', 'Coach', 'Config']];
-        currentConfig.forEach(t => {
-            rows.push([t.name, t.coach, JSON.stringify(t)]);
-        });
-
-        const payload = {
-            sheetName: 'SavedRules',
-            rows: rows,
-            sheetId: extractSheetId(sheetUrl)
-        };
-
+        if (!currentConfig) return;
         try {
-            await fetch(saveUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                cache: 'no-cache',
-                redirect: 'follow',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
-                body: JSON.stringify(payload)
+            const r = await fetch(`/api/${club.slug}/settings/teamRules`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+                body: JSON.stringify({ value: currentConfig }),
             });
-            alert('החוקים נשמרו בגיליון SavedRules בהצלחה!');
+            if (!r.ok) throw new Error('save failed');
+            alert('החוקים נשמרו ל-DB בהצלחה!');
         } catch (e) {
-            console.error("Save rules error:", e);
-            alert('שגיאה בשמירת החוקים לענן.');
+            console.error('Save rules error:', e);
+            alert('שגיאה בשמירת החוקים.');
         }
     };
 
