@@ -77,12 +77,27 @@ export async function deleteClub(slug) {
     await pool.query('DELETE FROM clubs WHERE slug=$1', [slug]);
 }
 
-// Save a base64 PNG icon to the volume; returns its public URL.
-export function saveIcon(slug, kind, base64) {
-    const data = base64.includes(',') ? base64.split(',')[1] : base64;
-    const file = `${slug}-${kind}.png`;
-    fs.writeFileSync(path.join(ICONS_DIR, file), Buffer.from(data, 'base64'));
-    return `/clubicons/${file}`;
+// Save an uploaded image (data-URL or raw base64) into the DB as bytes.
+// Returns the public URL the client should use to fetch it (cached, served by the API).
+export async function saveAsset(slug, kind, dataUrl) {
+    let mime = 'image/png';
+    let b64 = dataUrl;
+    const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl || '');
+    if (m) { mime = m[1]; b64 = m[2]; } else if (dataUrl.includes(',')) { b64 = dataUrl.split(',')[1]; }
+    const bytes = Buffer.from(b64, 'base64');
+    await pool.query(
+        `INSERT INTO club_assets (club_slug, kind, mime, bytes, updated_at)
+         VALUES ($1,$2,$3,$4, now())
+         ON CONFLICT (club_slug, kind) DO UPDATE SET mime = excluded.mime, bytes = excluded.bytes, updated_at = now()`,
+        [slug, kind, mime, bytes],
+    );
+    return `/api/${slug}/icon/${kind}`;
+}
+
+// Fetch an image row, or null. updated_at doubles as a cheap ETag/cache key.
+export async function getAsset(slug, kind) {
+    const r = await pool.query('SELECT mime, bytes, updated_at FROM club_assets WHERE club_slug=$1 AND kind=$2', [slug, kind]);
+    return r.rows[0] || null;
 }
 
 export function manifestFor(club) {

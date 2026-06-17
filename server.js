@@ -14,7 +14,7 @@ import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } 
 import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
 import { requireManager } from './server/auth.js';
 import {
-    ensureStore, listClubs, getClub, upsertClub, deleteClub, saveIcon, manifestFor, ICONS_DIR,
+    ensureStore, listClubs, getClub, upsertClub, deleteClub, saveAsset, getAsset, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -249,8 +249,22 @@ app.get(/^\/clubs\/([a-z0-9-]+)\.webmanifest$/, async (req, res) => {
     res.json(manifestFor(club));
 });
 
-// Uploaded club icons (served from the volume).
+// Uploaded club icons — legacy volume path (kept for any pre-DB uploads).
 app.use('/clubicons', express.static(ICONS_DIR));
+
+// Uploaded club images (logo / PWA icons) now live in the DB; serve them with caching.
+app.get('/api/:club/icon/:kind', async (req, res) => {
+    try {
+        const asset = await getAsset(req.params.club, req.params.kind);
+        if (!asset) return res.status(404).end();
+        const etag = `"${new Date(asset.updated_at).getTime()}"`;
+        if (req.headers['if-none-match'] === etag) return res.status(304).end();
+        res.set('Content-Type', asset.mime);
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.set('ETag', etag);
+        res.send(asset.bytes);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // ===== Clubs (superuser write) =====
 app.post('/api/superuser/clubs', requireSuperuser, async (req, res) => {
@@ -276,11 +290,13 @@ app.post('/api/superuser/clubs', requireSuperuser, async (req, res) => {
         icon192: club.icon192 || '',
         icon512: club.icon512 || '',
         appleIcon: club.appleIcon || '',
+        logo: club.logo || '',
     };
     if (icons) {
-        if (icons.i192) record.icon192 = saveIcon(club.slug, '192', icons.i192);
-        if (icons.i512) record.icon512 = saveIcon(club.slug, '512', icons.i512);
-        if (icons.apple) record.appleIcon = saveIcon(club.slug, 'apple', icons.apple);
+        if (icons.i192) record.icon192 = await saveAsset(club.slug, '192', icons.i192);
+        if (icons.i512) record.icon512 = await saveAsset(club.slug, '512', icons.i512);
+        if (icons.apple) record.appleIcon = await saveAsset(club.slug, 'apple', icons.apple);
+        if (icons.logo) record.logo = await saveAsset(club.slug, 'logo', icons.logo);
     }
     try { res.json(await upsertClub(record)); } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Superuser console (general manager). Password-gated. Lets you add/edit clubs and
-// upload their icons without touching code — everything persists on the server volume.
+// upload their logo/icons without touching code — images are stored in the DB and
+// served (cached) from /api/:club/icon/:kind, so a DB backup carries everything.
 
 const FILE_TO_DATAURL = (file) => new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -72,6 +73,8 @@ export default function SuperUser() {
             backgroundColor: c.backgroundColor || '#070b16', dataUrl: c.dataUrl || '', publishUrl: c.publishUrl || '',
             sheetApi: c.sheetApi || '', sport: c.sport || '',
             managerEmails: Array.isArray(c.managerEmails) ? c.managerEmails.join(', ') : (c.managerEmails || ''),
+            // carry existing image URLs so re-saving without re-uploading keeps them
+            icon192: c.icon192 || '', icon512: c.icon512 || '', appleIcon: c.appleIcon || '', logo: c.logo || '',
         });
         setIcons({});
         setMsg('');
@@ -171,9 +174,10 @@ export default function SuperUser() {
                         <div><label style={{ ...labelStyle, color: '#fbbf24' }}>📧 מיילי מנהלים לקבלת בקשות לאישור (מופרד בפסיק)</label><input value={form.managerEmails} onChange={(e) => setForm({ ...form, managerEmails: e.target.value })} placeholder="manager@club.com, second@club.com" style={{ ...inputStyle, direction: 'ltr', border: '1px solid #fbbf24' }} /></div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                        <div><label style={{ ...labelStyle, color: '#22d3ee' }}>🏆 לוגו המועדון (מוצג בכותרת ובדף הכניסה)</label><input type="file" accept="image/*" onChange={(e) => onIcon('logo', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem', border: '1px solid #22d3ee' }} /></div>
+                        <div><label style={labelStyle}>אייקון אפליקציה 512px</label><input type="file" accept="image/png" onChange={(e) => onIcon('i512', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
                         <div><label style={labelStyle}>אייקון 192px</label><input type="file" accept="image/png" onChange={(e) => onIcon('i192', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
-                        <div><label style={labelStyle}>אייקון 512px</label><input type="file" accept="image/png" onChange={(e) => onIcon('i512', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
                         <div><label style={labelStyle}>Apple icon</label><input type="file" accept="image/png" onChange={(e) => onIcon('apple', e.target.files[0])} style={{ ...inputStyle, padding: '0.4rem' }} /></div>
                     </div>
 
