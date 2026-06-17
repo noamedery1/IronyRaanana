@@ -13,19 +13,15 @@ import ApprovalsPanel from '../components/ApprovalsPanel';
 import { getActiveClub } from '../clubConfig.js';
 import { subscribeToPush } from '../push.js';
 
-const ADMIN_SHEET_ID = '1fpbkPyUIGUn_wwdJDXf4dhwHvv5Y-KRYfnmv026Gs6w';
-const ADMIN_SHEET_URL = `https://docs.google.com/spreadsheets/d/${ADMIN_SHEET_ID}/edit?gid=0#gid=0`;
-// LIVE script (holds trainer push subscriptions + the send mechanism).
-const LIVE_SCRIPT_API = 'https://script.google.com/macros/s/AKfycbxZBUPujrqGRHOgX7Vb8JXdGuivho-FiMqGoshZxLTvqIumLDKGUzyc1mM9-W4jVC0/exec';
-
 const AdminDashboard = () => {
     const navigate = useNavigate();
+    const club = getActiveClub(); // dashboard is scoped to the club in the URL
     const [activeTab, setActiveTab] = useState('setup');
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
-    // Setup state
-    const [sheetUrl] = useState(ADMIN_SHEET_URL);
-    const [saveUrl, setSaveUrl] = useState('https://script.google.com/macros/s/AKfycbzXzCDHLFUb2jZlBwrgsxaN_4Q_IAnPaFcGL9rEtL5pLScKxwPpyaV2Xo2Yn-iOoUYB/exec');
+    // Setup state — per-club "temporary Excel" (draft sheet) + its save API.
+    const [sheetUrl, setSheetUrl] = useState(club.publishUrl || club.dataUrl || '');
+    const [saveUrl, setSaveUrl] = useState(club.sheetApi || '');
     const [sheetName, setSheetName] = useState('גיליון1');
     const [isConnected, setIsConnected] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -76,7 +72,7 @@ const AdminDashboard = () => {
 
     const handleLogout = () => {
         localStorage.removeItem('isAdmin');
-        navigate('/admin');
+        navigate(`/${club.slug}/admin`);
     };
 
     // Subscribe THIS device to manager push (approve/reject from the notification).
@@ -179,19 +175,12 @@ const AdminDashboard = () => {
             console.log("No cloud rules or error loading them");
         }
 
+        // The club's own draft source: a Google Sheet (export to CSV) or a direct CSV URL.
         const id = extractSheetId(sheetUrl);
-        if (!id) {
-            setError('Invalid Google Sheet URL. Could not find Sheet ID.');
-            setLoading(false);
-            return;
-        }
-        if (id !== ADMIN_SHEET_ID) {
-            setError('Admin dashboard is locked to the dedicated Admin sheet only.');
-            setLoading(false);
-            return;
-        }
-
-        const csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`;
+        let csvUrl;
+        if (id) csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`;
+        else if (/\.csv(\?|$)/i.test(sheetUrl) || sheetUrl.startsWith('/')) csvUrl = sheetUrl;
+        else { setError('מקור לא תקין — הזן קישור Google Sheet או קובץ CSV.'); setLoading(false); return; }
 
         try {
             const response = await fetch(csvUrl);
@@ -417,9 +406,9 @@ const AdminDashboard = () => {
                             <input
                                 type="text"
                                 value={sheetUrl}
+                                onChange={(e) => setSheetUrl(e.target.value)}
                                 placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv..."
-                                disabled
-                                style={{ flex: 1, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', background: '#f8fafc', color: '#374151' }}
+                                style={{ flex: 1, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', background: '#fff', color: '#374151', direction: 'ltr' }}
                             />
                             <button
                                 onClick={handleConnect}
@@ -432,7 +421,7 @@ const AdminDashboard = () => {
 
                         {error && <div style={{ color: '#ef4444', marginTop: '1rem', background: '#fee2e2', padding: '1rem', borderRadius: '4px' }}>{error}</div>}
                         <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
-                            Admin is locked to: <code>{ADMIN_SHEET_URL}</code>
+                            לוז הטיוטה של <b>{club.name}</b>: <code>{sheetUrl || '—'}</code>
                         </div>
 
                         <div style={{ marginTop: '2rem' }}>

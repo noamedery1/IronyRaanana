@@ -164,7 +164,7 @@ function PublicSchedule() {
         fetch(`/api/${club.slug}/settings/floatingMessage`).then((r) => r.json())
             .then((d) => setFloatingMsg(d.value || null)).catch(() => { });
         fetch(`/api/${club.slug}/halls`).then((r) => r.json())
-            .then((d) => { if (d.config) localStorage.setItem('raananaHallConfig', JSON.stringify(d.config)); })
+            .then((d) => { if (d.config) localStorage.setItem(`hallcfg:${club.slug}`, JSON.stringify(d.config)); })
             .catch(() => { });
     }, []);
 

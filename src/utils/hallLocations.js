@@ -26,7 +26,10 @@ export function cleanHallName(loc) {
 
 // Admin-defined hall addresses (saved by the Halls settings page on this device).
 function readHallConfig() {
-    try { return JSON.parse(localStorage.getItem('raananaHallConfig')) || {}; }
+    try {
+        const slug = (window.location.pathname.split('/').filter(Boolean)[0]) || 'raanana';
+        return JSON.parse(localStorage.getItem(`hallcfg:${slug}`)) || JSON.parse(localStorage.getItem('raananaHallConfig')) || {};
+    }
     catch { return {}; }
 }
 

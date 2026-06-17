@@ -3,7 +3,7 @@
 // schedule for a dated week. Reuses the existing CSV parsing from scheduleCore.
 import Papa from 'papaparse';
 import { pool, withTx } from './db.js';
-import { parseCellContent, parseHeaderDate, parseTime } from './scheduleCore.js';
+import { parseCellContent, parseHeaderDate, parseTime, buildICS } from './scheduleCore.js';
 import { getClub } from './clubsStore.js';
 import { seedTeamsFromSessions } from './people.js';
 
@@ -168,6 +168,32 @@ export async function getLiveSchedule(slug, week) {
         [p.id],
     );
     return { publication: p, sessions: s.rows };
+}
+
+// Live, per-club calendar feed (ICS) for one team — built from the DB, not the Sheet.
+export async function teamICS(slug, teamParam) {
+    const data = await getLiveSchedule(slug);
+    if (!data || !data.sessions?.length) return null;
+    const t = (teamParam || '').trim();
+    const rows = data.sessions.filter((s) => s.status !== 'cancelled' && s.team
+        && (s.team.trim() === t || `${s.team.trim()} - ${(s.coach || '').trim()}` === t));
+    if (!rows.length) return null;
+
+    const events = rows.filter((s) => s.date && s.start_time).map((s, i) => {
+        const [sh, sm] = s.start_time.split(':').map(Number);
+        const start = new Date(s.date + 'T00:00:00'); start.setHours(sh, sm, 0, 0);
+        const end = new Date(s.date + 'T00:00:00');
+        if (s.end_time) { const [eh, em] = s.end_time.split(':').map(Number); end.setHours(eh, em, 0, 0); }
+        else end.setHours(sh + 1, sm + 30, 0, 0);
+        return {
+            title: `${s.type === 'match' ? '🏀 משחק' : 'אימון'} - ${s.team}`,
+            location: s.hall || '',
+            details: `קבוצת ${s.team}${s.coach ? ' · מאמן ' + s.coach : ''}`,
+            start, end,
+            uid: `${slug}-${s.team}-${s.date}-${(s.start_time || '').replace(/\D/g, '')}-${i}`.replace(/\s+/g, '_'),
+        };
+    });
+    return buildICS(events, `לו"ז ${t}`);
 }
 
 // Publication history (for the manager's "recent publications" panel / restore).

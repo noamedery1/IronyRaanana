@@ -22,7 +22,7 @@ const AdminLogin = () => {
             if (data.valid) {
                 localStorage.setItem('isAdmin', 'true');
                 localStorage.setItem('managerName', data.name || username);
-                navigate('/admin/dashboard');
+                navigate(`/${getActiveClub().slug}/admin/dashboard`);
                 return;
             }
         } catch { /* fall through to built-in */ }
@@ -30,7 +30,7 @@ const AdminLogin = () => {
         // 2) Built-in fallback (legacy).
         if (username === 'Admin' && password === 'Passw0rd') {
             localStorage.setItem('isAdmin', 'true');
-            navigate('/admin/dashboard');
+            navigate(`/${getActiveClub().slug}/admin/dashboard`);
         } else {
             setError('שם משתמש או סיסמה שגויים');
         }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n.jsx';
+import { getActiveClub } from '../clubConfig.js';
 
 // "Auto calendar" subscribe button + a centered chooser modal (not clipped by the hero card),
 // with cross-platform options: Apple (webcal), Android device (.ics), Google Calendar, copy link.
@@ -12,9 +13,11 @@ export default function CalendarSubscribe({ teamLabel }) {
     if (!teamLabel) return null;
 
     const host = window.location.host;
+    const slug = getActiveClub().slug;
     const q = encodeURIComponent(teamLabel);
-    const httpsUrl = `${window.location.protocol}//${host}/calendar.ics?team=${q}`;
-    const webcalUrl = `webcal://${host}/calendar.ics?team=${q}`;
+    const path = `/api/${slug}/calendar.ics?team=${q}`;
+    const httpsUrl = `${window.location.protocol}//${host}${path}`;
+    const webcalUrl = `webcal://${host}${path}`;
 
     const apple = () => { window.location.href = webcalUrl; setOpen(false); };
     const android = () => { window.location.href = httpsUrl; setOpen(false); };

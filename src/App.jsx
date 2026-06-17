@@ -68,6 +68,17 @@ function App() {
         {/* Invite-based registration (parent/trainee per team, or operator) */}
         <Route path="/:club/join" element={<Join />} />
 
+        {/* Per-club manager dashboard — each manager manages only their own club */}
+        <Route path="/:club/admin" element={<AdminLogin />} />
+        <Route
+          path="/:club/admin/dashboard"
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Per-club public routes — club slug is the first path segment */}
         <Route path="/:club" element={<PublicSchedule />} />
         <Route path="/:club/women" element={<PublicScheduleWomen />} />

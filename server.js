@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
 import { buildTeamICSFromCsv } from './server/scheduleCore.js';
-import { publishClub, getLiveSchedule, listPublications } from './server/publish.js';
+import { publishClub, getLiveSchedule, listPublications, teamICS } from './server/publish.js';
 import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
     registerUser, authUser, listTeams, upsertTeam, deleteTeam,
@@ -94,6 +94,22 @@ app.get('/api/:club/schedule', async (req, res) => {
         res.json(data);
     } catch (e) {
         res.status(500).json({ error: e.message });
+    }
+});
+
+// Per-club live calendar feed (ICS) from the DB.
+app.get('/api/:club/calendar.ics', async (req, res) => {
+    const team = (req.query.team || '').toString();
+    if (!team) return res.status(400).send('Missing team parameter');
+    try {
+        const ics = await teamICS(req.params.club, team);
+        if (!ics) return res.status(404).send('Team not found');
+        res.set('Content-Type', 'text/calendar; charset=utf-8');
+        res.set('Cache-Control', 'public, max-age=1800');
+        res.set('Content-Disposition', 'inline; filename="schedule.ics"');
+        return res.send(ics);
+    } catch (e) {
+        return res.status(500).send('Error building calendar');
     }
 });
 
