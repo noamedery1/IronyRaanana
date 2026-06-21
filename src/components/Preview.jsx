@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -623,12 +624,12 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             } catch (err) {
                 console.error("Save Error:", err);
                 alert('שגיאה בשליחה לגיליון.');
-                downloadCsv();
+                downloadXlsx();
             } finally {
                 setIsSaving(false);
             }
         } else {
-            downloadCsv();
+            downloadXlsx();
         }
     };
 
@@ -645,11 +646,67 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         document.body.removeChild(link);
     };
 
+    // Export a full .xlsx workbook (same shape as the loaded Excel), not a flat CSV.
+    const downloadXlsx = () => {
+        const aoa = [currentHeaders, ...dataToShow.map((row) => row.map((c) => (c === null || c === undefined) ? '' : String(c)))];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = (currentHeaders || []).map(() => ({ wch: 18 }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, (sheetName && sheetName.slice(0, 28)) || 'לו"ז');
+        XLSX.writeFile(wb, 'raanana_schedule.xlsx');
+    };
+
     const handleClear = () => {
         if (window.confirm('האם אתה בטוח שברצונך לנקות את כל השינויים ולחזור למצב הגיליון המקורי?')) {
             setCurrentSchedule(null);
             setSelectedCell(null);
         }
+    };
+
+    // Load every team's constraints (from "בניית שבוע") onto the board, without auto-filling
+    // the rest. Constraints win on their cell; OFF clears the day; same-day constraints stack.
+    const applyConstraints = () => {
+        if (!teamConfig || teamConfig.length === 0) {
+            alert('לא נמצאו קבוצות/אילוצים. הגדר אותם בלשונית "בניית שבוע".');
+            return;
+        }
+        const base = currentSchedule ? JSON.parse(JSON.stringify(currentSchedule)) : JSON.parse(JSON.stringify(rawRows));
+        const tok = (t) => String(t || '').replace(':', '').padStart(4, '0');
+        const written = new Set(); // cells written during THIS run → stack multiple same-day constraints
+        let count = 0;
+
+        teamConfig.forEach((team) => {
+            if (!team.constraints || team.constraints.length === 0) return;
+            const ri = base.findIndex(r => r[0] === team.name && (!team.coach || ((coachIndex != null && coachIndex !== -1 ? r[coachIndex] : '') || '').trim() === team.coach));
+            if (ri === -1) return;
+
+            team.constraints.forEach((c) => {
+                const col = dayStart + c.day;
+                const key = `${ri}_${col}`;
+                if (c.type === 'OFF') { base[ri][col] = ''; written.add(key); count++; return; }
+
+                const loc = (c.location || '').trim();
+                const s = tok(c.startTime), e = tok(c.endTime);
+                let content = `${loc} ${s}-${e}`.trim();
+                if (c.type === 'MATCH') {
+                    const where = c.subType === 'AWAY' ? 'חוץ' : (c.subType === 'HOME' ? 'בית' : '');
+                    content = `🏀 משחק ${where} ${loc} ${s}-${e}`.replace(/\s+/g, ' ').trim();
+                } else if (c.type === 'ATHLETICS') {
+                    content = `🏃 אתלטיקה ${loc} ${s}-${e}`.trim();
+                }
+
+                base[ri][col] = written.has(key) ? `${base[ri][col]}\n${content}` : content;
+                written.add(key);
+                count++;
+            });
+        });
+
+        if (count === 0) {
+            alert('לא נמצאו אילוצים מוגדרים. הגדר אותם בלשונית "בניית שבוע".');
+            return;
+        }
+        setCurrentSchedule(base);
+        alert(`✓ נטענו ${count} אילוצים ללוח.`);
     };
 
     // ---- Inspector helpers ----
@@ -921,7 +978,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                         <button className={`cc-btn ${showConflictsFS ? 'amber' : 'ghost'}`} onClick={() => setShowConflictsFS(v => !v)}>
                             {showConflictsFS ? '⚠️ מסתיר התנגשויות' : '⚠️ הצג התנגשויות'}{conflictDetails.length > 0 ? ` (${conflictDetails.length})` : ''}
                         </button>
-                        <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>{isSaving ? 'שומר…' : (saveUrl ? '💾 שמור' : '⬇ ייצא')}</button>
+                        <button className="cc-btn amber" onClick={applyConstraints}>📌 טען אילוצים</button>
+                        <button className="cc-btn ghost" onClick={downloadXlsx}>⬇ ייצא אקסל</button>
+                        {saveUrl && <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>{isSaving ? 'שומר…' : '💾 שמור'}</button>}
                         <button className="cc-btn blue" onClick={() => { setFullScreen(false); setEditModalOpen(false); setCtxMenu(null); }}>⤢ צא ממסך מלא</button>
                     </div>
                 </div>
@@ -939,12 +998,16 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     </label>
                     <button className="cc-btn blue" onClick={() => setFullScreen(true)}>🖥 עבודה על מסך מלא</button>
                     <button className="cc-btn ghost" onClick={handleClear}>↺ נקה הכל</button>
+                    <button className="cc-btn amber" onClick={applyConstraints}>📌 טען אילוצים</button>
                     <button className="cc-btn amber" onClick={handleGenerate} disabled={isGenerating}>
                         {isGenerating ? 'מחשב…' : '✨ צור לו"ז אוטומטי'}
                     </button>
-                    <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? 'שומר…' : (saveUrl ? '💾 שמור לגיליון' : '⬇ ייצא CSV')}
-                    </button>
+                    <button className="cc-btn ghost" onClick={downloadXlsx}>⬇ ייצא אקסל</button>
+                    {saveUrl && (
+                        <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? 'שומר…' : '💾 שמור לגיליון'}
+                        </button>
+                    )}
                 </div>
             </div>
             )}
