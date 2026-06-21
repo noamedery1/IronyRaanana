@@ -231,10 +231,10 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
     }
 
     return (
-        <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+        <div style={{ background: 'white', padding: 'clamp(0.8rem, 3vw, 2rem)', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
             <h3 style={{ marginTop: 0, marginBottom: '1.5rem' }}>הגדרות שבועיות לאימון</h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 100px 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
+            <div style={{ minWidth: 620, display: 'grid', gridTemplateColumns: 'minmax(160px, 1.5fr) 60px 100px 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
                 <div>קבוצה</div>
                 <div style={{ textAlign: 'center' }}>מגדר</div>
                 <div style={{ textAlign: 'center' }}>משך (דק')</div>
@@ -242,11 +242,12 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                 <div>אילוצים ושריון מגרשים</div>
             </div>
 
-            <div style={{ maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+            <div style={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
                 {teamConfig.map((team, index) => (
                     <div key={index} style={{
+                        minWidth: 620,
                         display: 'grid',
-                        gridTemplateColumns: 'minmax(200px, 1.5fr) 60px 100px 150px 3fr',
+                        gridTemplateColumns: 'minmax(160px, 1.5fr) 60px 100px 150px 3fr',
                         gap: '1rem',
                         padding: '0.8rem 0',
                         borderBottom: '1px solid #f0f0f0',

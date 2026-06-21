@@ -18,7 +18,9 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const club = getActiveClub(); // dashboard is scoped to the club in the URL
     const [activeTab, setActiveTab] = useState('setup');
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const mqMobile = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
+    const [isMobile, setIsMobile] = useState(mqMobile);
+    const [sidebarOpen, setSidebarOpen] = useState(() => !mqMobile()); // closed by default on phones
 
     // Setup state — per-club "temporary Excel" (draft sheet) + its save API.
     const [sheetUrl, setSheetUrl] = useState(club.publishUrl || club.dataUrl || '');
@@ -35,6 +37,17 @@ const AdminDashboard = () => {
     const [teamConfig, setTeamConfig] = useState([]);
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
+
+    // Track viewport so the dashboard becomes a phone-friendly layout (drawer sidebar).
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 768px)');
+        const onChange = () => { setIsMobile(mq.matches); setSidebarOpen(!mq.matches); };
+        mq.addEventListener('change', onChange);
+        return () => mq.removeEventListener('change', onChange);
+    }, []);
+
+    // Pick a tab and, on mobile, close the drawer so the content is visible.
+    const selectTab = (tab) => { setActiveTab(tab); if (mqMobile()) setSidebarOpen(false); };
 
     // Load saved rules (WeekBuilder constraints) from the DB on mount.
     useEffect(() => {
@@ -374,7 +387,7 @@ const AdminDashboard = () => {
                         </div>
 
                         {error && <div style={{ color: '#ef4444', marginTop: '1rem', background: '#fee2e2', padding: '1rem', borderRadius: '4px' }}>{error}</div>}
-                        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
                             לוז הטיוטה של <b>{club.name}</b>: <code>{sheetUrl || '—'}</code>
                         </div>
 
@@ -478,55 +491,61 @@ const AdminDashboard = () => {
     return (
         <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent', fontFamily: 'Rubik, sans-serif', color: 'var(--text)' }}>
             {/* Header */}
-            <header style={{ background: 'rgba(7,11,22,0.62)', backdropFilter: 'blur(20px) saturate(1.4)', padding: '0.9rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+            <header style={{ background: 'rgba(7,11,22,0.62)', backdropFilter: 'blur(20px) saturate(1.4)', padding: isMobile ? '0.6rem 0.8rem' : '0.9rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.6rem' : '1.2rem', minWidth: 0 }}>
                     <button
                         onClick={() => setSidebarOpen(o => !o)}
-                        title={sidebarOpen ? 'הסתר תפריט (הגדל טבלה)' : 'הצג תפריט'}
-                        style={{ background: 'var(--glass-2)', color: 'var(--text)', border: '1px solid var(--glass-border)', width: '40px', height: '40px', borderRadius: '11px', cursor: 'pointer', fontSize: '1.1rem' }}
+                        title={sidebarOpen ? 'הסתר תפריט' : 'הצג תפריט'}
+                        style={{ background: 'var(--glass-2)', color: 'var(--text)', border: '1px solid var(--glass-border)', width: '40px', height: '40px', borderRadius: '11px', cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}
                     >☰</button>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <img src="/men_logo.png" alt="Logo" style={{ height: '48px', width: 'auto', borderRadius: '12px', background: '#fff', padding: '3px' }} />
-                        <div>
-                            <h2 style={{ margin: 0, color: 'var(--text)', fontSize: '1.2rem' }}>מערכת ניהול · פורטל ראשי</h2>
-                            <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>ניהול גברים ונשים (משותף)</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0 }}>
+                        <img src="/men_logo.png" alt="Logo" style={{ height: isMobile ? '36px' : '48px', width: 'auto', borderRadius: '12px', background: '#fff', padding: '3px', flexShrink: 0 }} />
+                        <div style={{ minWidth: 0 }}>
+                            <h2 style={{ margin: 0, color: 'var(--text)', fontSize: isMobile ? '0.95rem' : '1.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{isMobile ? 'ניהול המועדון' : 'מערכת ניהול · פורטל ראשי'}</h2>
+                            {!isMobile && <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>ניהול גברים ונשים (משותף)</span>}
                         </div>
                     </div>
                 </div>
 
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <a href="/" target="_blank" style={{ textDecoration: 'none', color: 'var(--sky)', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>שלום, Admin</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.4rem' : '1rem', flexShrink: 0 }}>
+                    {!isMobile && <a href="/" target="_blank" style={{ textDecoration: 'none', color: 'var(--sky)', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>}
+                    {!isMobile && <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>שלום, Admin</span>}
                     <button
                         onClick={enableManagerPush}
                         title="קבל התראות על בקשות שינוי ואשר ישירות מההתראה"
-                        style={{ background: 'var(--glass-bg)', color: 'var(--text)', border: '1px solid var(--glass-border)', padding: '0.5rem 0.9rem', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}
+                        style={{ background: 'var(--glass-bg)', color: 'var(--text)', border: '1px solid var(--glass-border)', padding: isMobile ? '0.45rem 0.6rem' : '0.5rem 0.9rem', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Rubik, sans-serif', fontSize: isMobile ? '0.85rem' : '1rem', whiteSpace: 'nowrap' }}
                     >
-                        🔔 התראות מנהל
+                        🔔{isMobile ? '' : ' התראות מנהל'}
                     </button>
                     <button
                         onClick={handleLogout}
-                        style={{ background: 'var(--glass-bg)', color: 'var(--text)', border: '1px solid var(--glass-border)', padding: '0.5rem 1rem', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Rubik, sans-serif' }}
+                        style={{ background: 'var(--glass-bg)', color: 'var(--text)', border: '1px solid var(--glass-border)', padding: isMobile ? '0.45rem 0.6rem' : '0.5rem 1rem', borderRadius: '10px', cursor: 'pointer', fontFamily: 'Rubik, sans-serif', fontSize: isMobile ? '0.85rem' : '1rem', whiteSpace: 'nowrap' }}
                     >
-                        התנתק
+                        {isMobile ? 'יציאה' : 'התנתק'}
                     </button>
                 </div>
             </header >
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Sidebar */}
-                {sidebarOpen && <aside style={{ width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+                {/* Mobile drawer backdrop */}
+                {isMobile && sidebarOpen && (
+                    <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, top: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }} />
+                )}
+                {/* Sidebar — inline column on desktop, fixed drawer on mobile */}
+                {sidebarOpen && <aside style={isMobile
+                    ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: '1.2rem 0', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
+                    : { width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
                         <button
                             style={menuButtonStyle(activeTab === 'setup')}
-                            onClick={() => setActiveTab('setup')}
+                            onClick={() => selectTab('setup')}
                         >
                             ⚙️ הגדרות מערכת {isConnected && '✅'}
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'weekBuilder')}
-                            onClick={() => setActiveTab('weekBuilder')}
+                            onClick={() => selectTab('weekBuilder')}
                             disabled={!isConnected}
                             title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
                         >
@@ -534,50 +553,50 @@ const AdminDashboard = () => {
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'publish')}
-                            onClick={() => setActiveTab('publish')}
+                            onClick={() => selectTab('publish')}
                         >
                             🚀 פרסם לוז
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'approvals')}
-                            onClick={() => setActiveTab('approvals')}
+                            onClick={() => selectTab('approvals')}
                         >
                             ✅ בקשות לאישור
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'preview')}
-                            onClick={() => setActiveTab('preview')}
+                            onClick={() => selectTab('preview')}
                             disabled={!isConnected}
                         >
                             👁️ תצוגה מקדימה
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'halls')}
-                            onClick={() => setActiveTab('halls')}
+                            onClick={() => selectTab('halls')}
                         >
                             🏟️ הגדרת אולמות
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'messages')}
-                            onClick={() => setActiveTab('messages')}
+                            onClick={() => selectTab('messages')}
                         >
                             📣 הודעה צפה
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'trainerPush')}
-                            onClick={() => setActiveTab('trainerPush')}
+                            onClick={() => selectTab('trainerPush')}
                         >
                             📢 הודעות
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'invites')}
-                            onClick={() => setActiveTab('invites')}
+                            onClick={() => selectTab('invites')}
                         >
                             🔗 לינקי הזמנה
                         </button>
                         <button
                             style={menuButtonStyle(activeTab === 'trainersAdmin')}
-                            onClick={() => setActiveTab('trainersAdmin')}
+                            onClick={() => selectTab('trainersAdmin')}
                         >
                             👤 ניהול מאמנים
                         </button>
