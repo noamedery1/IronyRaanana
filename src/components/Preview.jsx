@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {} }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {}, onChange, onSaveDraft, onDiscardDraft, draftSavedAt, draftRestored }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [dragStart, setDragStart] = useState(null);
@@ -26,6 +26,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const [inspCustom, setInspCustom] = useState(''); // free-text activity label (e.g. "אימון חוויה")
 
     const [suggestion, setSuggestion] = useState(null); // { text, row, col, newContent }
+    const [draftMsg, setDraftMsg] = useState('');       // "save draft" feedback
 
     // Full-screen working mode + its helpers
     const [fullScreen, setFullScreen] = useState(false);
@@ -257,6 +258,23 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         applyWeekStart(iso);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentHeaders.length]);
+
+    // Report edited rows + headers up so the parent can auto-save a draft (survives refresh).
+    useEffect(() => {
+        if (!onChange) return;
+        const rows = currentSchedule || rawRows;
+        if (!rows || !currentHeaders.length) return;
+        onChange({ headers: currentHeaders, rows });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentSchedule, currentHeaders]);
+
+    const handleSaveDraft = async () => {
+        setDraftMsg('שומר…');
+        const r = onSaveDraft ? await onSaveDraft() : { ok: false };
+        setDraftMsg(r && r.ok ? '✓ הטיוטה נשמרה' : '❌ שמירה נכשלה');
+        setTimeout(() => setDraftMsg(''), 4000);
+    };
+    const draftTime = draftSavedAt ? new Date(draftSavedAt).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 
     const normalizeTimeToken = (timeValue) => {
         if (!timeValue) return null;
@@ -973,14 +991,16 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             {/* Full-screen top bar */}
             {fullScreen && (
                 <div className="cc-fsbar">
-                    <div className="cc-fsbar-title">🏀 לו"ז שבועי — {selectedDate ? `שבוע ${selectedDate.split('-').reverse().slice(0, 2).join('/')}` : ''} {currentSchedule && <span className="cc-dirty">· שינויים לא שמורים</span>}</div>
+                    <div className="cc-fsbar-title">🏀 לו"ז שבועי — {selectedDate ? `שבוע ${selectedDate.split('-').reverse().slice(0, 2).join('/')}` : ''}
+                        {draftMsg ? <span className="cc-dirty"> · {draftMsg}</span> : draftSavedAt ? <span className="cc-dirty" style={{ color: '#86efac' }}> · 💾 נשמר {draftTime}</span> : null}</div>
                     <div className="cc-actions">
                         <button className={`cc-btn ${showConflictsFS ? 'amber' : 'ghost'}`} onClick={() => setShowConflictsFS(v => !v)}>
                             {showConflictsFS ? '⚠️ מסתיר התנגשויות' : '⚠️ הצג התנגשויות'}{conflictDetails.length > 0 ? ` (${conflictDetails.length})` : ''}
                         </button>
+                        <button className="cc-btn green" onClick={handleSaveDraft}>💾 שמור טיוטה</button>
                         <button className="cc-btn amber" onClick={applyConstraints}>📌 טען אילוצים</button>
                         <button className="cc-btn ghost" onClick={downloadXlsx}>⬇ ייצא אקסל</button>
-                        {saveUrl && <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>{isSaving ? 'שומר…' : '💾 שמור'}</button>}
+                        {saveUrl && <button className="cc-btn ghost" onClick={handleSave} disabled={isSaving}>{isSaving ? 'שומר…' : '↗ לגיליון'}</button>}
                         <button className="cc-btn blue" onClick={() => { setFullScreen(false); setEditModalOpen(false); setCtxMenu(null); }}>⤢ צא ממסך מלא</button>
                     </div>
                 </div>
@@ -990,24 +1010,30 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             {!fullScreen && (
             <div className="cc-toolbar">
                 <div className="cc-title">
-                    🏀 לוח שיבוץ שבועי {currentSchedule && <span className="cc-dirty">· שינויים לא שמורים</span>}
+                    🏀 לוח שיבוץ שבועי
+                    {draftMsg ? <span className="cc-dirty"> · {draftMsg}</span>
+                        : draftSavedAt ? <span className="cc-dirty" style={{ color: '#86efac' }}> · 💾 טיוטה נשמרה {draftTime}</span>
+                            : currentSchedule ? <span className="cc-dirty"> · טיוטה לא נשמרה — לחץ "שמור טיוטה"</span> : null}
+                    {draftRestored && <span className="cc-dirty" style={{ color: '#a5f3fc' }}> · המשך מטיוטה</span>}
                 </div>
                 <div className="cc-actions">
                     <label className="cc-date">📅 תאריך התחלה
                         <input type="date" value={selectedDate} onChange={handleDateChange} />
                     </label>
                     <button className="cc-btn blue" onClick={() => setFullScreen(true)}>🖥 עבודה על מסך מלא</button>
-                    <button className="cc-btn ghost" onClick={handleClear}>↺ נקה הכל</button>
+                    <button className="cc-btn green" onClick={handleSaveDraft}>💾 שמור טיוטה</button>
                     <button className="cc-btn amber" onClick={applyConstraints}>📌 טען אילוצים</button>
                     <button className="cc-btn amber" onClick={handleGenerate} disabled={isGenerating}>
                         {isGenerating ? 'מחשב…' : '✨ צור לו"ז אוטומטי'}
                     </button>
                     <button className="cc-btn ghost" onClick={downloadXlsx}>⬇ ייצא אקסל</button>
                     {saveUrl && (
-                        <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>
-                            {isSaving ? 'שומר…' : '💾 שמור לגיליון'}
+                        <button className="cc-btn ghost" onClick={handleSave} disabled={isSaving}>
+                            {isSaving ? 'שומר…' : '↗ שמור לגיליון'}
                         </button>
                     )}
+                    {onDiscardDraft && <button className="cc-btn ghost" onClick={onDiscardDraft} title="מחק טיוטה וטען מחדש מהאקסל">🗑 התחל מחדש</button>}
+                    <button className="cc-btn ghost" onClick={handleClear}>↺ נקה הכל</button>
                 </div>
             </div>
             )}

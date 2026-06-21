@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 import WeekBuilder from '../components/WeekBuilder';
@@ -38,6 +38,25 @@ const AdminDashboard = () => {
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
 
+    // ---- Draft persistence (so a refresh / coming back days later keeps the work) ----
+    const DRAFT_KEY = `draft:${club.slug}`;
+    const latestDraft = useRef(null);     // { headers, rows } reported by the Preview on every edit
+    const [draftSavedAt, setDraftSavedAt] = useState(null);
+    const [draftRestored, setDraftRestored] = useState(false);
+    const sheetDataRef = useRef(null);    // mirror of sheetData for use inside callbacks
+
+    // Build the full snapshot to persist (sheet meta + edited rows/headers + setup).
+    const buildSnapshot = () => {
+        const sd = sheetDataRef.current;
+        const d = latestDraft.current;
+        if (!sd || !d) return null;
+        return {
+            headers: d.headers, rows: d.rows,
+            teams: sd.teams, indices: sd.indices, hallColors: sd.hallColors,
+            sheetName, sheetUrl, saveUrl, savedAt: Date.now(),
+        };
+    };
+
     // Track viewport so the dashboard becomes a phone-friendly layout (drawer sidebar).
     useEffect(() => {
         const mq = window.matchMedia('(max-width: 768px)');
@@ -68,6 +87,86 @@ const AdminDashboard = () => {
     useEffect(() => {
         localStorage.setItem('raananaHallConfig', JSON.stringify(hallConfig));
     }, [hallConfig]);
+
+    // Keep a ref in sync so draft callbacks can read the latest sheetData.
+    useEffect(() => { sheetDataRef.current = sheetData; }, [sheetData]);
+
+    // Preview reports its edited rows/headers on every change → auto-save to localStorage
+    // (instant safety net so a refresh never loses work).
+    const handlePreviewChange = (payload) => {
+        latestDraft.current = payload;
+        const snap = buildSnapshot();
+        if (snap) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(snap)); } catch { /* quota */ } }
+    };
+
+    // Explicit "save draft" → persist to the DB too (durable, survives cache clear / other device).
+    const saveDraftToCloud = async () => {
+        const snap = buildSnapshot();
+        if (!snap) return { ok: false };
+        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(snap)); } catch { /* quota */ }
+        try {
+            const r = await fetch(`/api/${club.slug}/settings/draftSchedule`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+                body: JSON.stringify({ value: snap }),
+            });
+            if (!r.ok) throw new Error('save failed');
+            setDraftSavedAt(snap.savedAt);
+            return { ok: true };
+        } catch (e) {
+            console.error('draft save error', e);
+            return { ok: false };
+        }
+    };
+
+    // Apply a draft snapshot to the live state (no need to reconnect to the Excel).
+    const applySnapshot = (snap) => {
+        if (!snap || !snap.rows) return;
+        setSheetData({
+            headers: snap.headers, teams: snap.teams || [], rawRows: snap.rows,
+            hallColors: snap.hallColors || {}, indices: snap.indices,
+        });
+        setCurrentSchedule(snap.rows);
+        if (snap.sheetName) setSheetName(snap.sheetName);
+        if (snap.sheetUrl) setSheetUrl(snap.sheetUrl);
+        if (snap.saveUrl !== undefined) setSaveUrl(snap.saveUrl);
+        latestDraft.current = { headers: snap.headers, rows: snap.rows };
+        sheetDataRef.current = { teams: snap.teams, indices: snap.indices, hallColors: snap.hallColors };
+        setIsConnected(true);
+        setDraftSavedAt(snap.savedAt || null);
+        setDraftRestored(true);
+    };
+
+    const discardDraft = () => {
+        if (!window.confirm('למחוק את הטיוטה השמורה ולהתחיל מחדש מהאקסל?')) return;
+        localStorage.removeItem(DRAFT_KEY);
+        fetch(`/api/${club.slug}/settings/draftSchedule`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+            body: JSON.stringify({ value: null }),
+        }).catch(() => {});
+        latestDraft.current = null;
+        setCurrentSchedule(null);
+        setDraftSavedAt(null);
+        setDraftRestored(false);
+        setIsConnected(false);
+        setActiveTab('setup');
+    };
+
+    // On mount: restore the most recent draft (DB vs localStorage) so work continues.
+    useEffect(() => {
+        let cancelled = false;
+        const localRaw = localStorage.getItem(DRAFT_KEY);
+        let local = null; try { local = localRaw ? JSON.parse(localRaw) : null; } catch { local = null; }
+        fetch(`/api/${club.slug}/settings/draftSchedule`).then((r) => r.json()).then((d) => {
+            if (cancelled) return;
+            const cloud = d && d.value && d.value.rows ? d.value : null;
+            const pick = (cloud && local) ? (cloud.savedAt >= local.savedAt ? cloud : local) : (cloud || local);
+            if (pick && pick.rows) { applySnapshot(pick); setActiveTab('preview'); }
+        }).catch(() => {
+            if (!cancelled && local && local.rows) { applySnapshot(local); setActiveTab('preview'); }
+        });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [club.slug]);
 
     const handleLogout = () => {
         localStorage.removeItem('isAdmin');
@@ -467,6 +566,11 @@ const AdminDashboard = () => {
                         setCurrentSchedule={setCurrentSchedule}
                         hallColors={sheetData?.hallColors || {}}
                         hallConfig={hallConfig}
+                        onChange={handlePreviewChange}
+                        onSaveDraft={saveDraftToCloud}
+                        onDiscardDraft={discardDraft}
+                        draftSavedAt={draftSavedAt}
+                        draftRestored={draftRestored}
                     />
                 );
             case 'halls':
