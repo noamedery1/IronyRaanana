@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -21,9 +21,16 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const [inspStart, setInspStart] = useState('17:00');
     const [inspEnd, setInspEnd] = useState('18:30');
     const [inspHall, setInspHall] = useState('');
-    const [inspType, setInspType] = useState('TRAIN'); // TRAIN | MATCH | ATHLETICS
+    const [inspType, setInspType] = useState('TRAIN'); // TRAIN | MATCH | ATHLETICS | CUSTOM
+    const [inspCustom, setInspCustom] = useState(''); // free-text activity label (e.g. "אימון חוויה")
 
     const [suggestion, setSuggestion] = useState(null); // { text, row, col, newContent }
+
+    // Full-screen working mode + its helpers
+    const [fullScreen, setFullScreen] = useState(false);
+    const [showConflictsFS, setShowConflictsFS] = useState(false); // in FS: only show ⚠️ markers when on
+    const [editModalOpen, setEditModalOpen] = useState(false);     // FS: edit a cell in a modal
+    const [ctxMenu, setCtxMenu] = useState(null);                  // { x, y, rowIndex, colIndex, isConflict }
 
     // Resizable / collapsible inspector (splitter)
     const [inspWidth, setInspWidth] = useState(340);
@@ -212,26 +219,43 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     const dayHeaders = currentHeaders.length > 0 ? currentHeaders.slice(dayStart, dayStart + 7) : [];
 
+    // Rewrite the 7 day-headers to the week that starts on `dateVal` (yyyy-mm-dd).
+    const applyWeekStart = (dateVal) => {
+        if (!dateVal) return;
+        const start = new Date(dateVal);
+        const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        setCurrentHeaders((prev) => {
+            const newHeaders = [...prev];
+            for (let i = 0; i < 7; i++) {
+                const currentDay = new Date(start);
+                currentDay.setDate(start.getDate() + i);
+                const formattedDate = `${currentDay.getDate()}/${currentDay.getMonth() + 1}`;
+                if (newHeaders[dayStart + i] !== undefined) {
+                    newHeaders[dayStart + i] = `${days[i]} ${formattedDate}`;
+                }
+            }
+            return newHeaders;
+        });
+    };
+
     const handleDateChange = (e) => {
         const dateVal = e.target.value;
         setSelectedDate(dateVal);
-        if (!dateVal) return;
-
-        const start = new Date(dateVal);
-        const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-        const newHeaders = [...currentHeaders];
-
-        for (let i = 0; i < 7; i++) {
-            const currentDay = new Date(start);
-            currentDay.setDate(start.getDate() + i);
-            const dayName = days[i];
-            const formattedDate = `${currentDay.getDate()}/${currentDay.getMonth() + 1}`;
-            if (newHeaders[dayStart + i]) {
-                newHeaders[dayStart + i] = `${dayName} ${formattedDate}`;
-            }
-        }
-        setCurrentHeaders(newHeaders);
+        applyWeekStart(dateVal);
     };
+
+    // Default the preview to the UPCOMING week (next Sunday) once headers are loaded,
+    // so the dates never come up blank — it's always "work on the coming week".
+    useEffect(() => {
+        if (selectedDate || !currentHeaders || currentHeaders.length === 0) return;
+        const d = new Date();
+        const diff = (7 - d.getDay()) % 7; // 0=Sun … 6=Sat → days until the coming Sunday
+        d.setDate(d.getDate() + diff);
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        setSelectedDate(iso);
+        applyWeekStart(iso);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentHeaders.length]);
 
     const normalizeTimeToken = (timeValue) => {
         if (!timeValue) return null;
@@ -630,28 +654,46 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     // ---- Inspector helpers ----
     const selectCell = (rowIndex, colIndex, teamName, dayLabel, cellData) => {
-        const range = parseTimeRangeFromText(cellData);
+        // When a cell already holds several sessions (multi-line), edit the FIRST line.
+        const firstLine = (cellData || '').split('\n')[0];
+        const range = parseTimeRangeFromText(firstLine);
         setInspStart(range ? formatTimeToken(range.start) : '17:00');
         setInspEnd(range ? formatTimeToken(range.end) : '18:30');
-        setInspHall(extractLocation(cellData) || '');
-        setInspType(cellData && cellData.includes('משחק') ? 'MATCH' : (cellData && cellData.includes('אתלטיקה') ? 'ATHLETICS' : 'TRAIN'));
+        setInspHall(extractLocation(firstLine) || '');
+        setInspType(firstLine && firstLine.includes('משחק') ? 'MATCH' : (firstLine && firstLine.includes('אתלטיקה') ? 'ATHLETICS' : 'TRAIN'));
+        setInspCustom('');
         setSelectedCell({ rowIndex, colIndex, teamName, dayLabel });
         setInspOpen(true); // make sure the editing panel is visible when a cell is chosen
     };
 
-    const applyInspector = () => {
-        if (!selectedCell) return;
+    // Build the cell text from the current editor fields (returns null if times invalid).
+    const buildInspContent = () => {
         const s = normalizeTimeToken(inspStart);
         const e = normalizeTimeToken(inspEnd);
         if (!s || !e || toMinutes(e) <= toMinutes(s)) {
             alert('טווח השעות לא תקין.');
-            return;
+            return null;
         }
         const hall = (inspHall || '').trim();
         let content = `${hall} ${s}-${e}`.trim();
         if (inspType === 'MATCH') content = `🏀 משחק ${content}`.trim();
         else if (inspType === 'ATHLETICS') content = `🏃 אתלטיקה ${content}`.trim();
-        handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, content);
+        else if (inspType === 'CUSTOM' && inspCustom.trim()) content = `${inspCustom.trim()} ${content}`.trim();
+        return content;
+    };
+
+    // append=false → replace the cell; append=true → add another session (new line) to it.
+    const applyInspector = (append = false) => {
+        if (!selectedCell) return;
+        const content = buildInspContent();
+        if (content === null) return;
+        if (append) {
+            const existing = (dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex] || '').trim();
+            handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, existing ? `${existing}\n${content}` : content);
+        } else {
+            handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, content);
+            if (editModalOpen) setEditModalOpen(false);
+        }
     };
 
     const clearSelected = () => {
@@ -724,12 +766,12 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         return c;
     };
 
-    const resolveConflict = (detail) => {
-        const { rowIndex: row, colIndex: col, dayIndex } = detail;
+    // Pure: compute a fix suggestion for a conflict detail (no side effects).
+    const computeSuggestion = (detail) => {
+        const { rowIndex: row, colIndex: col } = detail;
         const cell = dataToShow[row]?.[col] || '';
         const range = parseTimeRangeFromText(cell);
-        selectCell(row, col, detail.team, dayNameForIndex(dayIndex), cell);
-        if (!range) { setSuggestion({ text: 'אין שעה תקינה במשבצת — פתור ידנית.', row, col, newContent: null }); return; }
+        if (!range) return { text: 'אין שעה תקינה במשבצת — פתור ידנית.', row, col, newContent: null };
 
         const startMin = toMinutes(range.start);
         const endMin = toMinutes(range.end);
@@ -738,11 +780,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         if (detail.reason === 'אולם') {
             const hall = findFreeHallAt(col, row, startMin, endMin);
             if (hall) {
-                setSuggestion({
+                return {
                     text: `להעביר את "${detail.team}" לאולם "${hall}" באותה שעה (${formatTimeToken(range.start)}–${formatTimeToken(range.end)})`,
                     row, col, newContent: rebuildContent(cell, hall, range.start, range.end)
-                });
-                return;
+                };
             }
         } else { // coach
             const coachName = (coachIndex != null && coachIndex !== -1) ? (dataToShow[row]?.[coachIndex] || '').trim() : '';
@@ -751,15 +792,40 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 if (coachBusyAt(coachName, col, row, s, e)) continue;
                 const hall = findFreeHallAt(col, row, s, e);
                 if (hall) {
-                    setSuggestion({
+                    return {
                         text: `להעביר את "${detail.team}" לשעה ${formatTimeToken(minsToTok(s))}–${formatTimeToken(minsToTok(e))} באולם "${hall}"`,
                         row, col, newContent: rebuildContent(cell, hall, minsToTok(s), minsToTok(e))
-                    });
-                    return;
+                    };
                 }
             }
         }
-        setSuggestion({ text: 'לא נמצא פתרון אוטומטי פנוי — פתור ידנית בעזרת הפאנל.', row, col, newContent: null });
+        return { text: 'לא נמצא פתרון אוטומטי פנוי — פתור ידנית בעזרת הפאנל.', row, col, newContent: null };
+    };
+
+    const resolveConflict = (detail) => {
+        const { rowIndex: row, colIndex: col, dayIndex } = detail;
+        selectCell(row, col, detail.team, dayNameForIndex(dayIndex), dataToShow[row]?.[col] || '');
+        setSuggestion(computeSuggestion(detail));
+    };
+
+    const conflictDetailFor = (rowIndex, colIndex) =>
+        conflictDetails.find(c => c.rowIndex === rowIndex && c.colIndex === colIndex);
+
+    // Right-click → "auto fix": apply the computed suggestion immediately if one exists.
+    const autoFix = (rowIndex, colIndex) => {
+        const detail = conflictDetailFor(rowIndex, colIndex);
+        if (!detail) return;
+        const sug = computeSuggestion(detail);
+        if (sug.newContent) handleCellChange(rowIndex, colIndex, sug.newContent);
+        else alert(sug.text);
+        setCtxMenu(null);
+    };
+
+    // Right-click → "manual fix": open the editor (modal in full screen, side panel otherwise).
+    const manualFix = (rowIndex, colIndex, teamName, dayLabel) => {
+        selectCell(rowIndex, colIndex, teamName, dayLabel, dataToShow[rowIndex]?.[colIndex] || '');
+        if (fullScreen) setEditModalOpen(true);
+        setCtxMenu(null);
     };
 
     const applySuggestion = () => {
@@ -782,9 +848,87 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         ? conflictDetails.filter(c => c.rowIndex === selectedCell.rowIndex && c.colIndex === selectedCell.colIndex)
         : [];
 
+    // Shared editor body — used both in the side inspector and the full-screen modal.
+    const editorFields = selectedCell ? (
+        <>
+            {selectedConflicts.length > 0 && (
+                <div className="cc-insp-warn">
+                    ⚠️ {selectedConflicts.map(c => c.reason === 'מאמן' ? `המאמן "${c.resource}" משובץ במקביל` : `האולם "${c.resource}" תפוס באותה שעה`).join(' · ')}
+                    <button className="cc-btn amber full" style={{ marginTop: '0.5rem' }} onClick={() => resolveConflict(selectedConflicts[0])}>🛠 פתור אוטומטית</button>
+                </div>
+            )}
+
+            {suggestion && suggestion.row === selectedCell.rowIndex && suggestion.col === selectedCell.colIndex && (
+                <div className="cc-suggest">
+                    <div className="cc-suggest-text">💡 {suggestion.text}{suggestion.newContent ? '?' : ''}</div>
+                    <div className="cc-suggest-actions">
+                        {suggestion.newContent && <button className="cc-btn green" onClick={applySuggestion}>✓ אשר תיקון</button>}
+                        <button className="cc-btn ghost" onClick={() => setSuggestion(null)}>פתור ידנית</button>
+                    </div>
+                </div>
+            )}
+
+            <div className="cc-field">
+                <label>סוג פעילות</label>
+                <div className="cc-types">
+                    <button className={`cc-type ${inspType === 'TRAIN' ? 'on' : ''}`} onClick={() => setInspType('TRAIN')}>אימון</button>
+                    <button className={`cc-type match ${inspType === 'MATCH' ? 'on' : ''}`} onClick={() => setInspType('MATCH')}>🏀 משחק</button>
+                    <button className={`cc-type ath ${inspType === 'ATHLETICS' ? 'on' : ''}`} onClick={() => setInspType('ATHLETICS')}>🏃 אתלטיקה</button>
+                    <button className={`cc-type ${inspType === 'CUSTOM' ? 'on' : ''}`} onClick={() => setInspType('CUSTOM')}>✏️ אחר</button>
+                </div>
+            </div>
+
+            {inspType === 'CUSTOM' && (
+                <div className="cc-field">
+                    <label>סוג חופשי (לדוגמה: אימון חוויה)</label>
+                    <input value={inspCustom} onChange={e => setInspCustom(e.target.value)} placeholder="כתוב סוג אימון…" />
+                </div>
+            )}
+
+            <div className="cc-field-row">
+                <div className="cc-field"><label>משעה</label><input type="time" value={inspStart} onChange={e => setInspStart(e.target.value)} /></div>
+                <div className="cc-field"><label>עד שעה</label><input type="time" value={inspEnd} onChange={e => setInspEnd(e.target.value)} /></div>
+            </div>
+
+            <div className="cc-field">
+                <label>אולם</label>
+                <input list="cc-halls" value={inspHall} onChange={e => setInspHall(e.target.value)} placeholder="שם אולם" />
+                <datalist id="cc-halls">
+                    {knownHalls.map(h => <option key={h} value={h} />)}
+                </datalist>
+            </div>
+
+            <button className="cc-btn blue full" onClick={() => openHallPicker(selectedCell.rowIndex, selectedCell.colIndex, selectedCell.dayLabel, selectedCell.teamName, dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex] || '')}>
+                🔍 מצא אולם פנוי בשעה זו
+            </button>
+
+            <div className="cc-insp-actions">
+                <button className="cc-btn green full" onClick={() => applyInspector(false)}>✓ החל</button>
+                <button className="cc-btn danger" onClick={clearSelected}>נקה</button>
+            </div>
+            <button className="cc-btn ghost full" style={{ marginTop: '0.5rem' }} onClick={() => applyInspector(true)}>➕ הוסף אימון נוסף לאותו יום</button>
+            <p className="cc-insp-hint">טיפ: כמה אימונים באותו יום (למשל בוקר/ערב) — מלאו אימון ולחצו "הוסף אימון נוסף". אפשר גם לגרור אימון ממשבצת למשבצת.</p>
+        </>
+    ) : null;
+
     return (
-        <div className="cc">
+        <div className={`cc ${fullScreen ? 'cc--fs' : ''}`} onClick={() => ctxMenu && setCtxMenu(null)}>
+            {/* Full-screen top bar */}
+            {fullScreen && (
+                <div className="cc-fsbar">
+                    <div className="cc-fsbar-title">🏀 לו"ז שבועי — {selectedDate ? `שבוע ${selectedDate.split('-').reverse().slice(0, 2).join('/')}` : ''} {currentSchedule && <span className="cc-dirty">· שינויים לא שמורים</span>}</div>
+                    <div className="cc-actions">
+                        <button className={`cc-btn ${showConflictsFS ? 'amber' : 'ghost'}`} onClick={() => setShowConflictsFS(v => !v)}>
+                            {showConflictsFS ? '⚠️ מסתיר התנגשויות' : '⚠️ הצג התנגשויות'}{conflictDetails.length > 0 ? ` (${conflictDetails.length})` : ''}
+                        </button>
+                        <button className="cc-btn green" onClick={handleSave} disabled={isSaving}>{isSaving ? 'שומר…' : (saveUrl ? '💾 שמור' : '⬇ ייצא')}</button>
+                        <button className="cc-btn blue" onClick={() => { setFullScreen(false); setEditModalOpen(false); setCtxMenu(null); }}>⤢ צא ממסך מלא</button>
+                    </div>
+                </div>
+            )}
+
             {/* Toolbar */}
+            {!fullScreen && (
             <div className="cc-toolbar">
                 <div className="cc-title">
                     🏀 לוח שיבוץ שבועי {currentSchedule && <span className="cc-dirty">· שינויים לא שמורים</span>}
@@ -793,6 +937,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     <label className="cc-date">📅 תאריך התחלה
                         <input type="date" value={selectedDate} onChange={handleDateChange} />
                     </label>
+                    <button className="cc-btn blue" onClick={() => setFullScreen(true)}>🖥 עבודה על מסך מלא</button>
                     <button className="cc-btn ghost" onClick={handleClear}>↺ נקה הכל</button>
                     <button className="cc-btn amber" onClick={handleGenerate} disabled={isGenerating}>
                         {isGenerating ? 'מחשב…' : '✨ צור לו"ז אוטומטי'}
@@ -802,9 +947,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     </button>
                 </div>
             </div>
+            )}
 
-            {/* Conflict alerts banner */}
-            {conflictDetails.length > 0 ? (
+            {/* Conflict alerts banner (hidden in full-screen — use the "show conflicts" toggle there) */}
+            {!fullScreen && (conflictDetails.length > 0 ? (
                 <div className="cc-alerts">
                     <div className="cc-alerts-head">⚠️ נמצאו {conflictDetails.length} התנגשויות — יש לטפל לפני שמירה</div>
                     <div className="cc-alerts-list">
@@ -820,7 +966,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 </div>
             ) : (
                 dataToShow && <div className="cc-ok">✓ אין התנגשויות — הלו"ז תקין</div>
-            )}
+            ))}
 
             <div className="cc-body">
                 {/* Board */}
@@ -874,20 +1020,34 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                                 }
                                                 textColor = '#15233f';
                                             }
-                                            if (isConflict) { bgColor = '#fde2e4'; textColor = '#b91c1c'; }
+                                            // In full screen the board stays clean: conflicts are only
+                                            // marked (red fill + ⚠️) when "show conflicts" is toggled on.
+                                            const markConflict = isConflict && (!fullScreen || showConflictsFS);
+                                            // Normal view: red fill. Full screen: keep the colour, only the ⚠️ + border remain.
+                                            if (markConflict && !fullScreen) { bgColor = '#fde2e4'; textColor = '#b91c1c'; }
+
+                                            const openCell = () => {
+                                                selectCell(rowIndex, colIndex, teamName, dayHeaders[colMapIndex], cellData || '');
+                                                if (fullScreen) setEditModalOpen(true);
+                                            };
+                                            const onCellContext = (e) => {
+                                                e.preventDefault();
+                                                setCtxMenu({ x: e.clientX, y: e.clientY, rowIndex, colIndex, teamName, dayLabel: dayHeaders[colMapIndex], isConflict });
+                                            };
 
                                             return (
                                                 <td
                                                     key={colMapIndex}
-                                                    className={`cc-cell ${isConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''}`}
+                                                    className={`cc-cell ${markConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''}`}
                                                     style={{ backgroundColor: bgColor, color: textColor }}
                                                     draggable={!!cellData}
                                                     onDragStart={(e) => onDragStart(e, rowIndex, colIndex, cellData)}
                                                     onDragOver={onDragOver}
                                                     onDrop={(e) => onDrop(e, rowIndex, colIndex)}
-                                                    onClick={() => selectCell(rowIndex, colIndex, teamName, dayHeaders[colMapIndex], cellData || '')}
+                                                    onClick={openCell}
+                                                    onContextMenu={onCellContext}
                                                 >
-                                                    {isConflict && <span className="cc-cell-warn">⚠️</span>}
+                                                    {markConflict && <span className="cc-cell-warn">⚠️</span>}
                                                     {cellData
                                                         ? <span className="cc-cell-text">{cellData}</span>
                                                         : <span className="cc-cell-add">+</span>}
@@ -901,18 +1061,18 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     </table>
                 </div>
 
-                {/* collapsed: thin re-open strip so the table can use full width */}
-                {!inspOpen && (
+                {/* collapsed: thin re-open strip so the table can use full width (not in full screen) */}
+                {!fullScreen && !inspOpen && (
                     <button className="cc-insp-reopen" onClick={() => setInspOpen(true)} title="פתח פאנל עריכה">
                         ‹ עריכה
                     </button>
                 )}
 
                 {/* draggable splitter */}
-                {inspOpen && <div className="cc-splitter" onMouseDown={startResize} title="גרור לשינוי רוחב הפאנל">⋮</div>}
+                {!fullScreen && inspOpen && <div className="cc-splitter" onMouseDown={startResize} title="גרור לשינוי רוחב הפאנל">⋮</div>}
 
-                {/* Inspector side panel */}
-                {inspOpen && (
+                {/* Inspector side panel (hidden in full screen — editing happens in the modal there) */}
+                {!fullScreen && inspOpen && (
                 <aside className="cc-inspector" style={{ width: inspWidth }}>
                     <button className="cc-insp-collapse" onClick={() => setInspOpen(false)} title="הסתר פאנל (הגדל טבלה)">⟩ הסתר</button>
                     {!selectedCell ? (
@@ -924,60 +1084,36 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                         <>
                             <h3 className="cc-insp-title">{selectedCell.teamName}</h3>
                             <div className="cc-insp-sub">יום {selectedCell.dayLabel}</div>
-
-                            {selectedConflicts.length > 0 && (
-                                <div className="cc-insp-warn">
-                                    ⚠️ {selectedConflicts.map(c => c.reason === 'מאמן' ? `המאמן "${c.resource}" משובץ במקביל` : `האולם "${c.resource}" תפוס באותה שעה`).join(' · ')}
-                                    <button className="cc-btn amber full" style={{ marginTop: '0.5rem' }} onClick={() => resolveConflict(selectedConflicts[0])}>🛠 פתור אוטומטית</button>
-                                </div>
-                            )}
-
-                            {suggestion && selectedCell && suggestion.row === selectedCell.rowIndex && suggestion.col === selectedCell.colIndex && (
-                                <div className="cc-suggest">
-                                    <div className="cc-suggest-text">💡 {suggestion.text}{suggestion.newContent ? '?' : ''}</div>
-                                    <div className="cc-suggest-actions">
-                                        {suggestion.newContent && <button className="cc-btn green" onClick={applySuggestion}>✓ אשר תיקון</button>}
-                                        <button className="cc-btn ghost" onClick={() => setSuggestion(null)}>פתור ידנית</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="cc-field">
-                                <label>סוג פעילות</label>
-                                <div className="cc-types">
-                                    <button className={`cc-type ${inspType === 'TRAIN' ? 'on' : ''}`} onClick={() => setInspType('TRAIN')}>אימון</button>
-                                    <button className={`cc-type match ${inspType === 'MATCH' ? 'on' : ''}`} onClick={() => setInspType('MATCH')}>🏀 משחק</button>
-                                    <button className={`cc-type ath ${inspType === 'ATHLETICS' ? 'on' : ''}`} onClick={() => setInspType('ATHLETICS')}>🏃 אתלטיקה</button>
-                                </div>
-                            </div>
-
-                            <div className="cc-field-row">
-                                <div className="cc-field"><label>משעה</label><input type="time" value={inspStart} onChange={e => setInspStart(e.target.value)} /></div>
-                                <div className="cc-field"><label>עד שעה</label><input type="time" value={inspEnd} onChange={e => setInspEnd(e.target.value)} /></div>
-                            </div>
-
-                            <div className="cc-field">
-                                <label>אולם</label>
-                                <input list="cc-halls" value={inspHall} onChange={e => setInspHall(e.target.value)} placeholder="שם אולם" />
-                                <datalist id="cc-halls">
-                                    {knownHalls.map(h => <option key={h} value={h} />)}
-                                </datalist>
-                            </div>
-
-                            <button className="cc-btn blue full" onClick={() => openHallPicker(selectedCell.rowIndex, selectedCell.colIndex, selectedCell.dayLabel, selectedCell.teamName, dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex] || '')}>
-                                🔍 מצא אולם פנוי בשעה זו
-                            </button>
-
-                            <div className="cc-insp-actions">
-                                <button className="cc-btn green full" onClick={applyInspector}>✓ החל</button>
-                                <button className="cc-btn danger" onClick={clearSelected}>נקה</button>
-                            </div>
-                            <p className="cc-insp-hint">טיפ: אפשר גם לגרור אימון ממשבצת למשבצת בלוח.</p>
+                            {editorFields}
                         </>
                     )}
                 </aside>
                 )}
             </div>
+
+            {/* Full-screen edit modal */}
+            {fullScreen && editModalOpen && selectedCell && (
+                <div className="cc-modal-overlay" onClick={() => setEditModalOpen(false)}>
+                    <div className="cc-modal cc-edit-modal" onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                            <h4 style={{ margin: 0 }}>{selectedCell.teamName} · יום {selectedCell.dayLabel}</h4>
+                            <button onClick={() => setEditModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text)' }}>✕</button>
+                        </div>
+                        {editorFields}
+                    </div>
+                </div>
+            )}
+
+            {/* Right-click context menu (auto / manual fix) */}
+            {ctxMenu && (
+                <div className="cc-ctx" style={{ top: ctxMenu.y, left: ctxMenu.x }} onClick={(e) => e.stopPropagation()}>
+                    {ctxMenu.isConflict && (
+                        <button onClick={() => autoFix(ctxMenu.rowIndex, ctxMenu.colIndex)}>🛠 תיקון אוטומטי</button>
+                    )}
+                    <button onClick={() => manualFix(ctxMenu.rowIndex, ctxMenu.colIndex, ctxMenu.teamName, ctxMenu.dayLabel)}>✏️ תיקון ידני</button>
+                    <button onClick={() => setCtxMenu(null)}>✕ סגור</button>
+                </div>
+            )}
 
             {/* Hall picker modal (kept) */}
             {isHallPickerOpen && hallPickerTarget && (

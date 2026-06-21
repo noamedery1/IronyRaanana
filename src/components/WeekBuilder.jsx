@@ -5,6 +5,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTeamIndex, setSelectedTeamIndex] = useState(null);
+    const [editingConstraintIndex, setEditingConstraintIndex] = useState(null); // null = adding new
     const [newConstraint, setNewConstraint] = useState({
         type: 'FIXED', // FIXED, MATCH, ATHLETICS, OFF
         day: 0, // 0 = Sunday
@@ -62,17 +63,32 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
         setIsSettingsModalOpen(false);
     };
 
-    const openConstraintModal = (index) => {
+    const openConstraintModal = (index, constraintIndex = null) => {
         setSelectedTeamIndex(index);
-        setNewConstraint({
-            type: 'FIXED',
-            day: 0,
-            startTime: '17:00',
-            endTime: '18:30',
-            location: 'מטרו',
-            subType: 'HOME',
-            hasConflict: false
-        });
+        setEditingConstraintIndex(constraintIndex);
+        if (constraintIndex !== null && teamConfig[index]?.constraints?.[constraintIndex]) {
+            // edit existing — prefill the form from it (without the derived label/conflict flag)
+            const existing = teamConfig[index].constraints[constraintIndex];
+            setNewConstraint({
+                type: existing.type || 'FIXED',
+                day: existing.day ?? 0,
+                startTime: existing.startTime || '17:00',
+                endTime: existing.endTime || '18:30',
+                location: existing.location || '',
+                subType: existing.subType || 'HOME',
+                hasConflict: false,
+            });
+        } else {
+            setNewConstraint({
+                type: 'FIXED',
+                day: 0,
+                startTime: '17:00',
+                endTime: '18:30',
+                location: 'מטרו',
+                subType: 'HOME',
+                hasConflict: false
+            });
+        }
         setIsModalOpen(true);
     };
 
@@ -189,9 +205,15 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
         }
 
         const newConfig = [...teamConfig];
-        newConfig[selectedTeamIndex].constraints.push({ ...constraint, label });
+        if (editingConstraintIndex !== null) {
+            // update the existing constraint in place (no delete-and-recreate)
+            newConfig[selectedTeamIndex].constraints[editingConstraintIndex] = { ...constraint, label };
+        } else {
+            newConfig[selectedTeamIndex].constraints.push({ ...constraint, label });
+        }
         setTeamConfig(newConfig);
         setIsModalOpen(false);
+        setEditingConstraintIndex(null);
     };
 
     const removeConstraint = (teamIndex, constraintIndex) => {
@@ -315,10 +337,15 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                                     boxShadow: c.hasConflict ? '0 0 5px red' : 'none'
                                 }}>
                                     {c.hasConflict && <span>⚠️</span>}
-                                    {c.label}
+                                    <span
+                                        onClick={() => openConstraintModal(index, cIdx)}
+                                        style={{ cursor: 'pointer' }}
+                                        title="ערוך אילוץ"
+                                    >{c.label}</span>
                                     <span
                                         onClick={() => removeConstraint(index, cIdx)}
                                         style={{ cursor: 'pointer', fontWeight: 'bold', marginLeft: '4px' }}
+                                        title="מחק אילוץ"
                                     >×</span>
                                 </span>
                             ))}
@@ -350,7 +377,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                     background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
                 }}>
                     <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
-                        <h4 style={{ marginTop: 0 }}>הוספת אילוץ - {teamConfig[selectedTeamIndex]?.name}</h4>
+                        <h4 style={{ marginTop: 0 }}>{editingConstraintIndex !== null ? 'עריכת אילוץ' : 'הוספת אילוץ'} - {teamConfig[selectedTeamIndex]?.name}</h4>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div>
@@ -453,8 +480,8 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                             )}
 
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '0.8rem', border: '1px solid #ddd', background: 'white', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
-                                <button onClick={addConstraint} style={{ flex: 1, padding: '0.8rem', border: 'none', background: '#3b82f6', color: 'white', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>שמור</button>
+                                <button onClick={() => { setIsModalOpen(false); setEditingConstraintIndex(null); }} style={{ flex: 1, padding: '0.8rem', border: '1px solid #ddd', background: 'white', borderRadius: '4px', cursor: 'pointer' }}>ביטול</button>
+                                <button onClick={addConstraint} style={{ flex: 1, padding: '0.8rem', border: 'none', background: '#3b82f6', color: 'white', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>{editingConstraintIndex !== null ? 'עדכן' : 'שמור'}</button>
                             </div>
                         </div>
                     </div>

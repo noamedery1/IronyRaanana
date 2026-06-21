@@ -481,6 +481,42 @@
 .cc-hall-free:hover { background: rgba(37,211,102,0.26); }
 .cc-hall-busy { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.35); color: #fde68a; border-radius: 8px; padding: 0.45rem 0.6rem; font-size: 0.85rem; }
 
+/* prominent coach (trainer) names in the board */
+.cc-coach { font-size: 0.92rem; font-weight: 800; color: var(--text); background: rgba(255,255,255,0.05); }
+.cc--fs .cc-coach { font-size: 1.05rem; }
+
+/* full-screen working mode — covers the sidebar so the whole week is big & clear */
+.cc--fs {
+  position: fixed; inset: 0; z-index: 6000; background: var(--ink);
+  padding: 0.5rem 0.9rem 1rem; overflow: auto;
+}
+.cc-fsbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding: 0.3rem 0.2rem 0.7rem; position: sticky; top: 0; background: var(--ink); z-index: 5;
+}
+.cc-fsbar-title { font-weight: 800; font-size: 1.05rem; color: var(--text); }
+.cc--fs .cc-body { display: block; }
+.cc--fs .cc-board { max-height: calc(100vh - 72px); }
+.cc--fs .cc-table { border-spacing: 6px; }
+.cc--fs .cc-table th { font-size: 0.95rem; }
+.cc--fs .cc-team { font-size: 1rem; }
+.cc--fs .cc-cell { min-width: 150px; max-width: 230px; height: 72px; font-size: 0.95rem; }
+
+/* right-click context menu (auto / manual fix) */
+.cc-ctx {
+  position: fixed; z-index: 6500; background: var(--ink2); border: 1px solid var(--bd2);
+  border-radius: 10px; padding: 0.3rem; min-width: 168px; direction: rtl;
+  box-shadow: 0 18px 50px -12px rgba(0,0,0,0.85); display: flex; flex-direction: column;
+}
+.cc-ctx button {
+  background: transparent; border: none; color: var(--text); font-family: inherit;
+  font-size: 0.86rem; text-align: right; padding: 0.5rem 0.7rem; border-radius: 7px; cursor: pointer;
+}
+.cc-ctx button:hover { background: var(--glass-2); }
+
+/* full-screen edit modal */
+.cc-edit-modal { width: min(440px, 94vw); }
+
 @media (max-width: 900px) {
   .cc-body { flex-direction: column; }
   .cc-inspector { width: 100%; position: static; }
