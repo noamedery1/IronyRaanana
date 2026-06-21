@@ -517,6 +517,21 @@
 /* full-screen edit modal */
 .cc-edit-modal { width: min(440px, 94vw); }
 
+/* pending trainer proposals — special purple highlight + approve/reject banner */
+.cc-pending { background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.45); border-radius: 14px; padding: 0.7rem 0.9rem; margin-bottom: 1rem; }
+.cc-pending-head { font-weight: 800; color: #d8b4fe; margin-bottom: 0.5rem; }
+.cc-pending-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.cc-pending-item { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); border-radius: 10px; padding: 0.45rem 0.7rem; }
+.cc-pending-info { font-size: 0.85rem; color: var(--text); min-width: 0; }
+.cc-pending-tag { background: rgba(168,85,247,0.3); color: #e9d5ff; border-radius: 7px; padding: 0.1rem 0.5rem; font-size: 0.74rem; font-weight: 700; margin-inline-end: 0.4rem; }
+.cc-pending-new { color: #5eead4; }
+.cc-pending-reason { color: var(--text-dim); }
+.cc-pending-by { color: var(--text-muted); }
+.cc-pending-acts { display: flex; gap: 0.4rem; flex-shrink: 0; }
+.cc-pending-acts .cc-btn { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+.cc-cell.pending { outline: 2px dashed #a855f7; outline-offset: -2px; }
+.cc-cell-pending { position: absolute; top: 2px; left: 3px; font-size: 0.7rem; }
+
 /* per-day session list in the editor (edit/delete each session individually) */
 .cc-session-list { display: flex; flex-direction: column; gap: 0.35rem; }
 .cc-session {

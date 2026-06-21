@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { authHeaders } from '../adminApi.js';
+
+const REQ_TYPE_LABEL = { cancel: 'ביטול', change: 'שינוי', move: 'העברת יום', propose: 'הצעת שיבוץ' };
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {}, onChange, onSaveDraft, onDiscardDraft, draftSavedAt, draftRestored }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {}, onChange, onSaveDraft, onDiscardDraft, draftSavedAt, draftRestored, clubSlug }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [dragStart, setDragStart] = useState(null);
@@ -28,6 +31,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     const [suggestion, setSuggestion] = useState(null); // { text, row, col, newContent }
     const [draftMsg, setDraftMsg] = useState('');       // "save draft" feedback
+    const [pending, setPending] = useState([]);          // pending trainer requests/proposals
+    const [pendingMsg, setPendingMsg] = useState('');
 
     // Full-screen working mode + its helpers
     const [fullScreen, setFullScreen] = useState(false);
@@ -204,6 +209,19 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     const { set: conflictSet, details: conflictDetails } = computeConflicts();
 
+    // Map each pending trainer request to its board cell (team row × day column).
+    const reqDayIndex = (day) => { const f = (day || '').toString().trim().split(/\s+/)[0]; return DAY_NAMES.findIndex((d) => d === f); };
+    const pendingByCell = {};
+    pending.forEach((rq) => {
+        const p = rq.proposed || {};
+        const team = p.team || rq.session_team;
+        const di = reqDayIndex(p.day);
+        if (di < 0 || !team) return;
+        const row = (dataToShow || []).findIndex((r) => r[0] === team);
+        if (row < 0) return;
+        pendingByCell[`${row}_${dayStart + di}`] = rq;
+    });
+
     const LOCATIONS = ['מטרו', 'השרון', 'רימון', 'אביב', 'תיכון חדש'];
     const TIME_SLOTS = [
         { start: '1600', end: '1730' },
@@ -268,6 +286,30 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         onChange({ headers: currentHeaders, rows });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentSchedule, currentHeaders]);
+
+    // Pending trainer requests/proposals → shown on the board (special colour) + approve/reject.
+    const refreshPending = () => {
+        if (!clubSlug) return;
+        fetch(`/api/${clubSlug}/requests?status=pending`, { headers: authHeaders(clubSlug) })
+            .then((r) => r.json()).then((d) => setPending(d.requests || [])).catch(() => {});
+    };
+    useEffect(() => {
+        refreshPending();
+        const t = setInterval(refreshPending, 30000); // auto-refresh so new proposals appear
+        return () => clearInterval(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [clubSlug]);
+
+    const actOnRequest = async (id, action) => {
+        setPendingMsg('מעדכן…');
+        try {
+            const r = await fetch(`/api/${clubSlug}/requests/${id}/${action}`, { method: 'POST', headers: authHeaders(clubSlug) });
+            const d = await r.json().catch(() => ({}));
+            setPendingMsg(d.error ? ('שגיאה: ' + d.error) : (action === 'approve' ? '✓ הבקשה אושרה' : '✓ הבקשה נדחתה'));
+            refreshPending();
+            setTimeout(() => setPendingMsg(''), 3500);
+        } catch { setPendingMsg('שגיאת תקשורת'); }
+    };
 
     const handleSaveDraft = async () => {
         setDraftMsg('שומר…');
@@ -676,10 +718,12 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     };
 
     const handleClear = () => {
-        if (window.confirm('האם אתה בטוח שברצונך לנקות את כל השינויים ולחזור למצב הגיליון המקורי?')) {
-            setCurrentSchedule(null);
-            setSelectedCell(null);
-        }
+        if (!window.confirm('לנקות את כל האימונים מהלוח? כל המשבצות יתרוקנו (אפשר לבנות מחדש או לטעון אילוצים).')) return;
+        const base = JSON.parse(JSON.stringify(dataToShow || rawRows || []));
+        base.forEach((row) => { for (let i = dayStart; i < dayStart + 7; i++) if (row[i] !== undefined) row[i] = ''; });
+        setCurrentSchedule(base);
+        setSelectedCell(null);
+        setSuggestion(null);
     };
 
     // Load every team's constraints (from "בניית שבוע") onto the board, without auto-filling
@@ -1113,6 +1157,33 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 dataToShow && <div className="cc-ok">✓ אין התנגשויות — הלו"ז תקין</div>
             ))}
 
+            {/* Pending trainer requests/proposals — appear automatically, in a special colour */}
+            {pending.length > 0 && (
+                <div className="cc-pending">
+                    <div className="cc-pending-head">📨 {pending.length} בקשות/הצעות ממאמנים — ממתינות לאישור {pendingMsg && <b style={{ marginInlineStart: '0.6rem' }}>{pendingMsg}</b>}</div>
+                    <div className="cc-pending-list">
+                        {pending.map((rq) => {
+                            const p = rq.proposed || {};
+                            return (
+                                <div key={rq.id} className="cc-pending-item">
+                                    <span className="cc-pending-info">
+                                        <span className="cc-pending-tag">{REQ_TYPE_LABEL[rq.type] || rq.type}</span>
+                                        <b>{p.team || rq.session_team}</b> · {p.day} {p.time || ''}
+                                        {(p.newTime || p.newLocation || p.newDay) && <span className="cc-pending-new"> ← {p.newDay ? `יום ${p.newDay} ` : ''}{p.newTime || ''}{p.newLocation ? ' · ' + p.newLocation : ''}</span>}
+                                        {rq.reason && <span className="cc-pending-reason"> · {rq.reason}</span>}
+                                        <span className="cc-pending-by"> ({rq.requested_by})</span>
+                                    </span>
+                                    <span className="cc-pending-acts">
+                                        <button className="cc-btn green" onClick={() => actOnRequest(rq.id, 'approve')}>✓ אשר</button>
+                                        <button className="cc-btn danger" onClick={() => actOnRequest(rq.id, 'reject')}>✕ דחה</button>
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             <div className="cc-body">
                 {/* Board */}
                 <div className="cc-board">
@@ -1171,6 +1242,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                             // Normal view: red fill. Full screen: keep the colour, only the ⚠️ + border remain.
                                             if (markConflict && !fullScreen) { bgColor = '#fde2e4'; textColor = '#b91c1c'; }
 
+                                            const pendingHere = pendingByCell[`${rowIndex}_${colIndex}`];
+
                                             const openCell = () => {
                                                 selectCell(rowIndex, colIndex, teamName, dayHeaders[colMapIndex], cellData || '');
                                                 if (fullScreen) setEditModalOpen(true);
@@ -1183,7 +1256,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                             return (
                                                 <td
                                                     key={colMapIndex}
-                                                    className={`cc-cell ${markConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''}`}
+                                                    className={`cc-cell ${markConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''} ${pendingHere ? 'pending' : ''}`}
                                                     style={{ backgroundColor: bgColor, color: textColor }}
                                                     draggable={!!cellData}
                                                     onDragStart={(e) => onDragStart(e, rowIndex, colIndex, cellData)}
@@ -1191,8 +1264,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                                     onDrop={(e) => onDrop(e, rowIndex, colIndex)}
                                                     onClick={openCell}
                                                     onContextMenu={onCellContext}
+                                                    title={pendingHere ? `הצעת מאמן ממתינה (${pendingHere.requested_by})` : undefined}
                                                 >
                                                     {markConflict && <span className="cc-cell-warn">⚠️</span>}
+                                                    {pendingHere && <span className="cc-cell-pending">📨</span>}
                                                     {cellData
                                                         ? <span className="cc-cell-text">{cellData}</span>
                                                         : <span className="cc-cell-add">+</span>}

@@ -76,6 +76,15 @@ const addMin = (hhmm, mins) => {
     const t = ((h * 60 + m) + mins) % 1440;
     return `${pad(Math.floor(t / 60))}:${pad(t % 60)}`;
 };
+// Accept a single time ("17:00"/"1700") or a range ("17:00-18:30"/"1700-1830") → {start,end}.
+const normHHMM = (x) => { const c = String(x || '').replace(':', '').padStart(4, '0'); return `${c.slice(0, 2)}:${c.slice(2, 4)}`; };
+const parseTimeRange = (t) => {
+    const s = String(t || '').trim();
+    const m = s.match(/(\d{1,2}:?\d{2})\s*[-–]\s*(\d{1,2}:?\d{2})/);
+    if (m) return { start: normHHMM(m[1]), end: normHHMM(m[2]) };
+    if (/^\d{1,2}:?\d{2}$/.test(s)) return { start: normHHMM(s), end: null };
+    return { start: null, end: null };
+};
 
 async function livePub(cid) {
     const r = await pool.query(
@@ -161,24 +170,24 @@ export async function approveRequest(slug, id) {
             if (sessionId) await cx.query(`UPDATE sessions SET status='cancelled', updated_at=now() WHERE id=$1`, [sessionId]);
             msg = `האימון ב${p.day} בוטל.`;
         } else if (req.type === 'change') {
-            const start = (p.newTime || '').trim();
+            const { start, end } = parseTimeRange(p.newTime);
             if (sessionId) {
                 await cx.query(
                     `UPDATE sessions SET start_time=$1, end_time=$2, hall=COALESCE(NULLIF($3,''), hall), status='changed', updated_at=now() WHERE id=$4`,
-                    [start || null, start ? addMin(start, 90) : null, p.newLocation || '', sessionId],
+                    [start || null, end || (start ? addMin(start, 90) : null), p.newLocation || '', sessionId],
                 );
             }
             msg = `האימון ב${p.day} שונה ל-${p.newTime}${p.newLocation ? ' ב-' + p.newLocation : ''}.`;
         } else if (req.type === 'move') {
             if (sessionId) await cx.query(`UPDATE sessions SET status='moved', updated_at=now() WHERE id=$1`, [sessionId]);
-            const start = (p.newTime || '').trim();
+            const { start, end } = parseTimeRange(p.newTime);
             const nIdx = dayIndex(p.newDay);
             let date = null;
             if (pub && nIdx >= 0) { const d = new Date(pub.week_start + 'T00:00:00'); d.setDate(d.getDate() + nIdx); date = d.toISOString().slice(0, 10); }
             await cx.query(
                 `INSERT INTO sessions (publication_id, club_id, team, hall, date, day_of_week, start_time, end_time, type, status, note)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'training','changed',$9)`,
-                [pub?.id, cid, p.team, p.newLocation || null, date, nIdx >= 0 ? nIdx : null, start || null, start ? addMin(start, 90) : null, `הוזז מ${p.day}`],
+                [pub?.id, cid, p.team, p.newLocation || null, date, nIdx >= 0 ? nIdx : null, start || null, end || (start ? addMin(start, 90) : null), `הוזז מ${p.day}`],
             );
             msg = `האימון מ${p.day} הוזז ליום ${p.newDay} ${p.newTime}${p.newLocation ? ' ב-' + p.newLocation : ''}.`;
         }

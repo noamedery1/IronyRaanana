@@ -91,6 +91,18 @@ const AdminDashboard = () => {
     // Keep a ref in sync so draft callbacks can read the latest sheetData.
     useEffect(() => { sheetDataRef.current = sheetData; }, [sheetData]);
 
+    // Load hall settings (capacity + per-hall colour) from the DB so the preview uses them.
+    useEffect(() => {
+        fetch(`/api/${club.slug}/halls`).then((r) => r.json())
+            .then((d) => { if (d && d.config) setHallConfig((prev) => ({ ...prev, ...d.config })); })
+            .catch(() => {});
+    }, [club.slug]);
+
+    // Per-hall colours chosen in "הגדרת אולמות" override the auto palette in the preview.
+    const hallColorOverrides = Object.fromEntries(
+        Object.entries(hallConfig || {}).filter(([, v]) => v && v.color).map(([k, v]) => [k, v.color]),
+    );
+
     // Preview reports its edited rows/headers on every change → auto-save to localStorage
     // (instant safety net so a refresh never loses work).
     const handlePreviewChange = (payload) => {
@@ -564,8 +576,9 @@ const AdminDashboard = () => {
                         indices={sheetData?.indices}
                         currentSchedule={currentSchedule}
                         setCurrentSchedule={setCurrentSchedule}
-                        hallColors={sheetData?.hallColors || {}}
+                        hallColors={{ ...(sheetData?.hallColors || {}), ...hallColorOverrides }}
                         hallConfig={hallConfig}
+                        clubSlug={club.slug}
                         onChange={handlePreviewChange}
                         onSaveDraft={saveDraftToCloud}
                         onDiscardDraft={discardDraft}
