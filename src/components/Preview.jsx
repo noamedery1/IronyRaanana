@@ -3,8 +3,6 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { authHeaders } from '../adminApi.js';
 
-const REQ_TYPE_LABEL = { cancel: 'ביטול', change: 'שינוי', move: 'העברת יום', propose: 'הצעת שיבוץ' };
-
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {}, onChange, onSaveDraft, onDiscardDraft, draftSavedAt, draftRestored, clubSlug }) => {
@@ -31,8 +29,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     const [suggestion, setSuggestion] = useState(null); // { text, row, col, newContent }
     const [draftMsg, setDraftMsg] = useState('');       // "save draft" feedback
-    const [pending, setPending] = useState([]);          // pending trainer requests/proposals
-    const [pendingMsg, setPendingMsg] = useState('');
+    const [pending, setPending] = useState([]);          // trainer requests (we use 'propose' here)
 
     // Full-screen working mode + its helpers
     const [fullScreen, setFullScreen] = useState(false);
@@ -209,17 +206,30 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
 
     const { set: conflictSet, details: conflictDetails } = computeConflicts();
 
-    // Map each pending trainer request to its board cell (team row × day column).
+    // Weekly-schedule proposals (type 'propose', from the trainer's "הזנת לו\"ז") are placed
+    // straight INTO the board cells in a special colour — NOT as approval requests.
+    // (Change/cancel/move requests during the week stay in the separate Approvals screen.)
     const reqDayIndex = (day) => { const f = (day || '').toString().trim().split(/\s+/)[0]; return DAY_NAMES.findIndex((d) => d === f); };
-    const pendingByCell = {};
-    pending.forEach((rq) => {
-        const p = rq.proposed || {};
-        const team = p.team || rq.session_team;
-        const di = reqDayIndex(p.day);
-        if (di < 0 || !team) return;
+    const parseProposalSlots = (reason) => {
+        const body = (reason || '').includes(':') ? reason.split(':').slice(1).join(':') : (reason || '');
+        return body.split('·').map((s) => s.trim()).filter(Boolean).map((part) => {
+            const toks = part.split(/\s+/).filter(Boolean);
+            const dayName = toks[0];
+            const time = toks.find((t) => /^\d{1,2}:?\d{2}\s*[-–]\s*\d{1,2}:?\d{2}$/.test(t) || /^\d{3,4}-\d{3,4}$/.test(t)) || toks.find((t) => /\d{3,4}/.test(t)) || '';
+            const loc = toks.slice(1).filter((t) => t !== time && !/^\d{1,2}\/\d{1,2}$/.test(t)).join(' ');
+            return { dayName, time, loc };
+        });
+    };
+    const proposalByCell = {};
+    pending.filter((rq) => rq.type === 'propose').forEach((rq) => {
+        const team = (rq.proposed && rq.proposed.team) || rq.session_team;
         const row = (dataToShow || []).findIndex((r) => r[0] === team);
         if (row < 0) return;
-        pendingByCell[`${row}_${dayStart + di}`] = rq;
+        parseProposalSlots(rq.reason).forEach((slot) => {
+            const di = reqDayIndex(slot.dayName);
+            if (di < 0) return;
+            proposalByCell[`${row}_${dayStart + di}`] = { trainer: rq.requested_by, time: slot.time, loc: slot.loc };
+        });
     });
 
     const LOCATIONS = ['מטרו', 'השרון', 'רימון', 'אביב', 'תיכון חדש'];
@@ -299,17 +309,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         return () => clearInterval(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clubSlug]);
-
-    const actOnRequest = async (id, action) => {
-        setPendingMsg('מעדכן…');
-        try {
-            const r = await fetch(`/api/${clubSlug}/requests/${id}/${action}`, { method: 'POST', headers: authHeaders(clubSlug) });
-            const d = await r.json().catch(() => ({}));
-            setPendingMsg(d.error ? ('שגיאה: ' + d.error) : (action === 'approve' ? '✓ הבקשה אושרה' : '✓ הבקשה נדחתה'));
-            refreshPending();
-            setTimeout(() => setPendingMsg(''), 3500);
-        } catch { setPendingMsg('שגיאת תקשורת'); }
-    };
 
     const handleSaveDraft = async () => {
         setDraftMsg('שומר…');
@@ -1157,31 +1156,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 dataToShow && <div className="cc-ok">✓ אין התנגשויות — הלו"ז תקין</div>
             ))}
 
-            {/* Pending trainer requests/proposals — appear automatically, in a special colour */}
-            {pending.length > 0 && (
-                <div className="cc-pending">
-                    <div className="cc-pending-head">📨 {pending.length} בקשות/הצעות ממאמנים — ממתינות לאישור {pendingMsg && <b style={{ marginInlineStart: '0.6rem' }}>{pendingMsg}</b>}</div>
-                    <div className="cc-pending-list">
-                        {pending.map((rq) => {
-                            const p = rq.proposed || {};
-                            return (
-                                <div key={rq.id} className="cc-pending-item">
-                                    <span className="cc-pending-info">
-                                        <span className="cc-pending-tag">{REQ_TYPE_LABEL[rq.type] || rq.type}</span>
-                                        <b>{p.team || rq.session_team}</b> · {p.day} {p.time || ''}
-                                        {(p.newTime || p.newLocation || p.newDay) && <span className="cc-pending-new"> ← {p.newDay ? `יום ${p.newDay} ` : ''}{p.newTime || ''}{p.newLocation ? ' · ' + p.newLocation : ''}</span>}
-                                        {rq.reason && <span className="cc-pending-reason"> · {rq.reason}</span>}
-                                        <span className="cc-pending-by"> ({rq.requested_by})</span>
-                                    </span>
-                                    <span className="cc-pending-acts">
-                                        <button className="cc-btn green" onClick={() => actOnRequest(rq.id, 'approve')}>✓ אשר</button>
-                                        <button className="cc-btn danger" onClick={() => actOnRequest(rq.id, 'reject')}>✕ דחה</button>
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+            {/* Trainer weekly proposals are shown inside the board cells (see below), not here. */}
+            {Object.keys(proposalByCell).length > 0 && (
+                <div className="cc-proposal-note">📝 {Object.keys(proposalByCell).length} הצעות שיבוץ ממאמנים מסומנות בלוח (בצבע ההצעה) — לחצו על תא כדי לאמץ ולשמור.</div>
             )}
 
             <div className="cc-body">
@@ -1242,10 +1219,13 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                             // Normal view: red fill. Full screen: keep the colour, only the ⚠️ + border remain.
                                             if (markConflict && !fullScreen) { bgColor = '#fde2e4'; textColor = '#b91c1c'; }
 
-                                            const pendingHere = pendingByCell[`${rowIndex}_${colIndex}`];
+                                            const proposalHere = proposalByCell[`${rowIndex}_${colIndex}`];
+                                            const showProposal = proposalHere && !cellData; // proposal shown only on an empty cell
 
                                             const openCell = () => {
                                                 selectCell(rowIndex, colIndex, teamName, dayHeaders[colMapIndex], cellData || '');
+                                                // adopting a proposal: pre-fill the editor so "שמור אימון" commits it
+                                                if (!cellData && proposalHere) loadLineIntoFields(`${proposalHere.time} ${proposalHere.loc}`.trim());
                                                 if (fullScreen) setEditModalOpen(true);
                                             };
                                             const onCellContext = (e) => {
@@ -1256,7 +1236,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                             return (
                                                 <td
                                                     key={colMapIndex}
-                                                    className={`cc-cell ${markConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''} ${pendingHere ? 'pending' : ''}`}
+                                                    className={`cc-cell ${markConflict ? 'conflict' : ''} ${isSelected ? 'selected' : ''} ${showProposal ? 'proposal' : ''}`}
                                                     style={{ backgroundColor: bgColor, color: textColor }}
                                                     draggable={!!cellData}
                                                     onDragStart={(e) => onDragStart(e, rowIndex, colIndex, cellData)}
@@ -1264,13 +1244,14 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                                     onDrop={(e) => onDrop(e, rowIndex, colIndex)}
                                                     onClick={openCell}
                                                     onContextMenu={onCellContext}
-                                                    title={pendingHere ? `הצעת מאמן ממתינה (${pendingHere.requested_by})` : undefined}
+                                                    title={proposalHere ? `הצעת שיבוץ של ${proposalHere.trainer} — לחצו לאימוץ` : undefined}
                                                 >
                                                     {markConflict && <span className="cc-cell-warn">⚠️</span>}
-                                                    {pendingHere && <span className="cc-cell-pending">📨</span>}
-                                                    {cellData
+                                                    {showProposal ? (
+                                                        <span className="cc-cell-proposal-txt">📝 {`${proposalHere.time} ${proposalHere.loc}`.trim()}<small>הצעת {proposalHere.trainer}</small></span>
+                                                    ) : (cellData
                                                         ? <span className="cc-cell-text">{cellData}</span>
-                                                        : <span className="cc-cell-add">+</span>}
+                                                        : <span className="cc-cell-add">+</span>)}
                                                 </td>
                                             );
                                         })}
