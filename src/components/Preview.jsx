@@ -24,6 +24,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const [inspHall, setInspHall] = useState('');
     const [inspType, setInspType] = useState('TRAIN'); // TRAIN | MATCH | ATHLETICS | CUSTOM
     const [inspCustom, setInspCustom] = useState(''); // free-text activity label (e.g. "אימון חוויה")
+    const [activeLineIndex, setActiveLineIndex] = useState(-1); // which session in the day is being edited (-1 = new)
 
     const [suggestion, setSuggestion] = useState(null); // { text, row, col, newContent }
     const [draftMsg, setDraftMsg] = useState('');       // "save draft" feedback
@@ -728,20 +729,43 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     };
 
     // ---- Inspector helpers ----
-    const selectCell = (rowIndex, colIndex, teamName, dayLabel, cellData) => {
-        // When a cell already holds several sessions (multi-line), edit the FIRST line.
-        const firstLine = (cellData || '').split('\n')[0];
-        const range = parseTimeRangeFromText(firstLine);
+    // Split a cell into its individual sessions (one per non-empty line).
+    const linesOf = (cellData) => (cellData || '').split('\n').map((l) => l.trim()).filter(Boolean);
+
+    // Load a single session line into the edit fields.
+    const loadLineIntoFields = (line) => {
+        const range = parseTimeRangeFromText(line);
         setInspStart(range ? formatTimeToken(range.start) : '17:00');
         setInspEnd(range ? formatTimeToken(range.end) : '18:30');
-        setInspHall(extractLocation(firstLine) || '');
-        setInspType(firstLine && firstLine.includes('משחק') ? 'MATCH' : (firstLine && firstLine.includes('אתלטיקה') ? 'ATHLETICS' : 'TRAIN'));
+        setInspHall(extractLocation(line) || '');
+        setInspType(line && line.includes('משחק') ? 'MATCH' : (line && line.includes('אתלטיקה') ? 'ATHLETICS' : 'TRAIN'));
         setInspCustom('');
-        setSelectedCell({ rowIndex, colIndex, teamName, dayLabel });
-        setInspOpen(true); // make sure the editing panel is visible when a cell is chosen
     };
 
-    // Build the cell text from the current editor fields (returns null if times invalid).
+    const selectCell = (rowIndex, colIndex, teamName, dayLabel, cellData) => {
+        const lines = linesOf(cellData);
+        if (lines.length > 0) { loadLineIntoFields(lines[0]); setActiveLineIndex(0); }
+        else { setInspStart('17:00'); setInspEnd('18:30'); setInspHall(''); setInspType('TRAIN'); setInspCustom(''); setActiveLineIndex(-1); }
+        setSelectedCell({ rowIndex, colIndex, teamName, dayLabel });
+        setInspOpen(true);
+    };
+
+    // Pick an existing session in the day to edit it.
+    const selectLine = (idx) => {
+        if (!selectedCell) return;
+        const lines = linesOf(dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex]);
+        if (lines[idx] === undefined) return;
+        loadLineIntoFields(lines[idx]);
+        setActiveLineIndex(idx);
+    };
+
+    // Start a brand-new session in the same day (clears the fields).
+    const newSession = () => {
+        setInspStart('17:00'); setInspEnd('18:30'); setInspHall(''); setInspType('TRAIN'); setInspCustom('');
+        setActiveLineIndex(-1);
+    };
+
+    // Build the session text from the current editor fields (returns null if times invalid).
     const buildInspContent = () => {
         const s = normalizeTimeToken(inspStart);
         const e = normalizeTimeToken(inspEnd);
@@ -757,18 +781,30 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         return content;
     };
 
-    // append=false → replace the cell; append=true → add another session (new line) to it.
-    const applyInspector = (append = false) => {
+    // Save the fields into ONLY the active session — replacing it if it exists, else adding it.
+    // Other sessions in the same day are kept untouched.
+    const saveSession = () => {
         if (!selectedCell) return;
         const content = buildInspContent();
         if (content === null) return;
-        if (append) {
-            const existing = (dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex] || '').trim();
-            handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, existing ? `${existing}\n${content}` : content);
-        } else {
-            handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, content);
-            if (editModalOpen) setEditModalOpen(false);
-        }
+        const lines = linesOf(dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex]);
+        let idx = activeLineIndex;
+        if (idx >= 0 && idx < lines.length) lines[idx] = content;
+        else { lines.push(content); idx = lines.length - 1; }
+        handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, lines.join('\n'));
+        setActiveLineIndex(idx);
+        if (editModalOpen) setEditModalOpen(false);
+    };
+
+    // Delete one session from the day (keeps the rest).
+    const deleteLine = (idx) => {
+        if (!selectedCell) return;
+        const lines = linesOf(dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex]);
+        if (idx < 0 || idx >= lines.length) return;
+        lines.splice(idx, 1);
+        handleCellChange(selectedCell.rowIndex, selectedCell.colIndex, lines.join('\n'));
+        if (lines.length > 0) { const ni = Math.min(idx, lines.length - 1); loadLineIntoFields(lines[ni]); setActiveLineIndex(ni); }
+        else newSession();
     };
 
     const clearSelected = () => {
@@ -923,6 +959,10 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         ? conflictDetails.filter(c => c.rowIndex === selectedCell.rowIndex && c.colIndex === selectedCell.colIndex)
         : [];
 
+    // Sessions already in the selected day (each line = one session).
+    const dayLines = selectedCell ? linesOf(dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex]) : [];
+    const editingExisting = activeLineIndex >= 0 && activeLineIndex < dayLines.length;
+
     // Shared editor body — used both in the side inspector and the full-screen modal.
     const editorFields = selectedCell ? (
         <>
@@ -943,8 +983,24 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 </div>
             )}
 
+            {/* Sessions already in this day — tap one to edit it, 🗑 to delete just it */}
+            {dayLines.length > 0 && (
+                <div className="cc-field">
+                    <label>אימונים ביום זה ({dayLines.length})</label>
+                    <div className="cc-session-list">
+                        {dayLines.map((ln, i) => (
+                            <div key={i} className={`cc-session ${activeLineIndex === i ? 'on' : ''}`}>
+                                <span className="cc-session-txt" onClick={() => selectLine(i)} title="ערוך אימון זה">{ln}</span>
+                                <button className="cc-session-del" onClick={() => deleteLine(i)} title="מחק אימון זה">🗑</button>
+                            </div>
+                        ))}
+                    </div>
+                    <button className="cc-btn ghost full" style={{ marginTop: '0.45rem' }} onClick={newSession}>➕ אימון נוסף ליום זה</button>
+                </div>
+            )}
+
             <div className="cc-field">
-                <label>סוג פעילות</label>
+                <label>{editingExisting ? `עריכת אימון ${activeLineIndex + 1}` : (dayLines.length ? 'אימון חדש' : 'פרטי האימון')} · סוג פעילות</label>
                 <div className="cc-types">
                     <button className={`cc-type ${inspType === 'TRAIN' ? 'on' : ''}`} onClick={() => setInspType('TRAIN')}>אימון</button>
                     <button className={`cc-type match ${inspType === 'MATCH' ? 'on' : ''}`} onClick={() => setInspType('MATCH')}>🏀 משחק</button>
@@ -978,11 +1034,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             </button>
 
             <div className="cc-insp-actions">
-                <button className="cc-btn green full" onClick={() => applyInspector(false)}>✓ החל</button>
-                <button className="cc-btn danger" onClick={clearSelected}>נקה</button>
+                <button className="cc-btn green full" onClick={saveSession}>💾 {editingExisting ? 'עדכן אימון' : 'שמור אימון'}</button>
+                {editingExisting && <button className="cc-btn danger" onClick={() => deleteLine(activeLineIndex)}>🗑 מחק</button>}
             </div>
-            <button className="cc-btn ghost full" style={{ marginTop: '0.5rem' }} onClick={() => applyInspector(true)}>➕ הוסף אימון נוסף לאותו יום</button>
-            <p className="cc-insp-hint">טיפ: כמה אימונים באותו יום (למשל בוקר/ערב) — מלאו אימון ולחצו "הוסף אימון נוסף". אפשר גם לגרור אימון ממשבצת למשבצת.</p>
+            <button className="cc-btn ghost full" style={{ marginTop: '0.5rem' }} onClick={clearSelected}>נקה את כל היום</button>
+            <p className="cc-insp-hint">כל שורה למעלה = אימון נפרד באותו יום. לחצו עליה כדי לערוך אותה, או 🗑 כדי למחוק רק אותה. "אימון נוסף ליום זה" מוסיף עוד אחד.</p>
         </>
     ) : null;
 
