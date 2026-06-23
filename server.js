@@ -12,7 +12,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
-import { requireManager } from './server/auth.js';
+import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveAsset, getAsset, manifestFor, ICONS_DIR,
@@ -68,11 +68,12 @@ app.get('/api/health', async (req, res) => {
 
 // ===== Superuser auth =====
 const SUPERUSER_PASSWORD = process.env.SUPERUSER_PASSWORD || '';
-const validTokens = new Set(); // in-memory; cleared on restart (re-login required)
 
+// Superuser auth uses a signed (HMAC) token — stateless, so it survives server
+// restarts/redeploys (the old in-memory set was wiped on every deploy → saves 401'd).
 function requireSuperuser(req, res, next) {
-    const token = req.get('x-superuser-token');
-    if (!token || !validTokens.has(token)) return res.status(401).json({ error: 'unauthorized' });
+    const p = verifyToken(req.get('x-superuser-token'));
+    if (!p || p.role !== 'superuser') return res.status(401).json({ error: 'unauthorized' });
     next();
 }
 
@@ -80,9 +81,7 @@ app.post('/api/superuser/login', (req, res) => {
     if (!SUPERUSER_PASSWORD) return res.status(503).json({ error: 'superuser not configured' });
     const { password } = req.body || {};
     if (password !== SUPERUSER_PASSWORD) return res.status(403).json({ error: 'wrong password' });
-    const token = crypto.randomBytes(24).toString('hex');
-    validTokens.add(token);
-    res.json({ token });
+    res.json({ token: signToken({ role: 'superuser' }) });
 });
 
 // ===== Clubs (public read) =====
