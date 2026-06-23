@@ -58,12 +58,8 @@ const AdminDashboard = () => {
     // Pick a tab and, on mobile, close the drawer so the content is visible.
     const selectTab = (tab) => { setActiveTab(tab); if (mqMobile()) setSidebarOpen(false); };
 
-    // Load saved rules (WeekBuilder constraints) from the DB on mount.
-    useEffect(() => {
-        fetch(`/api/${club.slug}/settings/teamRules`).then((r) => r.json())
-            .then((d) => { if (Array.isArray(d.value) && d.value.length) setTeamConfig(d.value); })
-            .catch(() => { /* none yet */ });
-    }, [club.slug]);
+    // (teamConfig/rules are loaded inside loadDraft, merged with the draft teams,
+    //  to avoid a race where two effects clobber each other.)
 
     // Load hall config on mount
     useEffect(() => {
@@ -96,9 +92,13 @@ const AdminDashboard = () => {
     // Load the DB draft → populate the preview (sheet-shaped) + WeekBuilder teams.
     const loadDraft = async ({ silent } = {}) => {
         try {
-            const r = await fetch(`/api/${club.slug}/draft`, { headers: authHeaders(club.slug) });
-            if (!r.ok) return;
-            const draft = await r.json();
+            // load the draft AND the saved scheduling rules together (single source → no race)
+            const [draftR, rulesR] = await Promise.all([
+                fetch(`/api/${club.slug}/draft`, { headers: authHeaders(club.slug) }),
+                fetch(`/api/${club.slug}/settings/teamRules`).then((x) => x.json()).catch(() => ({})),
+            ]);
+            if (!draftR.ok) return;
+            const draft = await draftR.json();
             const sheet = sessionsToSheet(draft);
             setSheetData({ headers: sheet.headers, teams: sheet.teams, rawRows: sheet.rawRows, hallColors: sheet.hallColors, indices: sheet.indices });
             setCurrentSchedule(sheet.rawRows);
@@ -107,11 +107,16 @@ const AdminDashboard = () => {
             latestDraft.current = { headers: sheet.headers, rows: sheet.rawRows };
             setIsConnected(true);
             if (!silent) setDraftRestored((draft.sessions || []).length > 0);
-            // keep WeekBuilder teams in sync with the draft (merge saved rules)
-            setTeamConfig((prev) => sheet.teams.map((t) => {
-                const existing = prev.find((tc) => tc.name === t.name && (tc.coach || '') === (t.coach || ''));
-                return existing ? { ...existing, type: t.type } : { name: t.name, coach: t.coach, type: t.type, sessionsPerWeek: 3, constraints: [] };
-            }));
+            // teamConfig = draft teams (with their saved rules merged) + rules-only teams.
+            const saved = Array.isArray(rulesR.value) ? rulesR.value : [];
+            const byKey = {}; saved.forEach((t) => { byKey[`${t.name}|${t.coach || ''}`] = t; });
+            const draftKeys = new Set(sheet.teams.map((t) => `${t.name}|${t.coach || ''}`));
+            const fromDraft = sheet.teams.map((t) => {
+                const s = byKey[`${t.name}|${t.coach || ''}`];
+                return s ? { ...s, type: t.type } : { name: t.name, coach: t.coach, type: t.type, sessionsPerWeek: 3, constraints: [] };
+            });
+            const rulesOnly = saved.filter((t) => !draftKeys.has(`${t.name}|${t.coach || ''}`));
+            setTeamConfig([...fromDraft, ...rulesOnly]);
         } catch { /* offline */ }
     };
 
