@@ -18,7 +18,7 @@ import { sessionsToSheet, sheetToSessions } from '../draftBridge.js';
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const club = getActiveClub(); // dashboard is scoped to the club in the URL
-    const [activeTab, setActiveTab] = useState('setup');
+    const [activeTab, setActiveTab] = useState('preview'); // land straight on the working board
     const mqMobile = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches;
     const [isMobile, setIsMobile] = useState(mqMobile);
     const [sidebarOpen, setSidebarOpen] = useState(() => !mqMobile()); // closed by default on phones
@@ -523,43 +523,9 @@ const AdminDashboard = () => {
                             לעריכה ופרסום — עברו ל<b>תצוגה מקדימה</b> ואז <b>פרסם לוז</b>.
                         </div>
 
-                        <div style={{ marginTop: '2rem' }}>
-                            <h4 style={{ marginBottom: '0.5rem' }}>הגדרות שמירה (Admin)</h4>
-                            <p style={{ fontSize: '0.9rem', color: '#666', marginTop: 0 }}>
-                                כדי למנוע שמירה לקובץ שגוי, יש להגדיר כתובת Web App ייעודית של Apps Script עבור גיליון ה-Admin.
-                            </p>
-
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                                כתובת ה-API לשמירה (Web App URL)
-                            </label>
-                            <input
-                                type="text"
-                                value={saveUrl}
-                                onChange={(e) => setSaveUrl(e.target.value)}
-                                placeholder="https://script.google.com/macros/s/.../exec"
-                                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', direction: 'ltr' }}
-                            />
-
-                            {saveUrl && saveUrl.includes('/library/') && (
-                                <div style={{ color: '#E11D48', fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: 500 }}>
-                                    🛑 זו כתובת Library. יש להשתמש ב-Web App URL שמסתיים ב-<code>/exec</code>.
-                                </div>
-                            )}
-                            {saveUrl && !saveUrl.includes('/library/') && !saveUrl.includes('macros/s/') && !saveUrl.includes('script.google.com') && (
-                                <div style={{ color: '#F59E0B', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-                                    ⚠️ הכתובת לא נראית כמו כתובת Google Apps Script תקינה.
-                                </div>
-                            )}
-
-                            <div style={{ marginTop: '1rem' }}>
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>שם הגיליון (Tab) לשמירה</label>
-                                <input
-                                    type="text"
-                                    value={sheetName}
-                                    onChange={(e) => setSheetName(e.target.value)}
-                                    style={{ width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid #ddd' }}
-                                />
-                            </div>
+                        <div style={{ marginTop: '1.5rem', padding: '0.9rem 1rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, color: '#1e3a8a', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                            ℹ️ הלו"ז עובד מול מסד הנתונים. ייבוא נדרש רק <b>פעם אחת</b> כשמתחילים — אחר כך
+                            בונים ומפרסמים מתוך <b>בניית הלו"ז</b>. אין צורך בחיבור/שמירה לגיליון חיצוני.
                         </div>
                     </div>
                 );
@@ -675,68 +641,35 @@ const AdminDashboard = () => {
                     ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: '1.2rem 0', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
                     : { width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
-                        <button
-                            style={menuButtonStyle(activeTab === 'setup')}
-                            onClick={() => selectTab('setup')}
-                        >
-                            ⚙️ הגדרות מערכת {isConnected && '✅'}
+                        <button style={menuButtonStyle(activeTab === 'preview')} onClick={() => selectTab('preview')}>
+                            👁️ בניית הלו"ז (טיוטה)
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'weekBuilder')}
-                            onClick={() => selectTab('weekBuilder')}
-                            disabled={!isConnected}
-                            title={!isConnected ? "יש להתחבר לגיליון תחילה" : ""}
-                        >
-                            📅 בניית שבוע
-                        </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'publish')}
-                            onClick={() => selectTab('publish')}
-                        >
+                        <button style={menuButtonStyle(activeTab === 'publish')} onClick={() => selectTab('publish')}>
                             🚀 פרסם לוז
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'approvals')}
-                            onClick={() => selectTab('approvals')}
-                        >
+                        <button style={menuButtonStyle(activeTab === 'approvals')} onClick={() => selectTab('approvals')}>
                             ✅ בקשות לאישור
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'preview')}
-                            onClick={() => selectTab('preview')}
-                            disabled={!isConnected}
-                        >
-                            👁️ תצוגה מקדימה
+                        <button style={menuButtonStyle(activeTab === 'weekBuilder')} onClick={() => selectTab('weekBuilder')}>
+                            📅 חוקי שיבוץ
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'halls')}
-                            onClick={() => selectTab('halls')}
-                        >
-                            🏟️ הגדרת אולמות
+                        <button style={menuButtonStyle(activeTab === 'halls')} onClick={() => selectTab('halls')}>
+                            🏟️ אולמות
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'messages')}
-                            onClick={() => selectTab('messages')}
-                        >
+                        <button style={menuButtonStyle(activeTab === 'messages')} onClick={() => selectTab('messages')}>
                             📣 הודעה צפה
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'trainerPush')}
-                            onClick={() => selectTab('trainerPush')}
-                        >
+                        <button style={menuButtonStyle(activeTab === 'trainerPush')} onClick={() => selectTab('trainerPush')}>
                             📢 הודעות
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'invites')}
-                            onClick={() => selectTab('invites')}
-                        >
+                        <button style={menuButtonStyle(activeTab === 'invites')} onClick={() => selectTab('invites')}>
                             🔗 לינקי הזמנה
                         </button>
-                        <button
-                            style={menuButtonStyle(activeTab === 'trainersAdmin')}
-                            onClick={() => selectTab('trainersAdmin')}
-                        >
+                        <button style={menuButtonStyle(activeTab === 'trainersAdmin')} onClick={() => selectTab('trainersAdmin')}>
                             👤 ניהול מאמנים
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'setup')} onClick={() => selectTab('setup')}>
+                            ⚙️ הגדרות וייבוא
                         </button>
                     </nav>
                 </aside>}

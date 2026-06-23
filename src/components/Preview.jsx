@@ -243,7 +243,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     if (!teams || teams.length === 0) {
         return (
             <div style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '2rem' }}>
-                <p>אין נתונים לתצוגה. אנא התחבר לגיליון בלשונית ההגדרות.</p>
+                <p>אין עדיין קבוצות בטיוטה. ייבאו לו"ז קיים פעם אחת ב"⚙️ הגדרות וייבוא" כדי להתחיל — הקבוצות והאימונים ייטענו לכאן לעריכה.</p>
             </div>
         );
     }
