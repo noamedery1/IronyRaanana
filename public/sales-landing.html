@@ -92,6 +92,26 @@
     .frame-bar i{width:10px;height:10px;border-radius:50%;background:#ffffff22}
     @media(max-width:820px){.shot{grid-template-columns:1fr}.shot.rev{direction:rtl}}
 
+    /* live demo */
+    .demo{background:linear-gradient(180deg,var(--ink2),var(--ink))}
+    .demo-stage{display:flex;align-items:center;justify-content:center;gap:2.4rem;flex-wrap:wrap;max-width:1000px;margin:0 auto}
+    .lap{width:min(620px,92vw)}
+    .lap-top{background:#0c1322;border:1px solid var(--line2);border-bottom:none;border-radius:14px 14px 0 0;display:flex;align-items:center;gap:6px;padding:.5rem .8rem}
+    .lap-top i{width:10px;height:10px;border-radius:50%;background:#ffffff22}
+    .lap-top .url{margin-inline-start:auto;font-size:.72rem;color:var(--mut);direction:ltr;background:rgba(255,255,255,.05);padding:.15rem .7rem;border-radius:20px}
+    .screen{position:relative;overflow:hidden;background:#0c1322}
+    .lap .screen{aspect-ratio:1380/920;border:1px solid var(--line2);border-top:none;border-radius:0 0 14px 14px;box-shadow:var(--shadow)}
+    .dphone{width:min(210px,58vw);border-radius:30px;background:#0c1322;border:8px solid #1b2740;box-shadow:0 40px 70px -28px rgba(0,0,0,.8);overflow:hidden;position:relative}
+    .dphone::before{content:'';position:absolute;top:7px;left:50%;transform:translateX(-50%);width:70px;height:5px;border-radius:10px;background:#1b2740;z-index:3}
+    .dphone .screen{aspect-ratio:430/920}
+    .slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center;opacity:0;transition:opacity .7s ease}
+    .slide.on{opacity:1}
+    .demo-cap{max-width:760px;margin:1.8rem auto 0;text-align:center;font-weight:700;font-size:1.05rem;color:#cdd6e3;min-height:1.6em;transition:opacity .25s}
+    .demo-dots{display:flex;gap:.5rem;justify-content:center;margin-top:1rem}
+    .demo-dots b{width:26px;height:5px;border-radius:5px;background:var(--line2);transition:background .3s}
+    .demo-dots b.on{background:var(--emer2)}
+    @media(max-width:820px){.demo-stage{gap:1.4rem}}
+
     /* roles */
     .roles{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;max-width:1000px;margin:0 auto}
     @media(max-width:820px){.roles{grid-template-columns:1fr 1fr}}
@@ -137,6 +157,7 @@
       <div class="brandlogo"><svg class="shield"><use href="#shield"/></svg> Squad<span style="color:var(--emer2)">io</span></div>
       <div class="nav-links">
         <a href="#why">למה זה עובד</a>
+        <a href="#demo">דמו</a>
         <a href="#screens">המסכים</a>
         <a href="#pricing">מחירים</a>
       </div>
@@ -162,6 +183,35 @@
       <div class="phone"><img src="/sales-mobile.jpg" alt="הלו"ז במובייל" /></div>
     </div>
   </header>
+
+  <section id="demo" class="demo">
+    <div class="wrap">
+      <div style="text-align:center"><span class="eyebrow">▶ דמו חי</span></div>
+      <h2 class="t">ככה זה עובד — מהבנייה ועד ההורה</h2>
+      <p class="sub">מה שאתם מסדרים במחשב — ההורים מקבלים מיד בטלפון, מעוצב ומעודכן בזמן אמת.</p>
+      <div class="demo-stage">
+        <div class="lap">
+          <div class="lap-top"><i></i><i></i><i></i><span class="url">squadio.up.railway.app</span></div>
+          <div class="screen" id="lapScreen">
+            <img class="slide on" src="/demo/m03-weekbuilder.png" alt="בניית לוז" loading="lazy" decoding="async">
+            <img class="slide" src="/demo/m03b-preview.png" alt="תצוגה מקדימה" loading="lazy" decoding="async">
+            <img class="slide" src="/demo/m04-publish.png" alt="פרסום" loading="lazy" decoding="async">
+            <img class="slide" src="/demo/m11-push.png" alt="שליחת התראה" loading="lazy" decoding="async">
+          </div>
+        </div>
+        <div class="dphone">
+          <div class="screen" id="phoneScreen">
+            <img class="slide on" src="/demo/p01-gate.png" alt="כניסת הורה" loading="lazy" decoding="async">
+            <img class="slide" src="/demo/p03-schedule.png" alt="לוז אישי" loading="lazy" decoding="async">
+            <img class="slide" src="/demo/p04-weekly.png" alt="תצוגה שבועית" loading="lazy" decoding="async">
+            <img class="slide" src="/demo/p05-ticker.png" alt="עדכון בזמן אמת" loading="lazy" decoding="async">
+          </div>
+        </div>
+      </div>
+      <p class="demo-cap" id="demoCap">שלב 1 · המנהל בונה את הלו"ז — גרירה ושיבוץ חכם בלחיצות.</p>
+      <div class="demo-dots" id="demoDots"><b class="on"></b><b></b><b></b><b></b></div>
+    </div>
+  </section>
 
   <section id="why">
     <div class="wrap">
@@ -322,5 +372,31 @@
       <div style="margin-top:.6rem"><a href="/privacy.html" style="color:var(--emer2);text-decoration:none">מדיניות פרטיות</a></div>
     </div>
   </footer>
+
+  <script>
+    // Auto-playing demo: cycle the laptop (manager) + phone (parent) screens in sync.
+    (function () {
+      var caps = [
+        'שלב 1 · המנהל בונה את הלו"ז — גרירה ושיבוץ חכם בלחיצות.',
+        'שלב 2 · תצוגה מקדימה — הכל מסודר ומאושר לפני פרסום.',
+        'שלב 3 · פרסום בלחיצה אחת — הלו"ז עולה לכל ההורים.',
+        'שלב 4 · התראה נשלחת — ההורים רואים מיד, בזמן אמת.'
+      ];
+      var lap = document.querySelectorAll('#lapScreen .slide');
+      var ph = document.querySelectorAll('#phoneScreen .slide');
+      var dots = document.querySelectorAll('#demoDots b');
+      var cap = document.getElementById('demoCap');
+      if (!lap.length || !ph.length) return;
+      var i = 0, n = caps.length;
+      function show(k) {
+        lap.forEach(function (e, x) { e.classList.toggle('on', x === k); });
+        ph.forEach(function (e, x) { e.classList.toggle('on', x === k); });
+        dots.forEach(function (e, x) { e.classList.toggle('on', x === k); });
+        cap.style.opacity = 0;
+        setTimeout(function () { cap.textContent = caps[k]; cap.style.opacity = 1; }, 220);
+      }
+      setInterval(function () { i = (i + 1) % n; show(i); }, 3000);
+    })();
+  </script>
 </body>
 </html>
