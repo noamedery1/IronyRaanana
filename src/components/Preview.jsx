@@ -240,14 +240,6 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         { start: '2030', end: '2200' }
     ];
 
-    if (!teams || teams.length === 0) {
-        return (
-            <div style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '2rem' }}>
-                <p>אין עדיין קבוצות בטיוטה. ייבאו לו"ז קיים פעם אחת ב"⚙️ הגדרות וייבוא" כדי להתחיל — הקבוצות והאימונים ייטענו לכאן לעריכה.</p>
-            </div>
-        );
-    }
-
     const dayHeaders = currentHeaders.length > 0 ? currentHeaders.slice(dayStart, dayStart + 7) : [];
 
     // Rewrite the 7 day-headers to the week that starts on `dateVal` (yyyy-mm-dd).
@@ -1084,6 +1076,15 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             <p className="cc-insp-hint">כל שורה למעלה = אימון נפרד באותו יום. לחצו עליה כדי לערוך אותה, או 🗑 כדי למחוק רק אותה. "אימון נוסף ליום זה" מוסיף עוד אחד.</p>
         </>
     ) : null;
+
+    // Empty draft → friendly message (placed AFTER all hooks so hook order is stable).
+    if (!teams || teams.length === 0) {
+        return (
+            <div style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '2rem' }}>
+                <p>אין עדיין קבוצות בטיוטה. ייבאו לו"ז קיים פעם אחת ב"⚙️ הגדרות וייבוא" כדי להתחיל — הקבוצות והאימונים ייטענו לכאן לעריכה.</p>
+            </div>
+        );
+    }
 
     return (
         <div className={`cc ${fullScreen ? 'cc--fs' : ''}`} onClick={() => ctxMenu && setCtxMenu(null)}>

@@ -23,12 +23,21 @@ const statusOf = (s) => (s === 'cancelled' ? 'cancelled' : s === 'changed' ? 'ch
 
 // CSV text -> { sessions[], weekStart }. Pure (no DB) so it's easy to test.
 export function parseSheetToSessions(csvText) {
-    const rows = Papa.parse(csvText, { header: false }).data;
+    const raw = (csvText || '').replace(/^﻿/, '').trim();
+    if (!raw) throw new Error('הקובץ ריק.');
+    if (/^\s*<(!doctype|html)/i.test(raw)) {
+        throw new Error('הקישור החזיר דף HTML ולא CSV. ודא שהגיליון "פורסם לאינטרנט" כ‑CSV (קובץ ← שיתוף ← פרסום באינטרנט ← CSV), או העלה קובץ אקסל ישירות.');
+    }
+    const rows = Papa.parse(raw, { header: false }).data;
+    const clean = (x) => (x || '').toString().replace(/^﻿/, '').trim();
+    const hasDay = (r) => Array.isArray(r) && r.some((c) => /ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת/.test(clean(c)));
     let h = -1;
     for (let i = 0; i < rows.length; i++) {
-        if (rows[i][0] && rows[i][0].includes('קבוצות')) { h = i; break; }
+        if (clean(rows[i][0]).includes('קבוצות')) { h = i; break; }
     }
-    if (h === -1) throw new Error('Header row containing "קבוצות" not found');
+    // Fallback: a header row that has a day-name column even if the first cell isn't exactly "קבוצות".
+    if (h === -1) for (let i = 0; i < rows.length; i++) { if (clean(rows[i][0]) && hasDay(rows[i])) { h = i; break; } }
+    if (h === -1) throw new Error('לא נמצאה שורת כותרת. הקובץ צריך לכלול שורה עם העמודה "קבוצות" ועמודות ימים (ראשון, שני, …).');
 
     const header = rows[h];
     const dataRows = rows.slice(h + 1);
