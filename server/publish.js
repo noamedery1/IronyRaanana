@@ -170,7 +170,7 @@ export async function getLiveSchedule(slug, week) {
 
     const p = pub.rows[0];
     const s = await pool.query(
-        `SELECT team, coach, gender, hall, date::text,
+        `SELECT team, coach, gender, hall, date::text, day_of_week,
                 to_char(start_time,'HH24:MI') AS start_time, to_char(end_time,'HH24:MI') AS end_time,
                 type, status, note
          FROM sessions WHERE publication_id=$1 ORDER BY date, start_time`,

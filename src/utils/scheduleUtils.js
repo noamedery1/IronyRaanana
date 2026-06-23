@@ -150,7 +150,9 @@ export const sessionsToRows = (sessions, weekStart) => {
             order.push(key);
         }
         const rec = map.get(key);
-        const idx = Number.isInteger(s.day_of_week) ? s.day_of_week : 0;
+        // Prefer day_of_week; otherwise derive it from the date (so days never collapse to Sunday).
+        let idx = Number.isInteger(s.day_of_week) ? s.day_of_week : (s.date ? new Date(s.date + 'T00:00:00').getDay() : 0);
+        if (!Number.isInteger(idx) || idx < 0 || idx > 6) idx = 0;
         // Prefer the original cell text (note) so parseCellContent round-trips exactly.
         const line = s.note || [s.start_time, s.hall].filter(Boolean).join(' ');
         rec.days[idx].push(line);
