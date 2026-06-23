@@ -7,7 +7,7 @@ import { publishClub, getLiveSchedule, listPublications, teamICS, getPublication
 import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
     registerUser, authUser, listTeams, upsertTeam, deleteTeam,
-    createManager, authManager, listManagers,
+    createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
@@ -202,6 +202,13 @@ app.post('/api/:club/users/auth', async (req, res) => {
 app.post('/api/:club/managers/auth', async (req, res) => {
     try { ok(res, await authManager(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
+// Self-service: logged-in manager changes their own password (username from the token).
+app.post('/api/:club/managers/password', requireManager, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body || {};
+        res.json(await changeManagerPassword(req.params.club, req.auth.sub, currentPassword, newPassword));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+});
 
 // Teams (add / update / list / delete)
 app.get('/api/:club/teams', async (req, res) => {
@@ -354,6 +361,11 @@ app.post('/api/superuser/clubs/:slug/managers', requireSuperuser, async (req, re
 app.get('/api/superuser/clubs/:slug/managers', requireSuperuser, async (req, res) => {
     try { res.json({ managers: await listManagers(req.params.slug) }); }
     catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Superuser resets a manager's password (recovery when a manager is locked out).
+app.post('/api/superuser/clubs/:slug/managers/:username/reset', requireSuperuser, async (req, res) => {
+    try { res.json(await resetManagerPassword(req.params.slug, req.params.username, (req.body || {}).password)); }
+    catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 app.delete('/api/superuser/clubs/:slug', requireSuperuser, async (req, res) => {

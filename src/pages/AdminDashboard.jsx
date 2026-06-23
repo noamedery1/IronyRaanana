@@ -38,6 +38,24 @@ const AdminDashboard = () => {
     const [teamConfig, setTeamConfig] = useState([]);
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
+    const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
+    const [pwMsg, setPwMsg] = useState('');
+
+    const changePassword = async () => {
+        if (!pw.cur || !pw.next) { setPwMsg('מלא סיסמה נוכחית וחדשה'); return; }
+        if (pw.next !== pw.confirm) { setPwMsg('הסיסמה החדשה ואישורה אינם תואמים'); return; }
+        setPwMsg('משנה…');
+        try {
+            const r = await fetch(`/api/${club.slug}/managers/password`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+                body: JSON.stringify({ currentPassword: pw.cur, newPassword: pw.next }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (r.ok) { setPwMsg('✓ הסיסמה עודכנה'); setPw({ cur: '', next: '', confirm: '' }); }
+            else setPwMsg('❌ ' + (d.error || 'שינוי נכשל'));
+        } catch { setPwMsg('שגיאת תקשורת'); }
+        setTimeout(() => setPwMsg(''), 5000);
+    };
 
     // ---- Draft schedule — lives in the DB (status='draft'); the preview reads/writes it ----
     const DRAFT_KEY = `draft:${club.slug}`;        // instant local cache (crash safety only)
@@ -531,6 +549,18 @@ const AdminDashboard = () => {
                         <div style={{ marginTop: '1.5rem', padding: '0.9rem 1rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, color: '#1e3a8a', fontSize: '0.9rem', lineHeight: 1.6 }}>
                             ℹ️ הלו"ז עובד מול מסד הנתונים. ייבוא נדרש רק <b>פעם אחת</b> כשמתחילים — אחר כך
                             בונים ומפרסמים מתוך <b>בניית הלו"ז</b>. אין צורך בחיבור/שמירה לגיליון חיצוני.
+                        </div>
+
+                        <div style={{ marginTop: '1.5rem', borderTop: '1px solid #e5e7eb', paddingTop: '1.2rem' }}>
+                            <h4 style={{ margin: '0 0 0.3rem' }}>🔑 שינוי סיסמת מנהל</h4>
+                            <p style={{ color: '#666', fontSize: '0.85rem', margin: '0 0 0.7rem' }}>שכחת סיסמה? פנה למנהל‑העל לאיפוס.</p>
+                            <div style={{ display: 'grid', gap: '0.6rem', maxWidth: 360 }}>
+                                <input type="password" placeholder="סיסמה נוכחית" value={pw.cur} onChange={(e) => setPw({ ...pw, cur: e.target.value })} style={{ padding: '0.7rem', borderRadius: 8, border: '1px solid #ddd', direction: 'ltr' }} />
+                                <input type="password" placeholder="סיסמה חדשה" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} style={{ padding: '0.7rem', borderRadius: 8, border: '1px solid #ddd', direction: 'ltr' }} />
+                                <input type="password" placeholder="אישור סיסמה חדשה" value={pw.confirm} onChange={(e) => setPw({ ...pw, confirm: e.target.value })} style={{ padding: '0.7rem', borderRadius: 8, border: '1px solid #ddd', direction: 'ltr' }} />
+                                <button onClick={changePassword} style={{ background: '#0891b2', color: '#fff', border: 'none', padding: '0.7rem', borderRadius: 8, fontWeight: 'bold', cursor: 'pointer' }}>עדכן סיסמה</button>
+                                {pwMsg && <div style={{ fontWeight: 'bold', color: pwMsg.startsWith('✓') ? '#16a34a' : '#ef4444' }}>{pwMsg}</div>}
+                            </div>
                         </div>
                     </div>
                 );

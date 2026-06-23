@@ -175,6 +175,26 @@ export async function listManagers(slug) {
     return r.rows;
 }
 
+// Self-service: a logged-in manager changes their own password (verifies the current one).
+export async function changeManagerPassword(slug, username, currentPassword, newPassword) {
+    if (!newPassword || String(newPassword).length < 4) throw new Error('הסיסמה החדשה קצרה מדי (לפחות 4 תווים)');
+    const cid = await clubId(slug);
+    const r = await pool.query('SELECT password FROM managers WHERE club_id=$1 AND lower(username)=lower($2) LIMIT 1', [cid, (username || '').trim()]);
+    if (!r.rows.length) throw new Error('מנהל לא נמצא');
+    if (!verifyPw(currentPassword, r.rows[0].password)) throw new Error('הסיסמה הנוכחית שגויה');
+    await pool.query('UPDATE managers SET password=$1 WHERE club_id=$2 AND lower(username)=lower($3)', [hashPw(newPassword), cid, (username || '').trim()]);
+    return { ok: true };
+}
+
+// Superuser: reset a manager's password (no current-password needed).
+export async function resetManagerPassword(slug, username, newPassword) {
+    if (!newPassword || String(newPassword).length < 4) throw new Error('סיסמה קצרה מדי');
+    const cid = await clubId(slug);
+    const r = await pool.query('UPDATE managers SET password=$1 WHERE club_id=$2 AND lower(username)=lower($3)', [hashPw(newPassword), cid, (username || '').trim()]);
+    if (!r.rowCount) throw new Error('מנהל לא נמצא');
+    return { ok: true };
+}
+
 // Called from publish: seed/refresh the teams table from the published sessions.
 export async function seedTeamsFromSessions(cx, clubIdVal, publicationId) {
     // One row per team name (a name may appear with varying gender/coach across sessions).

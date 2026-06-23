@@ -33,6 +33,26 @@ export default function SuperUser() {
     const [busy, setBusy] = useState(false);
     const [mgr, setMgr] = useState({ slug: '', username: '', password: '', name: '' });
     const [mgrMsg, setMgrMsg] = useState('');
+    const [clubManagers, setClubManagers] = useState([]);
+
+    // Load the managers of the selected club (for the reset-password list).
+    useEffect(() => {
+        if (!token || !mgr.slug) { setClubManagers([]); return; }
+        fetch(`/api/superuser/clubs/${mgr.slug}/managers`, { headers: { 'x-superuser-token': token } })
+            .then((r) => r.json()).then((d) => setClubManagers(d.managers || [])).catch(() => setClubManagers([]));
+    }, [mgr.slug, token, mgrMsg]);
+
+    const resetManagerPw = async (username) => {
+        const np = prompt(`סיסמה חדשה למנהל "${username}":`);
+        if (!np) return;
+        const res = await fetch(`/api/superuser/clubs/${mgr.slug}/managers/${encodeURIComponent(username)}/reset`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-superuser-token': token },
+            body: JSON.stringify({ password: np }),
+        });
+        if (res.status === 401) { logout(); return; }
+        const d = await res.json().catch(() => ({}));
+        setMgrMsg(res.ok ? `✓ אופסה סיסמה ל"${username}"` : '❌ ' + (d.error || 'איפוס נכשל'));
+    };
     const [delTarget, setDelTarget] = useState(null); // club slug pending deletion (confirm modal)
     const [delMsg, setDelMsg] = useState('');
 
@@ -235,6 +255,20 @@ export default function SuperUser() {
                 <p style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
                     המנהל יתחבר ב-<code>/&lt;slug&gt;/admin</code> (הכתובת של המועדון שלו) עם הפרטים, וילחץ "🔔 התראות מנהל" כדי לקבל בקשות שינוי ולאשר ישירות מההתראה.
                 </p>
+
+                {mgr.slug && clubManagers.length > 0 && (
+                    <div style={{ marginTop: '1rem' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.4rem' }}>מנהלים קיימים ב-/{mgr.slug} (איפוס סיסמה):</div>
+                        <div style={{ display: 'grid', gap: '0.4rem' }}>
+                            {clubManagers.map((m) => (
+                                <div key={m.username} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', background: '#0b1220', border: '1px solid #1e293b', borderRadius: 8, padding: '0.45rem 0.7rem' }}>
+                                    <span><b>{m.username}</b>{m.name && m.name !== m.username ? ` · ${m.name}` : ''}</span>
+                                    <button onClick={() => resetManagerPw(m.username)} style={{ background: 'none', border: '1px solid #475569', color: '#cbd5e1', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: 'pointer', fontSize: '0.8rem' }}>🔑 אפס סיסמה</button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Delete confirmation — irreversible, so require an explicit second step */}
