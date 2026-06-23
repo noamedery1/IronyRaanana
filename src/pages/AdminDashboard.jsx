@@ -13,6 +13,7 @@ import ApprovalsPanel from '../components/ApprovalsPanel';
 import { getActiveClub } from '../clubConfig.js';
 import { subscribeToPush } from '../push.js';
 import { authHeaders } from '../adminApi.js';
+import { sessionsToSheet, sheetToSessions } from '../draftBridge.js';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -38,24 +39,13 @@ const AdminDashboard = () => {
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
 
-    // ---- Draft persistence (so a refresh / coming back days later keeps the work) ----
-    const DRAFT_KEY = `draft:${club.slug}`;
-    const latestDraft = useRef(null);     // { headers, rows } reported by the Preview on every edit
+    // ---- Draft schedule — lives in the DB (status='draft'); the preview reads/writes it ----
+    const DRAFT_KEY = `draft:${club.slug}`;        // instant local cache (crash safety only)
+    const latestDraft = useRef(null);              // { headers, rows } reported by the Preview on edit
+    const saveTimer = useRef(null);                // debounce handle for auto-save to DB
     const [draftSavedAt, setDraftSavedAt] = useState(null);
     const [draftRestored, setDraftRestored] = useState(false);
-    const sheetDataRef = useRef(null);    // mirror of sheetData for use inside callbacks
-
-    // Build the full snapshot to persist (sheet meta + edited rows/headers + setup).
-    const buildSnapshot = () => {
-        const sd = sheetDataRef.current;
-        const d = latestDraft.current;
-        if (!sd || !d) return null;
-        return {
-            headers: d.headers, rows: d.rows,
-            teams: sd.teams, indices: sd.indices, hallColors: sd.hallColors,
-            sheetName, sheetUrl, saveUrl, savedAt: Date.now(),
-        };
-    };
+    const sheetDataRef = useRef(null);             // mirror of {teams, indices, hallColors, weekStart}
 
     // Track viewport so the dashboard becomes a phone-friendly layout (drawer sidebar).
     useEffect(() => {
@@ -103,80 +93,66 @@ const AdminDashboard = () => {
         Object.entries(hallConfig || {}).filter(([, v]) => v && v.color).map(([k, v]) => [k, v.color]),
     );
 
-    // Preview reports its edited rows/headers on every change → auto-save to localStorage
-    // (instant safety net so a refresh never loses work).
-    const handlePreviewChange = (payload) => {
-        latestDraft.current = payload;
-        const snap = buildSnapshot();
-        if (snap) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(snap)); } catch { /* quota */ } }
+    // Load the DB draft → populate the preview (sheet-shaped) + WeekBuilder teams.
+    const loadDraft = async ({ silent } = {}) => {
+        try {
+            const r = await fetch(`/api/${club.slug}/draft`, { headers: authHeaders(club.slug) });
+            if (!r.ok) return;
+            const draft = await r.json();
+            const sheet = sessionsToSheet(draft);
+            setSheetData({ headers: sheet.headers, teams: sheet.teams, rawRows: sheet.rawRows, hallColors: sheet.hallColors, indices: sheet.indices });
+            setCurrentSchedule(sheet.rawRows);
+            setSheetName('draft');
+            sheetDataRef.current = { teams: sheet.teams, indices: sheet.indices, hallColors: sheet.hallColors, weekStart: sheet.weekStart };
+            latestDraft.current = { headers: sheet.headers, rows: sheet.rawRows };
+            setIsConnected(true);
+            if (!silent) setDraftRestored((draft.sessions || []).length > 0);
+            // keep WeekBuilder teams in sync with the draft (merge saved rules)
+            setTeamConfig((prev) => sheet.teams.map((t) => {
+                const existing = prev.find((tc) => tc.name === t.name && (tc.coach || '') === (t.coach || ''));
+                return existing ? { ...existing, type: t.type } : { name: t.name, coach: t.coach, type: t.type, sessionsPerWeek: 3, constraints: [] };
+            }));
+        } catch { /* offline */ }
     };
 
-    // Explicit "save draft" → persist to the DB too (durable, survives cache clear / other device).
-    const saveDraftToCloud = async () => {
-        const snap = buildSnapshot();
-        if (!snap) return { ok: false };
-        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(snap)); } catch { /* quota */ }
+    // Convert the current preview rows → sessions and PUT them to the DB draft.
+    const saveDraftToDB = async () => {
+        const sd = sheetDataRef.current; const d = latestDraft.current;
+        if (!sd || !d) return { ok: false };
+        const sessions = sheetToSessions(d.headers, d.rows, sd.indices, sd.teams, sd.weekStart);
         try {
-            const r = await fetch(`/api/${club.slug}/settings/draftSchedule`, {
+            const r = await fetch(`/api/${club.slug}/draft`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
-                body: JSON.stringify({ value: snap }),
+                body: JSON.stringify({ sessions, weekStart: sd.weekStart }),
             });
             if (!r.ok) throw new Error('save failed');
-            setDraftSavedAt(snap.savedAt);
+            setDraftSavedAt(Date.now());
             return { ok: true };
-        } catch (e) {
-            console.error('draft save error', e);
-            return { ok: false };
-        }
+        } catch (e) { console.error('draft save error', e); return { ok: false }; }
     };
 
-    // Apply a draft snapshot to the live state (no need to reconnect to the Excel).
-    const applySnapshot = (snap) => {
-        if (!snap || !snap.rows) return;
-        setSheetData({
-            headers: snap.headers, teams: snap.teams || [], rawRows: snap.rows,
-            hallColors: snap.hallColors || {}, indices: snap.indices,
-        });
-        setCurrentSchedule(snap.rows);
-        if (snap.sheetName) setSheetName(snap.sheetName);
-        if (snap.sheetUrl) setSheetUrl(snap.sheetUrl);
-        if (snap.saveUrl !== undefined) setSaveUrl(snap.saveUrl);
-        latestDraft.current = { headers: snap.headers, rows: snap.rows };
-        sheetDataRef.current = { teams: snap.teams, indices: snap.indices, hallColors: snap.hallColors };
-        setIsConnected(true);
-        setDraftSavedAt(snap.savedAt || null);
-        setDraftRestored(true);
+    // Preview reports edits → instant local cache (crash safety) + debounced DB save.
+    const handlePreviewChange = (payload) => {
+        latestDraft.current = payload;
+        try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...payload, ws: sheetDataRef.current?.weekStart, ts: Date.now() })); } catch { /* quota */ }
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => { saveDraftToDB(); }, 2500);
     };
 
-    const discardDraft = () => {
-        if (!window.confirm('למחוק את הטיוטה השמורה ולהתחיל מחדש מהאקסל?')) return;
-        localStorage.removeItem(DRAFT_KEY);
-        fetch(`/api/${club.slug}/settings/draftSchedule`, {
+    const discardDraft = async () => {
+        if (!window.confirm('לרוקן את הטיוטה הנוכחית ולהתחיל מחדש? (הלוז החי שכבר פורסם להורים לא יושפע.)')) return;
+        await fetch(`/api/${club.slug}/draft`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
-            body: JSON.stringify({ value: null }),
+            body: JSON.stringify({ sessions: [] }),
         }).catch(() => {});
-        latestDraft.current = null;
-        setCurrentSchedule(null);
-        setDraftSavedAt(null);
-        setDraftRestored(false);
-        setIsConnected(false);
-        setActiveTab('setup');
+        localStorage.removeItem(DRAFT_KEY);
+        loadDraft();
     };
 
-    // On mount: restore the most recent draft (DB vs localStorage) so work continues.
+    // On mount: load the draft from the DB so the manager continues where they left off.
     useEffect(() => {
-        let cancelled = false;
-        const localRaw = localStorage.getItem(DRAFT_KEY);
-        let local = null; try { local = localRaw ? JSON.parse(localRaw) : null; } catch { local = null; }
-        fetch(`/api/${club.slug}/settings/draftSchedule`).then((r) => r.json()).then((d) => {
-            if (cancelled) return;
-            const cloud = d && d.value && d.value.rows ? d.value : null;
-            const pick = (cloud && local) ? (cloud.savedAt >= local.savedAt ? cloud : local) : (cloud || local);
-            if (pick && pick.rows) { applySnapshot(pick); setActiveTab('preview'); }
-        }).catch(() => {
-            if (!cancelled && local && local.rows) { applySnapshot(local); setActiveTab('preview'); }
-        });
-        return () => { cancelled = true; };
+        loadDraft();
+        return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [club.slug]);
 
@@ -237,35 +213,68 @@ const AdminDashboard = () => {
         }
     };
 
+    // Import a Google Sheet / CSV URL into the DB draft, then load it into the preview.
     const handleConnect = async () => {
-        setLoading(true);
-        setError('');
-        setIsConnected(false);
-
-        // 1. Try to load rules from Cloud first
-        let cloudRulesMap = null;
-        try {
-            cloudRulesMap = await loadRulesFromCloud();
-            if (cloudRulesMap) {
-                console.log("Loaded rules from cloud:", Object.keys(cloudRulesMap).length);
-            }
-        } catch (e) {
-            console.log("No cloud rules or error loading them");
-        }
-
-        // The club's own draft source: a Google Sheet (export to CSV) or a direct CSV URL.
+        setLoading(true); setError('');
         const id = extractSheetId(sheetUrl);
         let csvUrl;
         if (id) csvUrl = `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0`;
         else if (/\.csv(\?|$)/i.test(sheetUrl) || sheetUrl.startsWith('/')) csvUrl = sheetUrl;
         else { setError('מקור לא תקין — הזן קישור Google Sheet או קובץ CSV.'); setLoading(false); return; }
-
         try {
             const response = await fetch(csvUrl);
-            if (!response.ok) {
-                throw new Error('Failed to fetch Google Sheet. Make sure it is public or shared.');
-            }
+            if (!response.ok) throw new Error('שגיאה בטעינת הגיליון — ודא שהוא משותף/פומבי.');
+            const csv = await response.text();
+            await importCsvToDraft(csv);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    // POST CSV text → the DB draft, then refresh the preview from the draft.
+    const importCsvToDraft = async (csv) => {
+        const r = await fetch(`/api/${club.slug}/draft/import`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+            body: JSON.stringify({ csv }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'ייבוא נכשל');
+        await loadDraft();
+        setActiveTab('preview');
+    };
+
+    // Read an uploaded Excel/CSV file in the browser → CSV text → import to the draft.
+    const handleImportFile = async (file) => {
+        if (!file) return;
+        setLoading(true); setError('');
+        try {
+            let csv;
+            if (/\.csv$/i.test(file.name)) {
+                csv = await file.text();
+            } else {
+                const XLSX = await import('xlsx');
+                const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+                csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+            }
+            await importCsvToDraft(csv);
+        } catch (err) {
+            setError('ייבוא נכשל: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // (legacy inline-parse path kept below but unused; superseded by DB draft import)
+    const handleConnectLegacy = async () => {
+        const cloudRulesMap = null;
+        const sheetUrlLegacy = sheetUrl;
+        const id = extractSheetId(sheetUrlLegacy);
+        let csvUrl = id ? `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=0` : sheetUrlLegacy;
+        try {
+            const response = await fetch(csvUrl);
+            if (!response.ok) throw new Error('x');
             const reader = response.body.getReader();
             const result = await reader.read();
             const decoder = new TextDecoder('utf-8');
@@ -477,29 +486,41 @@ const AdminDashboard = () => {
             case 'setup':
                 return (
                     <div className="report-panel" style={{ marginTop: 0, color: '#0f1b33' }}>
-                        <h3 style={{ marginTop: 0 }}>הגדרות חיבור לגיליון</h3>
-                        <p style={{ color: '#666' }}>הדבק את כתובת ה-Google Sheet שפורסמה כ-CSV (קובץ - שתף - פרסם באינטרנט - CSV).</p>
+                        <h3 style={{ marginTop: 0 }}>טעינת לוז ראשוני (אופציונלי)</h3>
+                        <p style={{ color: '#666', maxWidth: 680 }}>
+                            הלוז נשמר ב‑DB. אפשר לבנות אותו מאפס ב<b>תצוגה מקדימה</b>, או לטעון לוז קיים פעם אחת —
+                            מקובץ <b>אקסל/CSV</b> או מקישור Google Sheet. הטעינה ממלאה את <b>טיוטת שבוע הבא</b> (לא את הלוז החי).
+                        </p>
 
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.2rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <label style={{ background: '#0891b2', color: 'white', padding: '0.7rem 1.2rem', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>
+                                {loading ? 'טוען…' : '⬆ טען קובץ אקסל / CSV'}
+                                <input type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }}
+                                    onChange={(e) => { handleImportFile(e.target.files[0]); e.target.value = ''; }} />
+                            </label>
+                            <span style={{ color: '#94a3b8' }}>או</span>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
                             <input
                                 type="text"
                                 value={sheetUrl}
                                 onChange={(e) => setSheetUrl(e.target.value)}
                                 placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv..."
-                                style={{ flex: 1, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', background: '#fff', color: '#374151', direction: 'ltr' }}
+                                style={{ flex: 1, minWidth: 240, padding: '0.8rem', borderRadius: '4px', border: '1px solid #ddd', background: '#fff', color: '#374151', direction: 'ltr' }}
                             />
                             <button
                                 onClick={handleConnect}
                                 disabled={loading}
                                 style={{ background: '#2563eb', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                             >
-                                {loading ? 'טוען...' : 'תחבר וטען נתונים'}
+                                {loading ? 'טוען...' : 'ייבא מקישור Google Sheet'}
                             </button>
                         </div>
 
                         {error && <div style={{ color: '#ef4444', marginTop: '1rem', background: '#fee2e2', padding: '1rem', borderRadius: '4px' }}>{error}</div>}
-                        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563', overflowWrap: 'anywhere', wordBreak: 'break-all' }}>
-                            לוז הטיוטה של <b>{club.name}</b>: <code>{sheetUrl || '—'}</code>
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
+                            לעריכה ופרסום — עברו ל<b>תצוגה מקדימה</b> ואז <b>פרסם לוז</b>.
                         </div>
 
                         <div style={{ marginTop: '2rem' }}>
@@ -580,7 +601,7 @@ const AdminDashboard = () => {
                         hallConfig={hallConfig}
                         clubSlug={club.slug}
                         onChange={handlePreviewChange}
-                        onSaveDraft={saveDraftToCloud}
+                        onSaveDraft={saveDraftToDB}
                         onDiscardDraft={discardDraft}
                         draftSavedAt={draftSavedAt}
                         draftRestored={draftRestored}

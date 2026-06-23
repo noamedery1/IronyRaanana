@@ -29,10 +29,10 @@ export default function PublishPanel({ clubSlug }) {
     useEffect(() => { loadPubs(); }, [loadPubs]);
 
     const publish = async () => {
-        if (!window.confirm('לפרסם את הלוז הנוכחי מהגיליון אל הלוז החי? פעולה זו תחליף את הלוז החי לשבוע זה.')) return;
+        if (!window.confirm('לפרסם את הטיוטה הנוכחית אל הלוז החי? כל ההורים יראו מיד את הלוז החדש (הלוז הקודם נשמר בארכיון).')) return;
         setBusy(true); setError(''); setResult(null);
         try {
-            const res = await fetch(`/api/${clubSlug}/publish`, {
+            const res = await fetch(`/api/${clubSlug}/publish-draft`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders(clubSlug) },
                 body: JSON.stringify({}),
@@ -52,8 +52,9 @@ export default function PublishPanel({ clubSlug }) {
         <div className="report-panel" style={{ marginTop: 0, color: '#0f1b33' }}>
             <h3 style={{ marginTop: 0 }}>🚀 פרסום לוז</h3>
             <p style={{ color: '#475569', maxWidth: 640 }}>
-                הגיליון הוא טיוטת העבודה. בלחיצת <b>פרסם</b> המערכת מושכת את הלוז מהגיליון ושומרת אותו ל-DB
-                כ<b>לוז החי</b> לשבוע. עריכות בגיליון לא ישפיעו על הלוז החי עד הפרסום הבא.
+                אתה עובד על <b>טיוטת שבוע הבא</b> בתצוגה המקדימה. בלחיצת <b>פרסם</b> הטיוטה הופכת
+                ל<b>לוז החי</b> שכל ההורים רואים, והלוז הקודם עובר לארכיון. הטיוטה והלוז החי נפרדים — עריכות
+                בטיוטה לא משפיעות על מה שמפורסם עד הפרסום הבא.
             </p>
 
             <button

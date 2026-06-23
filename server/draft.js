@@ -53,13 +53,23 @@ export async function replaceDraftSessions(slug, sessions = [], weekStart) {
     const draft = await getOrCreateDraft(slug, weekStart);
     return withTx(async (cx) => {
         if (weekStart) await cx.query(`UPDATE schedule_publications SET week_start=$2 WHERE id=$1`, [draft.id, weekStart]);
+        // the authoritative week for date derivation (passed-in, else the draft's own)
+        const ws = weekStart || (await cx.query(`SELECT week_start::text FROM schedule_publications WHERE id=$1`, [draft.id])).rows[0].week_start;
+        const dateFor = (s) => {
+            if (s.date) return s.date;
+            if (ws && s.day_of_week !== null && s.day_of_week !== undefined) {
+                const d = new Date(ws + 'T00:00:00'); d.setDate(d.getDate() + Number(s.day_of_week));
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            }
+            return null;
+        };
         await cx.query('DELETE FROM sessions WHERE publication_id=$1', [draft.id]);
         for (const s of sessions) {
             await cx.query(
                 `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
                  VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
                 [draft.id, draft.clubId, s.team, s.coach || null, s.gender || 'M', s.hall || null,
-                 s.date || null, s.day_of_week ?? null, s.start_time || null, s.end_time || null,
+                 dateFor(s), s.day_of_week ?? null, s.start_time || null, s.end_time || null,
                  s.type || 'training', s.status || 'active', s.note || null],
             );
         }
