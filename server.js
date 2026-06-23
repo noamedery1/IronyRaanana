@@ -11,6 +11,7 @@ import {
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
+import { getDraft, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
@@ -103,6 +104,26 @@ app.post('/api/:club/publish', requireManager, async (req, res) => {
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
+});
+
+// ===== Draft schedule (next week, manager-only) — the DB-backed working copy =====
+app.get('/api/:club/draft', requireManager, async (req, res) => {
+    try { res.json(await getDraft(req.params.club)); } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/:club/draft', requireManager, async (req, res) => {
+    try { res.json(await replaceDraftSessions(req.params.club, req.body?.sessions || [], req.body?.weekStart)); }
+    catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/:club/draft/import', requireManager, async (req, res) => {
+    try {
+        if (!req.body?.csv) return res.status(400).json({ error: 'missing csv' });
+        res.json(await importCsvToDraft(req.params.club, req.body.csv));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+});
+// Publish by promoting the current draft → live (the new DB-only flow).
+app.post('/api/:club/publish-draft', requireManager, async (req, res) => {
+    try { res.json(await publishDraft(req.params.club, req.body?.publishedBy || 'manager')); }
+    catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // Live schedule from the DB (latest live publication, or ?week=YYYY-MM-DD).
