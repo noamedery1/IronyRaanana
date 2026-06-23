@@ -286,14 +286,16 @@ app.get('/api/:club/icon/:kind', async (req, res) => {
 // ===== Clubs (superuser write) =====
 app.post('/api/superuser/clubs', requireSuperuser, async (req, res) => {
     const { club, icons } = req.body || {};
-    if (!club || !club.slug || !/^[a-z0-9-]+$/.test(club.slug)) {
+    // Strip bidi/zero-width marks (common in RTL inputs) + whitespace, then validate.
+    const slug = (club?.slug || '').replace(/[​-‏‪-‮⁦-⁩]/g, '').trim().toLowerCase();
+    if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
         return res.status(400).json({ error: 'invalid slug (use lowercase letters, digits, hyphens)' });
     }
     if (!club.name) {
         return res.status(400).json({ error: 'name is required' });
     }
     const record = {
-        slug: club.slug,
+        slug,
         name: club.name,
         shortName: club.shortName || club.name,
         sport: club.sport || '',
@@ -310,10 +312,10 @@ app.post('/api/superuser/clubs', requireSuperuser, async (req, res) => {
         logo: club.logo || '',
     };
     if (icons) {
-        if (icons.i192) record.icon192 = await saveAsset(club.slug, '192', icons.i192);
-        if (icons.i512) record.icon512 = await saveAsset(club.slug, '512', icons.i512);
-        if (icons.apple) record.appleIcon = await saveAsset(club.slug, 'apple', icons.apple);
-        if (icons.logo) record.logo = await saveAsset(club.slug, 'logo', icons.logo);
+        if (icons.i192) record.icon192 = await saveAsset(slug, '192', icons.i192);
+        if (icons.i512) record.icon512 = await saveAsset(slug, '512', icons.i512);
+        if (icons.apple) record.appleIcon = await saveAsset(slug, 'apple', icons.apple);
+        if (icons.logo) record.logo = await saveAsset(slug, 'logo', icons.logo);
     }
     try { res.json(await upsertClub(record)); } catch (e) { res.status(500).json({ error: e.message }); }
 });

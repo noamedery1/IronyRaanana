@@ -158,7 +158,7 @@ export default function SuperUser() {
 
                 <form onSubmit={save} style={{ display: 'grid', gap: '0.8rem' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-                        <div><label style={labelStyle}>מזהה בכתובת (slug) — אותיות קטנות באנגלית</label><input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="hapoel" style={inputStyle} /></div>
+                        <div><label style={labelStyle}>מזהה בכתובת (slug) — אותיות קטנות באנגלית</label><input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })} placeholder="hapoel" style={inputStyle} /></div>
                         <div><label style={labelStyle}>שם מלא</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder='הפועל ... — לו"ז' style={inputStyle} /></div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
