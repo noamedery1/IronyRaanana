@@ -84,8 +84,8 @@ export async function importCsvToDraft(slug, csvText) {
 }
 
 // Promote the draft → live: archive the current live week, flip draft to live,
-// keep its sessions, and refresh the teams table. A fresh empty draft is created
-// lazily on the next getOrCreateDraft call.
+// refresh the teams table, then open NEXT week's draft as a copy of what was just
+// published (dates shifted +7) so the manager tweaks rather than rebuilds.
 export async function publishDraft(slug, publishedBy = 'manager') {
     const draft = await getOrCreateDraft(slug);
     return withTx(async (cx) => {
@@ -99,6 +99,19 @@ export async function publishDraft(slug, publishedBy = 'manager') {
             `INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff)
              VALUES ($1,$2,'publish','schedule_publication',$3,$4)`,
             [draft.clubId, publishedBy, draft.id, JSON.stringify({ weekStart: ws, sessionCount: count, source: 'draft' })],
+        );
+        // open next week's draft as a copy of the just-published week (dates +7).
+        const nd = new Date(ws + 'T00:00:00'); nd.setDate(nd.getDate() + 7);
+        const nextWs = `${nd.getFullYear()}-${pad(nd.getMonth() + 1)}-${pad(nd.getDate())}`;
+        const np = await cx.query(
+            `INSERT INTO schedule_publications (club_id, week_start, status, published_by) VALUES ($1,$2,'draft','manager') RETURNING id`,
+            [draft.clubId, nextWs],
+        );
+        await cx.query(
+            `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
+             SELECT $1, club_id, team, coach, gender, hall, (date + INTERVAL '7 days')::date, day_of_week, start_time, end_time, type, 'active', note
+             FROM sessions WHERE publication_id=$2`,
+            [np.rows[0].id, draft.id],
         );
         return { ok: true, publicationId: draft.id, weekStart: ws, sessionCount: count };
     });
