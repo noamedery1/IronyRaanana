@@ -38,6 +38,17 @@ const SESSION_COLS = `team, coach, gender, hall, date::text,
     to_char(start_time,'HH24:MI') AS start_time, to_char(end_time,'HH24:MI') AS end_time,
     type, status, day_of_week, note`;
 
+// Read-only view of the draft (next week) — does NOT create one if missing.
+// Used by the trainer portal's "propose / enter schedule" tab.
+export async function getDraftView(slug) {
+    const clubId = await clubIdOf(slug);
+    if (!clubId) return { week_start: null, sessions: [] };
+    const p = await pool.query(`SELECT id, week_start::text FROM schedule_publications WHERE club_id=$1 AND status='draft' LIMIT 1`, [clubId]);
+    if (!p.rows.length) return { week_start: null, sessions: [] };
+    const s = await pool.query(`SELECT ${SESSION_COLS} FROM sessions WHERE publication_id=$1 ORDER BY date, start_time, team`, [p.rows[0].id]);
+    return { week_start: p.rows[0].week_start, sessions: s.rows };
+}
+
 // The draft schedule (publication meta + its sessions).
 export async function getDraft(slug) {
     const draft = await getOrCreateDraft(slug);

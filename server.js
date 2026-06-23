@@ -11,7 +11,7 @@ import {
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
-import { getDraft, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
+import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
@@ -104,6 +104,11 @@ app.post('/api/:club/publish', requireManager, async (req, res) => {
     } catch (e) {
         res.status(500).json({ error: e.message });
     }
+});
+
+// Read-only draft view for trainers (next week's plan; no auth, like public reads).
+app.get('/api/:club/draft/view', async (req, res) => {
+    try { res.json(await getDraftView(req.params.club)); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ===== Draft schedule (next week, manager-only) — the DB-backed working copy =====

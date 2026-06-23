@@ -63,9 +63,9 @@ const TrainerPortal = () => {
     // The token is saved on this device so the trainer stays identified next time —
     // a single shared trainer link works; first login persists identity locally.
     // Load the trainer's boards + register push (called once we know who the trainer is).
-    const initTrainer = (name) => {
-        fetchSchedule(name);      // live board → requests
-        fetchManagerBoard(name);  // manager board → proposals
+    const initTrainer = (name, teams) => {
+        fetchSchedule(name);             // LIVE schedule (DB) → main tab
+        fetchManagerBoard(name, teams);  // NEXT-WEEK draft (DB) → propose tab
         if (localStorage.getItem('trainerPushV2') !== '1') {
             subscribeToPush(TRAINER_PUSH_PREFIX + name, LIVE_SHEET_API)
                 .then((res) => { if (res && res.ok) { localStorage.setItem('trainerPushV2', '1'); setPushEnabled(true); } })
@@ -79,7 +79,7 @@ const TrainerPortal = () => {
         if (data.token) localStorage.setItem('trainerToken', data.token);
         localStorage.setItem('trainerInfo', JSON.stringify(info)); // remembered across refreshes
         setView('dashboard');
-        if (!skipInit) initTrainer(data.trainerName);
+        if (!skipInit) initTrainer(data.trainerName, info.teams);
     };
 
     const logout = () => {
@@ -113,7 +113,7 @@ const TrainerPortal = () => {
                 const info = JSON.parse(saved);
                 setTrainer(info);
                 setView('dashboard');
-                initTrainer(info.name);
+                initTrainer(info.name, info.teams);
             } catch { /* ignore */ }
         }
         const token = localStorage.getItem('trainerToken') || new URLSearchParams(window.location.search).get('t');
@@ -221,15 +221,52 @@ const TrainerPortal = () => {
 
     const mergeLocations = (locs) => setLocations((prev) => Array.from(new Set([...prev, ...locs])).sort());
 
-    // Requests tab → LIVE board (change-requests approve on the live file).
+    const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    const ddmm = (iso) => { if (!iso) return ''; const d = new Date(iso + 'T00:00:00'); return `${d.getDate()}/${d.getMonth() + 1}`; };
+    const slug = getActiveClub().slug;
+
+    // Main tab "האימונים שלי" → the LIVE schedule from the DB (what parents see),
+    // filtered to this trainer's sessions (by coach name).
     const fetchSchedule = (trainerName) => {
         setLoading(true);
-        parseBoard(CSV_URL, trainerName, (r) => { setSchedule(r.mySessions); mergeLocations(r.locs); setLoading(false); });
+        const nameL = (trainerName || '').trim().toLowerCase();
+        fetch(`/api/${slug}/schedule`).then((r) => r.json()).then(({ sessions }) => {
+            const mine = (sessions || []).filter((s) => (s.coach || '').trim().toLowerCase() === nameL);
+            setSchedule(mine.map((s, i) => ({
+                id: `${s.team}-${s.day_of_week}-${i}`,
+                team: s.team,
+                day: `${DAY_NAMES[s.day_of_week] || ''} ${ddmm(s.date)}`.trim(),
+                date: ddmm(s.date),
+                raw: (s.note && s.note.trim()) ? s.note.trim() : `${s.hall || ''} ${s.start_time || ''}${s.end_time ? '-' + s.end_time : ''}`.trim(),
+            })));
+            mergeLocations([...new Set(mine.map((s) => s.hall).filter(Boolean))]);
+            setLoading(false);
+        }).catch(() => setLoading(false));
     };
 
-    // Propose tab → MANAGER planning board (proposals write there, so rows line up).
-    const fetchManagerBoard = (trainerName) => {
-        parseBoard(MANAGER_CSV, trainerName, (r) => { setDayHeaders(r.dayHdrs); setMyTeamRows(r.teamRows); mergeLocations(r.locs); });
+    // Propose tab "הזנת לו\"ז" → the NEXT-WEEK draft from the DB. Shows the trainer's
+    // teams (seeded from their assignment + any draft sessions) for proposing slots.
+    const fetchManagerBoard = (trainerName, teams) => {
+        const nameL = (trainerName || '').trim().toLowerCase();
+        fetch(`/api/${slug}/draft/view`).then((r) => r.json()).then(({ week_start, sessions }) => {
+            const dayHdrs = [];
+            for (let i = 0; i < 7; i++) {
+                let label = DAY_NAMES[i];
+                if (week_start) { const d = new Date(week_start + 'T00:00:00'); d.setDate(d.getDate() + i); label = `${DAY_NAMES[i]} ${d.getDate()}/${d.getMonth() + 1}`; }
+                dayHdrs.push({ name: label, col: i });
+            }
+            const seed = Array.isArray(teams) ? teams : (teams ? [teams] : []);
+            const rows = {};
+            seed.forEach((t) => { if (t) rows[t] = { team: t, row: t, days: {} }; });
+            (sessions || []).filter((s) => (s.coach || '').trim().toLowerCase() === nameL).forEach((s) => {
+                if (!rows[s.team]) rows[s.team] = { team: s.team, row: s.team, days: {} };
+                const dn = dayHdrs[s.day_of_week]?.name;
+                if (dn) { const v = (s.note && s.note.trim()) ? s.note.trim() : `${s.hall || ''} ${s.start_time || ''}`.trim(); rows[s.team].days[dn] = rows[s.team].days[dn] ? `${rows[s.team].days[dn]}\n${v}` : v; }
+            });
+            setDayHeaders(dayHdrs);
+            setMyTeamRows(Object.values(rows));
+            mergeLocations([...new Set((sessions || []).map((s) => s.hall).filter(Boolean))]);
+        }).catch(() => {});
     };
 
     const handleEditClick = (session) => {
