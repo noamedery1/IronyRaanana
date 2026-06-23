@@ -356,6 +356,12 @@ app.post('/api/push/send', async (req, res) => {
     return res.json({ sent, failed, expired });
 });
 
+// Bare domain root → the product sales/landing page. Clubs live under /<slug>.
+// (Registered before express.static, which would otherwise auto-serve the SPA index.html at "/".)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'sales-landing.html'));
+});
+
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
