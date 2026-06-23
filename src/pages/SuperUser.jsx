@@ -33,6 +33,11 @@ export default function SuperUser() {
     const [busy, setBusy] = useState(false);
     const [mgr, setMgr] = useState({ slug: '', username: '', password: '', name: '' });
     const [mgrMsg, setMgrMsg] = useState('');
+    const [delTarget, setDelTarget] = useState(null); // club slug pending deletion (confirm modal)
+    const [delMsg, setDelMsg] = useState('');
+
+    // This is the system console, not a club — keep a neutral tab title (not "raanana").
+    useEffect(() => { document.title = 'Squadio — ניהול מערכת'; }, []);
 
     const loadClubs = useCallback(async () => {
         const res = await fetch('/api/clubs');
@@ -120,13 +125,25 @@ export default function SuperUser() {
         if (res.ok) setMgr({ slug: mgr.slug, username: '', password: '', name: '' });
     };
 
-    const removeClub = async (slug) => {
-        if (!confirm(`למחוק את המועדון "${slug}"?`)) return;
-        const res = await fetch('/api/superuser/clubs/' + slug, {
-            method: 'DELETE', headers: { 'x-superuser-token': token },
-        });
-        if (res.status === 401) { logout(); return; }
-        loadClubs();
+    // Two-step delete: the "מחק" button opens a confirm modal; this runs on final confirm.
+    const confirmDelete = async () => {
+        const slug = delTarget;
+        if (!slug) return;
+        setDelTarget(null);
+        setDelMsg('מוחק…');
+        try {
+            const res = await fetch('/api/superuser/clubs/' + slug, {
+                method: 'DELETE', headers: { 'x-superuser-token': token },
+            });
+            if (res.status === 401) { setDelMsg(''); logout(); return; }
+            const d = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setClubs((prev) => prev.filter((c) => c.slug !== slug)); // optimistic — drop the row now
+                setDelMsg(`✓ המועדון "${slug}" נמחק לצמיתות`);
+                loadClubs();
+            } else setDelMsg('❌ ' + (d.error || 'מחיקה נכשלה'));
+        } catch { setDelMsg('❌ שגיאת תקשורת'); }
+        setTimeout(() => setDelMsg(''), 5000);
     };
 
     const wrap = { minHeight: '100vh', background: '#070b16', color: '#e2e8f0', fontFamily: 'Rubik, sans-serif', direction: 'rtl', padding: '2rem 1rem' };
@@ -186,6 +203,7 @@ export default function SuperUser() {
                 </form>
 
                 <h3 style={{ marginTop: '2rem', marginBottom: '0.6rem', fontSize: '1rem', color: '#94a3b8' }}>מועדונים קיימים</h3>
+                {delMsg && <div style={{ marginBottom: '0.6rem', fontWeight: 'bold', color: delMsg.startsWith('✓') ? '#34d399' : '#f87171' }}>{delMsg}</div>}
                 <div style={{ display: 'grid', gap: '0.5rem' }}>
                     {clubs.map((c) => (
                         <div key={c.slug} style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', background: '#0b1220', border: '1px solid #1e293b', borderRadius: '10px', padding: '0.6rem 0.8rem' }}>
@@ -195,7 +213,7 @@ export default function SuperUser() {
                                 <a href={'/' + c.slug} style={{ color: '#60a5fa', fontSize: '0.8rem', textDecoration: 'none' }}>/{c.slug}</a>
                             </div>
                             <button onClick={() => editClub(c)} style={{ background: 'none', border: '1px solid #334155', color: '#cbd5e1', borderRadius: '8px', padding: '0.35rem 0.7rem', cursor: 'pointer' }}>עריכה</button>
-                            {c.slug !== 'raanana' && <button onClick={() => removeClub(c.slug)} style={{ background: 'none', border: '1px solid #7f1d1d', color: '#f87171', borderRadius: '8px', padding: '0.35rem 0.7rem', cursor: 'pointer' }}>מחק</button>}
+                            {c.slug !== 'raanana' && <button onClick={() => setDelTarget(c.slug)} style={{ background: 'none', border: '1px solid #7f1d1d', color: '#f87171', borderRadius: '8px', padding: '0.35rem 0.7rem', cursor: 'pointer' }}>מחק</button>}
                         </div>
                     ))}
                 </div>
@@ -215,9 +233,26 @@ export default function SuperUser() {
                     {mgrMsg && <div style={{ textAlign: 'center', fontSize: '0.9rem', color: mgrMsg.startsWith('✓') ? '#34d399' : '#f87171' }}>{mgrMsg}</div>}
                 </form>
                 <p style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
-                    המנהל יתחבר ב-<code>/admin</code> עם הפרטים, וילחץ "🔔 התראות מנהל" כדי לקבל בקשות שינוי ולאשר ישירות מההתראה.
+                    המנהל יתחבר ב-<code>/&lt;slug&gt;/admin</code> (הכתובת של המועדון שלו) עם הפרטים, וילחץ "🔔 התראות מנהל" כדי לקבל בקשות שינוי ולאשר ישירות מההתראה.
                 </p>
             </div>
+
+            {/* Delete confirmation — irreversible, so require an explicit second step */}
+            {delTarget && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, direction: 'rtl' }} onClick={() => setDelTarget(null)}>
+                    <div onClick={(e) => e.stopPropagation()} style={{ background: '#0f172a', border: '1px solid #7f1d1d', borderRadius: 16, padding: '1.6rem', width: '90%', maxWidth: 420, boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)' }}>
+                        <h3 style={{ margin: '0 0 0.6rem', color: '#f87171' }}>⚠️ מחיקת מועדון</h3>
+                        <p style={{ color: '#e2e8f0', lineHeight: 1.7, margin: '0 0 1.2rem' }}>
+                            למחוק לצמיתות את <b>"{delTarget}"</b>?<br />
+                            כל הנתונים של המועדון יימחקו — מנהלים, מאמנים, קבוצות, אימונים, פרסומים, הגדרות ובקשות. <b>פעולה זו בלתי הפיכה.</b>
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.8rem' }}>
+                            <button onClick={() => setDelTarget(null)} style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: '1px solid #334155', background: 'transparent', color: '#cbd5e1', cursor: 'pointer', fontWeight: 700 }}>ביטול</button>
+                            <button onClick={confirmDelete} style={{ flex: 1, padding: '0.7rem', borderRadius: 10, border: 'none', background: '#dc2626', color: '#fff', cursor: 'pointer', fontWeight: 800 }}>כן, מחק לצמיתות</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
