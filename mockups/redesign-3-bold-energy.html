@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squadio · Bold Energy — לו"ז ציבורי</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&family=Rubik:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#120a2e; --bg2:#1a0f3d;
+    --card:rgba(255,255,255,.07); --card2:rgba(255,255,255,.11);
+    --line:rgba(255,255,255,.14); --line2:rgba(255,255,255,.24);
+    --mag:#ff2d78; --orange:#ff8a00; --violet:#7c3aed; --cyan:#22d3ee; --lime:#a3e635;
+    --green:#25d366; --amber:#ffd23f; --red:#ff4d6d;
+    --text:#fff; --dim:rgba(255,255,255,.72); --muted:rgba(255,255,255,.45);
+    --radius:24px;
+    --hype:linear-gradient(115deg,var(--violet),var(--mag) 55%,var(--orange));
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',sans-serif;color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;
+    background:
+      radial-gradient(700px 500px at 92% -100px, rgba(255,45,120,.5), transparent 60%),
+      radial-gradient(680px 480px at 0% 0%, rgba(124,58,237,.55), transparent 60%),
+      radial-gradient(900px 700px at 50% 130%, rgba(255,138,0,.35), transparent 62%),
+      linear-gradient(165deg,#120a2e,#1a0f3d 60%,#2a0f2e);background-attachment:fixed}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(125deg,transparent 0 80px,rgba(255,255,255,.025) 80px 82px)}
+  .wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:18px 20px 70px}
+  h1,h2,h3,h4{font-family:'Rubik',sans-serif}
+  .label{font-size:.74rem;font-weight:800;letter-spacing:.12em;color:var(--amber);text-transform:uppercase}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);backdrop-filter:blur(16px)}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;
+    background:var(--card);border:1px solid var(--line);border-radius:22px;backdrop-filter:blur(16px)}
+  .brand{display:flex;align-items:center;gap:13px}
+  .crest{width:50px;height:50px;border-radius:16px;background:var(--hype);display:grid;place-items:center;font-size:1.4rem;
+    box-shadow:0 10px 28px -8px rgba(255,45,120,.7)}
+  .brand-name{font-family:'Rubik';font-weight:900;font-size:1.3rem;letter-spacing:-.01em}
+  .brand-sub{font-size:.8rem;color:var(--dim);margin-top:2px}
+  .top-actions{display:flex;gap:8px;align-items:center}
+  .pill{background:var(--card2);border:1px solid var(--line2);color:#fff;border-radius:999px;padding:9px 15px;
+    font-weight:800;font-size:.82rem;cursor:pointer;display:flex;gap:6px;align-items:center}
+  .pill.icon{width:42px;height:42px;justify-content:center;padding:0;border-radius:13px}
+
+  .ticker{margin-top:13px;border-radius:16px;padding:12px 16px;overflow:hidden;display:flex;gap:12px;align-items:center;
+    background:var(--hype);font-weight:800;box-shadow:0 12px 30px -14px rgba(255,45,120,.7)}
+  .ticker .tag{background:rgba(0,0,0,.25);border-radius:999px;font-size:.72rem;padding:4px 10px;flex:none}
+  .ticker .scroll{display:flex;gap:38px;white-space:nowrap;animation:mk 24s linear infinite}
+  @keyframes mk{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:18px}
+  .select{background:var(--card2);border:1px solid var(--line2);color:#fff;border-radius:16px;padding:14px 18px;
+    font-family:'Rubik';font-weight:800;font-size:1.02rem;min-width:240px;cursor:pointer}
+  .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px}
+  .tab{border:none;background:transparent;color:var(--dim);padding:10px 18px;border-radius:11px;font-weight:800;font-size:.88rem;cursor:pointer}
+  .tab.on{background:var(--hype);color:#fff;box-shadow:0 8px 20px -8px rgba(255,45,120,.7)}
+
+  /* hero — full bleed energetic */
+  .hero{margin-top:18px;border-radius:28px;padding:32px 34px;position:relative;overflow:hidden;
+    background:var(--hype);box-shadow:0 30px 70px -28px rgba(255,45,120,.65)}
+  .hero::after{content:"🏀";position:absolute;left:-30px;bottom:-50px;font-size:13rem;opacity:.14;transform:rotate(-14deg)}
+  .hero .label{color:rgba(255,255,255,.85)}
+  .hero-time{font-family:'Rubik';font-weight:900;font-size:clamp(3rem,8vw,4.6rem);line-height:.95;letter-spacing:-.03em;
+    text-shadow:0 6px 30px rgba(0,0,0,.25)}
+  .meta-row{display:flex;gap:14px;margin-top:18px;flex-wrap:wrap}
+  .chip{background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:10px 16px}
+  .chip b{display:block;font-family:'Rubik';font-weight:800;font-size:1.1rem}
+  .chip span{font-size:.76rem;opacity:.8}
+  .actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:24px;position:relative;z-index:1}
+  .btn{border:none;border-radius:15px;padding:14px 18px;font-weight:900;font-size:.92rem;cursor:pointer;
+    display:flex;align-items:center;gap:8px;font-family:'Heebo'}
+  .btn.wa{background:#fff;color:#0a7d34}
+  .btn.cal{background:rgba(0,0,0,.28);color:#fff;border:1px solid rgba(255,255,255,.3)}
+  .btn.ghost{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3)}
+
+  .below{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-top:16px;align-items:start}
+  @media(max-width:860px){.below{grid-template-columns:1fr}}
+
+  .sec-title{display:flex;align-items:center;gap:10px;margin:4px 2px 16px;font-family:'Rubik';font-weight:900;font-size:1.5rem}
+  .sec-title::before{content:"";width:6px;height:28px;background:var(--hype);border-radius:4px}
+
+  /* week timeline */
+  .timeline{position:relative;padding-inline-start:6px}
+  .tl-day{display:flex;gap:14px;margin-bottom:16px}
+  .tl-rail{flex:none;width:56px;text-align:center}
+  .tl-rail .dn{font-family:'Rubik';font-weight:900;font-size:1rem}
+  .tl-rail .dd{font-size:.72rem;color:var(--muted);font-weight:700}
+  .tl-dot{width:14px;height:14px;border-radius:50%;background:var(--hype);margin:8px auto 0;box-shadow:0 0 0 5px rgba(255,45,120,.18)}
+  .tl-body{flex:1;display:flex;flex-direction:column;gap:9px}
+  .slot{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;
+    display:flex;justify-content:space-between;align-items:center;position:relative;transition:transform .15s}
+  .slot:hover{transform:translateX(-4px)}
+  .slot .t{font-family:'Rubik';font-weight:900;font-size:1.25rem}
+  .slot .l{font-size:.86rem;color:var(--dim);margin-top:2px}
+  .slot.match{background:linear-gradient(100deg,rgba(255,138,0,.25),var(--card));border-color:rgba(255,138,0,.5)}
+  .slot.cancel{opacity:.55}
+  .slot.cancel .t{text-decoration:line-through}
+  .badge{font-size:.7rem;font-weight:900;padding:5px 11px;border-radius:999px}
+  .b-match{background:var(--orange);color:#3a1d00}
+  .b-changed{background:var(--amber);color:#3a2c00}
+  .b-cancel{background:var(--red);color:#fff}
+  .edit{position:absolute;top:-9px;left:12px;font-size:.64rem;font-weight:800;color:#fff;
+    background:rgba(0,0,0,.4);border:1px solid var(--line2);border-radius:8px;padding:3px 8px;cursor:pointer}
+
+  /* map */
+  .map{overflow:hidden;display:flex;flex-direction:column;position:sticky;top:16px}
+  .map-top{padding:20px 22px 14px}
+  .map-top h4{font-size:1.35rem;font-weight:900;margin:6px 0 4px}
+  .map-top p{font-size:.85rem;color:var(--dim)}
+  .navlink{display:inline-block;margin-top:12px;background:var(--card2);border:1px solid var(--line2);
+    color:#fff;font-weight:800;font-size:.86rem;padding:9px 14px;border-radius:12px}
+  .map-box{min-height:170px;position:relative;background:
+      repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 28px,transparent 28px 29px),
+      repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 28px,transparent 28px 29px),rgba(0,0,0,.2)}
+  .pin{position:absolute;top:48%;left:44%;width:20px;height:20px;background:var(--mag);border-radius:50% 50% 50% 0;
+    transform:rotate(-45deg) translate(-50%,-50%);box-shadow:0 0 0 8px rgba(255,45,120,.25)}
+
+  .rolebar{display:flex;justify-content:center;margin-top:36px}
+  .roles{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px}
+  .role{border:none;background:transparent;color:var(--dim);padding:10px 18px;border-radius:999px;font-weight:800;font-size:.84rem;cursor:pointer}
+  .role.on{background:var(--hype);color:#fff}
+  .float{position:fixed;bottom:22px;inset-inline-start:22px;background:var(--amber);color:#3a2c00;border:none;
+    border-radius:999px;padding:13px 19px;font-weight:900;cursor:pointer;box-shadow:0 14px 30px -10px rgba(255,210,63,.7);display:flex;gap:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="crest">🏀</div>
+      <div>
+        <div class="brand-name">עירוני רעננה</div>
+        <div class="brand-sub">מחלקת הכדורסל · לו"ז שבועי</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="pill">🌐 עב</button>
+      <button class="pill icon">⚙</button>
+    </div>
+  </div>
+
+  <div class="ticker">
+    <span class="tag">📣 חדשות המועדון</span>
+    <div class="scroll">
+      <span>משחק בית מול הפועל ת״א — שבת 19:00 🏀</span>
+      <span>הרשמה למחנה הקיץ נפתחה ☀️</span>
+      <span>אין אימון ביום שישי</span>
+      <span>משחק בית מול הפועל ת״א — שבת 19:00 🏀</span>
+      <span>הרשמה למחנה הקיץ נפתחה ☀️</span>
+      <span>אין אימון ביום שישי</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <select class="select">
+      <option>עתודה 1 — אבי כהן</option>
+      <option>נוער על — דני לוי</option>
+      <option>קדטים א' — שרון</option>
+    </select>
+    <div class="tabs">
+      <button class="tab on">לו"ז קבוצה</button>
+      <button class="tab">📍 אולמות</button>
+      <button class="tab">📅 יומי</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="label">האימון הקרוב · עתודה 1</div>
+    <div class="hero-time">14:30–16:00</div>
+    <div class="meta-row">
+      <div class="chip"><b>ראשון 14/6</b><span>היום</span></div>
+      <div class="chip"><b>אולם זמר</b><span>אימון</span></div>
+      <div class="chip"><b>אבי כהן</b><span>מאמן</span></div>
+    </div>
+    <div class="actions">
+      <button class="btn wa">💬 שיתוף בוואטסאפ</button>
+      <button class="btn cal">📲 יומן מתעדכן</button>
+      <button class="btn ghost">📅 שמור ליומן</button>
+      <button class="btn ghost">🔔 עדכונים</button>
+    </div>
+  </div>
+
+  <div class="below">
+    <div>
+      <h2 class="sec-title">לו"ז שבועי מלא</h2>
+      <div class="timeline">
+        <div class="tl-day">
+          <div class="tl-rail"><div class="dn">ראשון</div><div class="dd">14/6</div><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="slot match">
+              <span class="edit">✏️ מאמן</span>
+              <div><div class="t">14:30–16:00</div><div class="l">אולם זמר · אימון</div></div>
+            </div>
+            <div class="slot match">
+              <div><div class="t">19:00</div><div class="l">היכל רעננה</div></div>
+              <span class="badge b-match">🏀 משחק</span>
+            </div>
+          </div>
+        </div>
+        <div class="tl-day">
+          <div class="tl-rail"><div class="dn">שני</div><div class="dd">15/6</div><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="slot"><div><div class="t">17:00–18:30</div><div class="l">אולם מטרו ווסט</div></div></div>
+          </div>
+        </div>
+        <div class="tl-day">
+          <div class="tl-rail"><div class="dn">שלישי</div><div class="dd">16/6</div><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="slot"><div><div class="t">16:00–17:30</div><div class="l">אולם זמר</div></div></div>
+            <div class="slot"><div><div class="t">18:00–19:00</div><div class="l">חדר כושר</div></div><span class="badge b-changed">⚠️ שינוי</span></div>
+          </div>
+        </div>
+        <div class="tl-day">
+          <div class="tl-rail"><div class="dn">רביעי</div><div class="dd">17/6</div><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="slot"><div><div class="t">17:00–18:30</div><div class="l">אולם מטרו ווסט</div></div></div>
+          </div>
+        </div>
+        <div class="tl-day">
+          <div class="tl-rail"><div class="dn">חמישי</div><div class="dd">18/6</div><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="slot cancel"><div><div class="t">16:30–18:00</div><div class="l">אולם זמר</div></div><span class="badge b-cancel">❌ בוטל</span></div>
+          </div>
+        </div>
+        <div class="tl-day">
+          <div class="tl-rail"><div class="dn">שבת</div><div class="dd">20/6</div><div class="tl-dot"></div></div>
+          <div class="tl-body">
+            <div class="slot"><div><div class="t">10:00–11:30</div><div class="l">אולם זמר</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card map">
+      <div class="map-top">
+        <div class="label">📍 מיקום</div>
+        <h4>אולם זמר</h4>
+        <p>ראשון 14/6 (היום) · 14:30–16:00</p>
+        <a class="navlink">ניווט במפות ←</a>
+      </div>
+      <div class="map-box"><span class="pin"></span></div>
+    </div>
+  </div>
+
+  <div class="rolebar">
+    <div class="roles">
+      <button class="role on">👨‍👩‍👧 הורים</button>
+      <button class="role">🏀 מאמן</button>
+      <button class="role">📋 ניהול</button>
+      <button class="role">⚙ מנהל</button>
+    </div>
+  </div>
+</div>
+<button class="float">💡 הצעה לשיפור</button>
+</body>
+</html>

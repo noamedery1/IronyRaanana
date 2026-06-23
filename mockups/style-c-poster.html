@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squadio · POSTER</title>
+<link href="https://fonts.googleapis.com/css2?family=Suez+One&family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0a0a; --paper:#f5f3ee; --volt:#d6ff00; --volt-d:#b9e000; --grey:#6b6b6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',sans-serif;color:var(--ink);background:var(--paper);min-height:100vh;-webkit-font-smoothing:antialiased}
+  .display{font-family:'Suez One',serif;font-weight:400;letter-spacing:-.01em}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 0 70px}
+  .pad{padding-inline:26px}
+
+  /* top: thin editorial bar */
+  .top{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--ink);padding:16px 26px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .crest{width:42px;height:42px;border:2px solid var(--ink);display:grid;place-items:center;font-size:1.25rem;background:var(--volt)}
+  .bn{font-family:'Suez One';font-size:1.25rem;line-height:.95}
+  .bs{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--grey);margin-top:2px}
+  .topb{display:flex;gap:18px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .topb span{cursor:pointer;border-bottom:2px solid transparent;padding-bottom:2px}
+  .topb span:hover{border-color:var(--ink)}
+
+  /* running headline strip */
+  .marq{background:var(--ink);color:var(--paper);overflow:hidden;display:flex;align-items:center;padding:9px 0}
+  .marq .roll{display:flex;gap:26px;white-space:nowrap;animation:roll 22s linear infinite;font-weight:900;font-size:.84rem;letter-spacing:.04em}
+  .marq .roll span em{color:var(--volt);font-style:normal}
+  @keyframes roll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* controls */
+  .controls{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center;margin-top:22px}
+  .select{background:transparent;border:none;border-bottom:3px solid var(--ink);font-family:'Suez One';font-size:1.3rem;padding:6px 4px;min-width:240px;cursor:pointer;color:var(--ink)}
+  .tabs{display:flex;gap:0;border:2px solid var(--ink)}
+  .tab{border:none;background:transparent;border-inline-start:2px solid var(--ink);padding:9px 16px;font-weight:700;font-size:.84rem;cursor:pointer;letter-spacing:.04em}
+  .tab:first-child{border-inline-start:none}
+  .tab.on{background:var(--ink);color:var(--volt)}
+
+  /* HERO — giant poster */
+  .hero{margin-top:26px;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);padding:18px 26px 0;position:relative;overflow:hidden}
+  .hero-grid{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+  .eyebrow{font-size:.78rem;font-weight:900;letter-spacing:.22em;text-transform:uppercase;color:var(--grey)}
+  .giant{font-family:'Suez One';font-size:clamp(3.6rem,13vw,8.5rem);line-height:.82;margin:6px 0 2px}
+  .giant em{font-style:normal;background:var(--volt);padding:0 .08em}
+  .hero-sub{display:flex;flex-wrap:wrap;gap:0;border-top:2px solid var(--ink);margin-top:14px}
+  .fact{padding:14px 22px 16px;border-inline-end:2px solid var(--ink);flex:1;min-width:120px}
+  .fact:last-child{border-inline-end:none}
+  .fact .k{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--grey)}
+  .fact .v{font-family:'Suez One';font-size:1.5rem;margin-top:5px;line-height:1}
+  /* vertical big index */
+  .bigno{font-family:'Suez One';font-size:clamp(5rem,16vw,11rem);line-height:.8;color:transparent;-webkit-text-stroke:2px var(--ink);user-select:none}
+  .actions{display:flex;flex-wrap:wrap;gap:0;border-top:2px solid var(--ink);margin:0 -26px}
+  .abtn{flex:1;min-width:150px;border:none;border-inline-end:2px solid var(--ink);background:transparent;padding:16px;font-weight:900;
+    font-size:.96rem;cursor:pointer;display:flex;gap:8px;align-items:center;justify-content:center;transition:.12s;letter-spacing:.02em}
+  .abtn:last-child{border-inline-end:none}
+  .abtn:hover{background:var(--ink);color:var(--paper)}
+  .abtn.lead{background:var(--volt)}
+  .abtn.lead:hover{background:var(--ink);color:var(--volt)}
+
+  /* WEEK — editorial ledger */
+  .sec{display:flex;align-items:baseline;gap:14px;margin:34px 0 0;padding:0 26px}
+  .sec h2{font-family:'Suez One';font-size:2.2rem;line-height:1}
+  .sec .rule{flex:1;height:2px;background:var(--ink)}
+  .sec .count{font-weight:900;letter-spacing:.1em;color:var(--grey)}
+  .ledger{margin-top:14px;border-top:2px solid var(--ink)}
+  .lrow{display:grid;grid-template-columns:120px 1fr auto;gap:18px;align-items:center;padding:18px 26px;border-bottom:2px solid var(--ink);
+    position:relative;transition:.12s}
+  .lrow:hover{background:#ecdfff00;background:#eceae3}
+  .lrow .dno{display:flex;align-items:baseline;gap:10px}
+  .lrow .dno .n{font-family:'Suez One';font-size:2.2rem;line-height:.8;color:transparent;-webkit-text-stroke:1.5px var(--ink)}
+  .lrow .dno .d{font-weight:900}
+  .lrow .dno .d small{display:block;font-weight:700;color:var(--grey);font-size:.78rem}
+  .lrow .main{display:flex;flex-direction:column;gap:7px}
+  .ev{display:flex;align-items:baseline;gap:14px}
+  .ev .t{font-family:'Suez One';font-size:1.5rem;line-height:1;min-width:128px}
+  .ev .l{font-size:.95rem;color:#222}
+  .tagp{font-weight:900;font-size:.74rem;letter-spacing:.08em;padding:5px 11px;border:2px solid var(--ink);text-transform:uppercase}
+  .tagp.game{background:var(--volt)}
+  .tagp.cancel{background:var(--ink);color:var(--paper)}
+  .lrow.game{background:linear-gradient(90deg,rgba(214,255,0,.22),transparent 60%)}
+  .lrow.cancel .ev .t,.lrow.cancel .ev .l{text-decoration:line-through;color:var(--grey)}
+  .lrow.cancel .ev .t{-webkit-text-stroke:1.5px var(--grey);color:transparent}
+  .edit{font-size:.72rem;font-weight:900;letter-spacing:.06em;border:2px solid var(--ink);padding:5px 10px;cursor:pointer;background:#fff}
+
+  .roles{display:flex;justify-content:center;gap:0;margin-top:40px;border:2px solid var(--ink);width:max-content;margin-inline:auto}
+  .role{border:none;border-inline-start:2px solid var(--ink);background:transparent;padding:11px 22px;font-weight:900;cursor:pointer;letter-spacing:.04em}
+  .role:first-child{border-inline-start:none}
+  .role.on{background:var(--ink);color:var(--volt)}
+  .float{position:fixed;bottom:22px;inset-inline-start:22px;background:var(--volt);border:2px solid var(--ink);
+    padding:12px 18px;font-weight:900;cursor:pointer;letter-spacing:.03em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="crest">🏀</div>
+      <div><div class="bn">עירוני רעננה</div><div class="bs">Basketball · Weekly</div></div>
+    </div>
+    <div class="topb"><span>עברית</span><span>הגדרות</span></div>
+  </div>
+
+  <div class="marq">
+    <div class="roll">
+      <span><em>★</em> משחק בית מול הפועל ת״א — שבת 19:00</span><span><em>★</em> הרשמה למחנה הקיץ נפתחה</span><span><em>★</em> אין אימון ביום שישי</span>
+      <span><em>★</em> משחק בית מול הפועל ת״א — שבת 19:00</span><span><em>★</em> הרשמה למחנה הקיץ נפתחה</span><span><em>★</em> אין אימון ביום שישי</span>
+    </div>
+  </div>
+
+  <div class="pad">
+    <div class="controls">
+      <select class="select"><option>עתודה 1 — אבי כהן</option><option>נוער על — דני לוי</option><option>קדטים א' — שרון</option></select>
+      <div class="tabs"><button class="tab on">לו"ז קבוצה</button><button class="tab">אולמות</button><button class="tab">יומי</button></div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">האימון הקרוב — ראשון 14/6 · היום</div>
+        <div class="giant"><em>14:30</em>-16:00</div>
+      </div>
+      <div class="bigno">01</div>
+    </div>
+    <div class="hero-sub">
+      <div class="fact"><div class="k">קבוצה</div><div class="v">עתודה 1</div></div>
+      <div class="fact"><div class="k">מאמן</div><div class="v">אבי כהן</div></div>
+      <div class="fact"><div class="k">מיקום</div><div class="v">אולם זמר</div></div>
+    </div>
+    <div class="actions">
+      <button class="abtn lead">💬 שיתוף בוואטסאפ</button>
+      <button class="abtn">📲 יומן מתעדכן</button>
+      <button class="abtn">📅 שמור ליומן</button>
+      <button class="abtn">🔔 עדכונים</button>
+      <button class="abtn">🧭 ניווט</button>
+    </div>
+  </div>
+
+  <!-- WEEK -->
+  <div class="sec"><h2>לו"ז שבועי</h2><span class="rule"></span><span class="count">06 ימים</span></div>
+  <div class="ledger">
+    <div class="lrow game">
+      <div class="dno"><span class="n">01</span><span class="d">ראשון<small>14/6</small></span></div>
+      <div class="main">
+        <div class="ev"><span class="t">14:30-16:00</span><span class="l">אולם זמר · אימון</span></div>
+        <div class="ev"><span class="t">19:00</span><span class="l">היכל רעננה · מול הפועל ת״א</span></div>
+      </div>
+      <span class="tagp game">🏀 משחק</span>
+    </div>
+    <div class="lrow">
+      <div class="dno"><span class="n">02</span><span class="d">שני<small>15/6</small></span></div>
+      <div class="main"><div class="ev"><span class="t">17:00-18:30</span><span class="l">אולם מטרו ווסט</span></div></div>
+      <button class="edit">✏️ מאמן</button>
+    </div>
+    <div class="lrow">
+      <div class="dno"><span class="n">03</span><span class="d">שלישי<small>16/6</small></span></div>
+      <div class="main">
+        <div class="ev"><span class="t">16:00-17:30</span><span class="l">אולם זמר</span></div>
+        <div class="ev"><span class="t">18:00-19:00</span><span class="l">חדר כושר · שינוי</span></div>
+      </div>
+      <span class="tagp">⚠ שינוי</span>
+    </div>
+    <div class="lrow">
+      <div class="dno"><span class="n">04</span><span class="d">רביעי<small>17/6</small></span></div>
+      <div class="main"><div class="ev"><span class="t">17:00-18:30</span><span class="l">אולם מטרו ווסט</span></div></div>
+      <button class="edit">✏️ מאמן</button>
+    </div>
+    <div class="lrow cancel">
+      <div class="dno"><span class="n">05</span><span class="d">חמישי<small>18/6</small></span></div>
+      <div class="main"><div class="ev"><span class="t">16:30-18:00</span><span class="l">אולם זמר</span></div></div>
+      <span class="tagp cancel">✕ בוטל</span>
+    </div>
+    <div class="lrow">
+      <div class="dno"><span class="n">06</span><span class="d">שבת<small>20/6</small></span></div>
+      <div class="main"><div class="ev"><span class="t">10:00-11:30</span><span class="l">אולם זמר</span></div></div>
+      <button class="edit">✏️ מאמן</button>
+    </div>
+  </div>
+
+  <div class="roles">
+    <button class="role on">הורים</button><button class="role">מאמן</button><button class="role">ניהול</button><button class="role">מנהל</button>
+  </div>
+</div>
+<button class="float">💡 הצעה לשיפור</button>
+</body>
+</html>

@@ -434,6 +434,16 @@ app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// Final safety net: any uncaught error never reaches the client as a raw stack trace.
+// API calls get a clean JSON error; page loads get the SPA (which renders the designed
+// ErrorPage), so the user always sees a styled page — never a blank/leaky error screen.
+app.use((err, req, res, next) => {
+    console.error('Unhandled error:', err);
+    if (res.headersSent) return next(err);
+    if (req.path.startsWith('/api/')) return res.status(500).json({ error: 'שגיאת שרת, נסו שוב' });
+    res.status(500).sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
 const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

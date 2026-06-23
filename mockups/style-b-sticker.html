@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squadio · STICKER POP</title>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;900&family=Heebo:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#111111; --paper:#fff3d6;
+    --yellow:#ffd400; --pink:#ff4d9d; --cyan:#19d3e6; --lime:#9bff3d; --purple:#8b5cff; --orange:#ff7a18;
+    --sh:6px 6px 0 var(--ink); --sh-lg:9px 9px 0 var(--ink);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',sans-serif;color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;
+    background:var(--paper);
+    background-image:radial-gradient(var(--ink) 1.4px,transparent 1.5px);background-size:22px 22px}
+  .wrap{max-width:1060px;margin:0 auto;padding:18px 18px 70px}
+  h1,h2,h3{font-family:'Rubik',sans-serif;font-weight:900}
+  .box{background:#fff;border:3px solid var(--ink);border-radius:16px;box-shadow:var(--sh)}
+
+  /* top */
+  .top{display:flex;justify-content:space-between;align-items:center;background:var(--cyan);border:3px solid var(--ink);
+    border-radius:18px;box-shadow:var(--sh-lg);padding:12px 16px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .crest{width:50px;height:50px;border:3px solid var(--ink);border-radius:12px;background:var(--yellow);display:grid;place-items:center;font-size:1.5rem;transform:rotate(-6deg);box-shadow:3px 3px 0 var(--ink)}
+  .bn{font-family:'Rubik';font-weight:900;font-size:1.35rem;line-height:1}
+  .bs{font-weight:700;font-size:.8rem;margin-top:3px}
+  .topb{display:flex;gap:8px}
+  .tb{border:3px solid var(--ink);background:#fff;border-radius:11px;padding:8px 12px;font-weight:900;cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+
+  /* ticker */
+  .ticker{margin-top:14px;background:var(--pink);border:3px solid var(--ink);border-radius:14px;box-shadow:var(--sh);
+    padding:10px 14px;overflow:hidden;display:flex;gap:10px;align-items:center;color:#fff}
+  .ticker .tag{background:var(--ink);color:var(--yellow);font-weight:900;font-size:.74rem;padding:4px 10px;border-radius:8px;flex:none}
+  .ticker .roll{display:flex;gap:36px;white-space:nowrap;animation:roll 20s linear infinite;font-weight:900}
+  @keyframes roll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* controls */
+  .controls{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-top:16px}
+  .select{background:var(--lime);border:3px solid var(--ink);border-radius:13px;box-shadow:var(--sh);padding:12px 16px;font-family:'Rubik';font-weight:900;font-size:1.05rem;min-width:230px;cursor:pointer}
+  .tabs{display:flex;gap:9px}
+  .tab{border:3px solid var(--ink);background:#fff;border-radius:12px;padding:9px 15px;font-weight:900;cursor:pointer;box-shadow:3px 3px 0 var(--ink)}
+  .tab.on{background:var(--yellow);transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+
+  /* hero */
+  .hero{position:relative;margin-top:20px;background:var(--yellow);border:3px solid var(--ink);border-radius:22px;
+    box-shadow:var(--sh-lg);padding:26px 28px;overflow:hidden}
+  .hero::after{content:"🏀";position:absolute;left:-22px;bottom:-34px;font-size:11rem;opacity:.13;transform:rotate(-14deg)}
+  .kicker{display:inline-block;background:var(--ink);color:var(--yellow);font-weight:900;font-size:.82rem;padding:6px 14px;border-radius:9px;transform:rotate(-2deg)}
+  .htime{font-family:'Rubik';font-weight:900;font-size:clamp(3rem,9vw,5rem);line-height:.9;margin-top:14px;letter-spacing:-.02em;
+    -webkit-text-stroke:2px var(--ink)}
+  .htime .a{color:#fff}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .chip{background:#fff;border:3px solid var(--ink);border-radius:12px;padding:8px 14px;font-weight:900;box-shadow:4px 4px 0 var(--ink)}
+  .chip b{font-family:'Rubik'}
+  .chip.pink{background:var(--pink);color:#fff}
+  .chip.cyan{background:var(--cyan)}
+  .actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:22px;position:relative;z-index:1}
+  .btn{border:3px solid var(--ink);border-radius:13px;padding:12px 17px;font-weight:900;font-size:.96rem;cursor:pointer;
+    box-shadow:5px 5px 0 var(--ink);transition:.12s;display:flex;gap:8px;align-items:center}
+  .btn:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+  .btn.wa{background:var(--lime)} .btn.cal{background:var(--cyan)} .btn.g{background:#fff} .btn.p{background:var(--purple);color:#fff}
+  .sticker{position:absolute;top:-14px;left:30px;background:var(--pink);color:#fff;font-family:'Rubik';font-weight:900;font-size:1rem;
+    padding:10px 16px;border:3px solid var(--ink);border-radius:14px;transform:rotate(8deg);box-shadow:4px 4px 0 var(--ink);z-index:2}
+
+  /* week — sticker tiles */
+  .sec{font-family:'Rubik';font-weight:900;font-size:1.5rem;margin:30px 2px 16px;display:inline-block;
+    background:var(--ink);color:#fff;padding:6px 16px;border-radius:12px;transform:rotate(-1deg)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+  .tile{background:#fff;border:3px solid var(--ink);border-radius:18px;box-shadow:var(--sh);padding:14px;position:relative}
+  .tile:nth-child(6n+1){background:var(--cyan)} .tile:nth-child(6n+2){background:var(--lime)}
+  .tile:nth-child(6n+3){background:#fff} .tile:nth-child(6n+4){background:var(--purple);color:#fff}
+  .tile:nth-child(6n+5){background:var(--orange)} .tile:nth-child(6n){background:var(--pink);color:#fff}
+  .tile .dh{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid var(--ink);padding-bottom:9px;margin-bottom:11px}
+  .tile.lighttext .dh{border-color:#fff}
+  .dn{font-family:'Rubik';font-weight:900;font-size:1.2rem}
+  .dd{font-weight:900;font-size:.82rem}
+  .ev{margin-bottom:9px}
+  .ev .t{font-family:'Rubik';font-weight:900;font-size:1.25rem}
+  .ev .l{font-weight:700;font-size:.86rem}
+  .badge{display:inline-block;font-weight:900;font-size:.72rem;padding:4px 10px;border:2px solid var(--ink);border-radius:8px;margin-top:6px;background:#fff;color:var(--ink)}
+  .edit{position:absolute;top:-12px;left:12px;background:var(--ink);color:#fff;font-weight:900;font-size:.7rem;padding:4px 9px;border-radius:8px;transform:rotate(-5deg);cursor:pointer}
+  .tile.cancel{opacity:.65}
+  .tile.cancel .ev .t{text-decoration:line-through}
+
+  .roles{display:flex;justify-content:center;gap:10px;margin-top:34px;flex-wrap:wrap}
+  .role{border:3px solid var(--ink);background:#fff;border-radius:999px;padding:9px 18px;font-weight:900;cursor:pointer;box-shadow:4px 4px 0 var(--ink)}
+  .role.on{background:var(--pink);color:#fff;transform:translate(-1px,-1px);box-shadow:6px 6px 0 var(--ink)}
+  .float{position:fixed;bottom:20px;inset-inline-start:20px;background:var(--purple);color:#fff;border:3px solid var(--ink);
+    border-radius:999px;padding:11px 18px;font-weight:900;cursor:pointer;box-shadow:5px 5px 0 var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="crest">🏀</div>
+      <div><div class="bn">עירוני רעננה</div><div class="bs">מחלקת הכדורסל · לו"ז שבועי</div></div>
+    </div>
+    <div class="topb"><button class="tb">🌐 עב</button><button class="tb">⚙</button></div>
+  </div>
+
+  <div class="ticker">
+    <span class="tag">📣 חדש</span>
+    <div class="roll">
+      <span>🏀 משחק בית מול הפועל ת״א — שבת 19:00</span><span>☀️ הרשמה למחנה הקיץ נפתחה</span><span>🚫 אין אימון ביום שישי</span>
+      <span>🏀 משחק בית מול הפועל ת״א — שבת 19:00</span><span>☀️ הרשמה למחנה הקיץ נפתחה</span><span>🚫 אין אימון ביום שישי</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <select class="select"><option>עתודה 1 — אבי כהן</option><option>נוער על — דני לוי</option><option>קדטים א' — שרון</option></select>
+    <div class="tabs"><button class="tab on">לו"ז קבוצה</button><button class="tab">📍 אולמות</button><button class="tab">📅 יומי</button></div>
+  </div>
+
+  <div class="hero">
+    <span class="sticker">🔥 היום!</span>
+    <span class="kicker">האימון הקרוב · עתודה 1</span>
+    <div class="htime">14:30<span class="a">-16:00</span></div>
+    <div class="chips">
+      <div class="chip cyan"><b>ראשון 14/6</b></div>
+      <div class="chip"><b>📍 אולם זמר</b></div>
+      <div class="chip pink"><b>🏀 אבי כהן</b></div>
+    </div>
+    <div class="actions">
+      <button class="btn wa">💬 וואטסאפ</button>
+      <button class="btn cal">📲 יומן מתעדכן</button>
+      <button class="btn g">📅 שמור ליומן</button>
+      <button class="btn p">🔔 עדכונים</button>
+    </div>
+  </div>
+
+  <h2 class="sec">לו"ז שבועי 💥</h2>
+  <div class="grid">
+    <div class="tile">
+      <span class="edit">✏️ מאמן</span>
+      <div class="dh"><span class="dn">ראשון</span><span class="dd">14/6</span></div>
+      <div class="ev"><div class="t">14:30-16:00</div><div class="l">אולם זמר</div></div>
+      <div class="ev"><div class="t">19:00</div><div class="l">היכל רעננה</div><span class="badge">🏀 משחק!</span></div>
+    </div>
+    <div class="tile">
+      <div class="dh"><span class="dn">שני</span><span class="dd">15/6</span></div>
+      <div class="ev"><div class="t">17:00-18:30</div><div class="l">מטרו ווסט</div></div>
+    </div>
+    <div class="tile">
+      <div class="dh"><span class="dn">שלישי</span><span class="dd">16/6</span></div>
+      <div class="ev"><div class="t">16:00-17:30</div><div class="l">אולם זמר</div></div>
+      <div class="ev"><div class="t">18:00-19:00</div><div class="l">חדר כושר</div><span class="badge">⚠️ שינוי</span></div>
+    </div>
+    <div class="tile lighttext">
+      <div class="dh"><span class="dn">רביעי</span><span class="dd">17/6</span></div>
+      <div class="ev"><div class="t">17:00-18:30</div><div class="l">מטרו ווסט</div></div>
+    </div>
+    <div class="tile cancel">
+      <div class="dh"><span class="dn">חמישי</span><span class="dd">18/6</span></div>
+      <div class="ev"><div class="t">16:30-18:00</div><div class="l">אולם זמר</div><span class="badge">❌ בוטל</span></div>
+    </div>
+    <div class="tile lighttext">
+      <div class="dh"><span class="dn">שבת</span><span class="dd">20/6</span></div>
+      <div class="ev"><div class="t">10:00-11:30</div><div class="l">אולם זמר</div></div>
+    </div>
+  </div>
+
+  <div class="roles">
+    <button class="role on">👨‍👩‍👧 הורים</button><button class="role">🏀 מאמן</button><button class="role">📋 ניהול</button><button class="role">⚙ מנהל</button>
+  </div>
+</div>
+<button class="float">💡 הצעה לשיפור</button>
+</body>
+</html>

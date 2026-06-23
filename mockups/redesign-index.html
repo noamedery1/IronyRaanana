@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squadio · בחירת עיצוב — 3 כיוונים</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&family=Rubik:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',sans-serif;background:#0c1020;color:#eef2fb;min-height:100vh;padding:30px 22px 60px}
+  h1{font-family:'Rubik';font-weight:900;font-size:1.9rem;text-align:center}
+  .sub{text-align:center;color:rgba(238,242,251,.6);margin:8px 0 30px;font-size:.98rem}
+  .grid{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+  .opt{border:1px solid rgba(255,255,255,.12);border-radius:20px;overflow:hidden;background:rgba(255,255,255,.04);
+    display:flex;flex-direction:column;transition:transform .15s,border-color .15s}
+  .opt:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.3)}
+  .swatch{height:120px;display:flex;align-items:flex-end;padding:14px;font-family:'Rubik';font-weight:900;font-size:1.3rem}
+  .s1{background:radial-gradient(600px 200px at 90% -40px,rgba(255,122,24,.25),transparent),#f4f6fb;color:#1d2b53}
+  .s2{background:radial-gradient(500px 200px at 86% -40px,rgba(34,211,238,.4),transparent),linear-gradient(165deg,#080c17,#140a04)}
+  .s3{background:linear-gradient(115deg,#7c3aed,#ff2d78 55%,#ff8a00);color:#fff}
+  .body{padding:18px 18px 20px;flex:1;display:flex;flex-direction:column}
+  .tag{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#22d3ee}
+  .opt h3{font-family:'Rubik';font-weight:800;font-size:1.25rem;margin:6px 0 8px}
+  .opt p{font-size:.9rem;color:rgba(238,242,251,.68);line-height:1.5;flex:1}
+  .cta{margin-top:16px;display:block;text-align:center;text-decoration:none;background:#3b82f6;color:#fff;
+    font-weight:800;padding:12px;border-radius:12px}
+  .opt:nth-child(3) .cta{background:#ff7a18}
+  .opt:nth-child(4) .cta{background:linear-gradient(115deg,#7c3aed,#ff2d78)}
+</style>
+</head>
+<body>
+  <h1>Squadio — לו"ז ציבורי · 3 כיווני עיצוב</h1>
+  <p class="sub">לחצו על כל כיוון כדי לראות מסך מלא. אותו תוכן, שלוש שפות עיצוב שונות — בחרו את האהוב עליכם.</p>
+  <div class="grid">
+    <div class="opt">
+      <div class="swatch s1">Court Light</div>
+      <div class="body">
+        <span class="tag">בהיר · נקי · מקצועי</span>
+        <h3>1 · Court Light</h3>
+        <p>רקע בהיר ואוורירי, כרטיסים לבנים עם צללים רכים והדגשת כתום-כדורסל. קריא מאוד גם בשמש, מרגיש מודרני ונגיש להורים.</p>
+        <a class="cta" href="redesign-1-court-light.html">צפייה →</a>
+      </div>
+    </div>
+    <div class="opt">
+      <div class="swatch s2">Arena Pro</div>
+      <div class="body">
+        <span class="tag">כהה · ספורטיבי · מלוטש</span>
+        <h3>2 · Arena Pro</h3>
+        <p>אבולוציה של ה-Arena Glass הקיים: זכוכית כהה, היררכיה נקייה יותר, מבטא ציאן-כחול וזוהר עדין. שומר על ה-DNA הנוכחי.</p>
+        <a class="cta" href="redesign-2-arena-pro.html">צפייה →</a>
+      </div>
+    </div>
+    <div class="opt">
+      <div class="swatch s3">Bold Energy</div>
+      <div class="body">
+        <span class="tag">נועז · אנרגטי · צעיר</span>
+        <h3>3 · Bold Energy</h3>
+        <p>גרדיאנט סגול-מג'נטה-כתום, טיפוגרפיה ענקית והירו במסך מלא. לו"ז השבוע כציר זמן אנכי. בולט, "היפ" ומלא אנרגיית מגרש.</p>
+        <a class="cta" href="redesign-3-bold-energy.html">צפייה →</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

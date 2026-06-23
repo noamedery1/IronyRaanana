@@ -8,6 +8,7 @@ import TrainerPortal from './pages/TrainerPortal';
 import Join from './pages/Join';
 import SuperUser from './pages/SuperUser';
 import NoClub from './pages/NoClub';
+import ErrorPage from './pages/ErrorPage';
 import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
 import AdminSwitcher from './components/AdminSwitcher';
@@ -70,9 +71,9 @@ function App() {
         <Route path="/:club/women" element={<RequireClub><PublicScheduleWomen /></RequireClub>} />
         <Route path="/:club/trainer" element={<RequireClub><TrainerPortal /></RequireClub>} />
 
-        {/* Anything else — including legacy un-prefixed links (/admin, /trainer, /women)
-            and unknown slugs — is "not connected to a club". */}
-        <Route path="*" element={<NoClub />} />
+        {/* Any unmatched URL → designed 404. (Unknown club slugs are handled
+            separately by RequireClub → NoClub, which gives a "use your link" hint.) */}
+        <Route path="*" element={<ErrorPage mode="notFound" />} />
       </Routes>
 
       {/* Floating Feedback Button - Shows on all pages (or conditionally if needed) */}

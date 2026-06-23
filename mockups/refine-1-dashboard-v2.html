@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squadio · Squad Pro (Sport)</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&family=Saira+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f5f9; --surface:#ffffff; --surface2:#fafbfc;
+    --line:#e7eaf0; --line2:#dde2ea;
+    --ink:#161b25; --muted:#646e85; --faint:#97a0b2;
+    --accent:#1f5fff; --accent-d:#1546c8; --accent-soft:#e9f0ff;
+    --court:#e7670f; --court-soft:#fdeede;           /* athletic warm = match/game */
+    --green:#16915f; --green-soft:#e4f5ec; --amber:#bd8410; --amber-soft:#f9f1de; --red:#d33b56; --red-soft:#fcebee;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(20,30,50,.04), 0 10px 28px -18px rgba(20,30,50,.28);
+    --cond:'Saira Condensed',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+  .num{font-family:var(--cond);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  .shell{display:flex;min-height:100vh}
+
+  /* sidebar */
+  .side{width:252px;flex:none;background:var(--surface);border-inline-start:1px solid var(--line);padding:18px 14px;
+    display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+  .brand{display:flex;align-items:center;gap:11px;padding:6px 8px 14px;border-bottom:1px solid var(--line);margin-bottom:10px}
+  .crest{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#22305a,#141a2b);display:grid;place-items:center;color:#fff;font-size:1.3rem;
+    box-shadow:0 6px 16px -7px rgba(20,30,80,.6);position:relative}
+  .crest::after{content:"";position:absolute;inset:0;border-radius:12px;border-bottom:3px solid var(--court)}
+  .bn{font-weight:800;font-size:1.06rem;line-height:1.1}
+  .bs{font-size:.73rem;color:var(--muted);margin-top:2px}
+  .record{display:flex;gap:6px;margin:2px 8px 12px}
+  .rc{flex:1;background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:7px 4px;text-align:center}
+  .rc b{display:block;font-family:var(--cond);font-size:1.25rem;font-weight:800;line-height:1}
+  .rc.w b{color:var(--green)} .rc.l b{color:var(--red)}
+  .rc span{font-size:.64rem;color:var(--faint);font-weight:700;letter-spacing:.04em}
+  .navlbl{font-size:.68rem;font-weight:800;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;padding:10px 10px 4px}
+  .nav{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;font-weight:600;font-size:.92rem;color:var(--muted);cursor:pointer}
+  .nav .ic{width:20px;text-align:center}
+  .nav:hover{background:var(--surface2)}
+  .nav.on{background:var(--accent-soft);color:var(--accent);position:relative}
+  .nav.on::before{content:"";position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
+  .side-foot{margin-top:auto;border-top:1px solid var(--line);padding-top:12px}
+  .teamsel{width:100%;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;font-family:inherit;font-weight:700;font-size:.9rem;color:var(--ink);background:var(--surface2);cursor:pointer}
+
+  /* main */
+  .main{flex:1;padding:24px 30px 50px;max-width:1010px}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px}
+  .head h1{font-family:var(--cond);font-size:2.1rem;font-weight:800;letter-spacing:.01em;text-transform:uppercase}
+  .head .crumb{font-size:.82rem;color:var(--muted);font-weight:600;letter-spacing:.04em}
+  .head-actions{display:flex;gap:8px}
+  .ibtn{border:1px solid var(--line2);background:var(--surface);border-radius:9px;padding:8px 12px;font-weight:600;font-size:.85rem;color:var(--ink);cursor:pointer}
+
+  /* WEEK STATS STRIP */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 16px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+  .stat::after{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--accent)}
+  .stat.g::after{background:var(--court)} .stat.h::after{background:var(--green)} .stat.c::after{background:var(--amber)}
+  .stat b{font-family:var(--cond);font-size:1.7rem;font-weight:800;line-height:1}
+  .stat span{display:block;font-size:.76rem;color:var(--muted);font-weight:600;margin-top:3px}
+
+  .note{display:flex;align-items:center;gap:10px;margin-top:14px;background:var(--court-soft);border:1px solid #f3d9bd;border-inline-start:3px solid var(--court);
+    border-radius:11px;padding:11px 15px;font-size:.9rem;color:#8a4710;font-weight:600}
+  .note b{color:#6f370a}
+
+  /* next training */
+  .next{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
+    display:grid;grid-template-columns:1.35fr 1fr}
+  @media(max-width:780px){.next{grid-template-columns:1fr}.side{display:none}.stats{grid-template-columns:repeat(2,1fr)}}
+  .next-l{padding:22px 24px;position:relative;overflow:hidden}
+  /* faint court lines */
+  .next-l::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:
+      radial-gradient(circle at 100% 50%, transparent 78px, var(--line) 78px, var(--line) 80px, transparent 80px),
+      linear-gradient(90deg, transparent calc(100% - 2px), var(--line) calc(100% - 2px))}
+  .next-l>*{position:relative}
+  .ntag{display:inline-flex;align-items:center;gap:7px;font-family:var(--cond);font-size:.84rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    color:#fff;background:var(--court);padding:5px 12px;border-radius:7px}
+  .ntag .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:bl 1.2s infinite}
+  @keyframes bl{50%{opacity:.3}}
+  .time{font-family:var(--cond);font-size:3.4rem;font-weight:800;letter-spacing:0;margin:12px 0 0;line-height:1}
+  .when{color:var(--muted);font-weight:700;letter-spacing:.02em}
+  .facts{display:flex;gap:26px;margin-top:18px}
+  .facts .k{font-size:.72rem;color:var(--faint);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .facts .v{font-weight:800;font-size:1.04rem;margin-top:3px}
+  .actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:22px}
+  .btn{border:1px solid var(--line2);background:var(--surface);border-radius:10px;padding:10px 14px;font-weight:700;font-size:.86rem;cursor:pointer;display:flex;gap:7px;align-items:center;color:var(--ink)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.wa{background:var(--green);border-color:var(--green);color:#fff}
+  .next-r{background:var(--surface2);border-inline-start:1px solid var(--line);padding:20px 22px;display:flex;flex-direction:column}
+  .next-r h4{font-size:1.05rem;font-weight:800;margin:6px 0 3px}
+  .next-r p{font-size:.84rem;color:var(--muted)}
+  .mapmini{flex:1;min-height:96px;margin-top:12px;border-radius:10px;border:1px solid var(--line2);position:relative;overflow:hidden;
+    background:repeating-linear-gradient(0deg,#eef1f6 0 22px,#e8ebf0 22px 23px),repeating-linear-gradient(90deg,#eef1f6 0 22px,#e8ebf0 22px 23px)}
+  .mapmini .pin{position:absolute;top:50%;left:44%;width:14px;height:14px;background:var(--court);border-radius:50% 50% 50% 0;transform:rotate(-45deg) translate(-50%,-50%);box-shadow:0 0 0 5px rgba(231,103,15,.18)}
+  .navlink{margin-top:10px;color:var(--accent);font-weight:700;font-size:.85rem;text-decoration:none}
+
+  /* week table */
+  .sectit{display:flex;justify-content:space-between;align-items:center;margin:28px 2px 12px}
+  .sectit h2{font-family:var(--cond);font-size:1.45rem;font-weight:800;text-transform:uppercase;letter-spacing:.02em}
+  .sectit .seg{display:flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden}
+  .sectit .seg button{border:none;background:var(--surface);padding:7px 13px;font-weight:700;font-size:.82rem;color:var(--muted);cursor:pointer;border-inline-start:1px solid var(--line)}
+  .sectit .seg button:first-child{border:none}
+  .sectit .seg button.on{background:var(--ink);color:#fff}
+  .table{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .trow{display:grid;grid-template-columns:64px 120px 1fr 120px;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line)}
+  .trow:last-child{border-bottom:none}
+  .trow:hover{background:var(--surface2)}
+  .jersey{font-family:var(--cond);font-size:1.9rem;font-weight:800;color:transparent;-webkit-text-stroke:1.5px var(--line2);line-height:1;text-align:center}
+  .trow.today .jersey{-webkit-text-stroke-color:var(--accent);color:var(--accent-soft)}
+  .trow.game .jersey{-webkit-text-stroke-color:var(--court)}
+  .d{font-weight:800}
+  .d small{display:block;color:var(--faint);font-weight:600;font-size:.78rem;margin-top:1px}
+  .sess{display:flex;flex-direction:column;gap:6px}
+  .line{display:flex;align-items:baseline;gap:12px}
+  .line .t{font-family:var(--cond);font-weight:800;font-size:1.2rem;min-width:118px}
+  .line .l{color:var(--muted);font-size:.9rem}
+  .st{justify-self:start}
+  .pill{font-size:.74rem;font-weight:800;padding:4px 11px;border-radius:7px;letter-spacing:.02em}
+  .p-game{color:#fff;background:var(--court)}
+  .p-chg{color:var(--amber);background:var(--amber-soft)}
+  .p-cancel{color:var(--red);background:var(--red-soft)}
+  .trow.today{background:var(--accent-soft)}
+  .trow.game{background:var(--court-soft)}
+  .trow.cancel .line .t{text-decoration:line-through;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <div class="brand">
+      <div class="crest">🏀</div>
+      <div><div class="bn">עירוני רעננה</div><div class="bs">מחלקת הכדורסל</div></div>
+    </div>
+    <div class="record">
+      <div class="rc w"><b>12</b><span>נצחונות</span></div>
+      <div class="rc l"><b>4</b><span>הפסדים</span></div>
+      <div class="rc"><b>3</b><span>מקום בליגה</span></div>
+    </div>
+    <div class="navlbl">תצוגה</div>
+    <div class="nav on"><span class="ic">📋</span> לו"ז קבוצה</div>
+    <div class="nav"><span class="ic">📍</span> לפי אולמות</div>
+    <div class="nav"><span class="ic">📅</span> תצוגה יומית</div>
+    <div class="navlbl">המועדון</div>
+    <div class="nav"><span class="ic">🏆</span> משחקי ליגה</div>
+    <div class="nav"><span class="ic">🔔</span> עדכונים</div>
+    <div class="nav"><span class="ic">🧭</span> אולמות ומיקומים</div>
+    <div class="side-foot">
+      <div class="navlbl" style="padding-inline:0">קבוצה</div>
+      <select class="teamsel"><option>עתודה 1 — אבי כהן</option><option>נוער על — דני לוי</option><option>קדטים א' — שרון</option></select>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <div>
+        <div class="crumb">עתודה 1 · מחזור 22 · 14–20 ביוני</div>
+        <h1>לו"ז שבועי</h1>
+      </div>
+      <div class="head-actions">
+        <button class="ibtn">🌐 עברית</button>
+        <button class="ibtn">⚙ הגדרות</button>
+      </div>
+    </div>
+
+    <!-- STATS STRIP -->
+    <div class="stats">
+      <div class="stat"><b class="num">5</b><span>אימונים השבוע</span></div>
+      <div class="stat g"><b class="num">1</b><span>משחק ליגה</span></div>
+      <div class="stat h"><b class="num">11.5</b><span>שעות מגרש</span></div>
+      <div class="stat c"><b class="num">2</b><span>אולמות</span></div>
+    </div>
+
+    <div class="note">🏀 <span><b>משחק בית</b> מול הפועל ת״א — שבת 19:00 · הרשמה למחנה הקיץ נפתחה</span></div>
+
+    <div class="next">
+      <div class="next-l">
+        <span class="ntag"><span class="dot"></span> האימון הקרוב · היום</span>
+        <div class="time num">14:30–16:00</div>
+        <div class="when">יום ראשון, 14 ביוני</div>
+        <div class="facts">
+          <div><div class="k">מאמן</div><div class="v">אבי כהן</div></div>
+          <div><div class="k">מיקום</div><div class="v">אולם זמר</div></div>
+          <div><div class="k">סוג</div><div class="v">אימון קבוצתי</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn wa">💬 שיתוף בוואטסאפ</button>
+          <button class="btn primary">📲 יומן מתעדכן</button>
+          <button class="btn">📅 שמור ליומן</button>
+        </div>
+      </div>
+      <div class="next-r">
+        <span class="ntag" style="background:var(--accent)">📍 מיקום</span>
+        <h4>אולם זמר</h4>
+        <p>רעננה · ראשון 14/6 · 14:30</p>
+        <div class="mapmini"><span class="pin"></span></div>
+        <a class="navlink" href="#">פתיחת ניווט במפות ←</a>
+      </div>
+    </div>
+
+    <div class="sectit">
+      <h2>כל האימונים השבוע</h2>
+      <div class="seg"><button class="on">השבוע</button><button>הבא</button></div>
+    </div>
+    <div class="table">
+      <div class="trow today game">
+        <div class="jersey num">01</div>
+        <div class="d">ראשון<small>14 ביוני</small></div>
+        <div class="sess">
+          <div class="line"><span class="t num">14:30–16:00</span><span class="l">אולם זמר · אימון</span></div>
+          <div class="line"><span class="t num">19:00</span><span class="l">היכל רעננה · מול הפועל ת״א</span></div>
+        </div>
+        <span class="pill p-game st">🏀 משחק</span>
+      </div>
+      <div class="trow">
+        <div class="jersey num">02</div>
+        <div class="d">שני<small>15 ביוני</small></div>
+        <div class="sess"><div class="line"><span class="t num">17:00–18:30</span><span class="l">אולם מטרו ווסט</span></div></div>
+        <span></span>
+      </div>
+      <div class="trow">
+        <div class="jersey num">03</div>
+        <div class="d">שלישי<small>16 ביוני</small></div>
+        <div class="sess">
+          <div class="line"><span class="t num">16:00–17:30</span><span class="l">אולם זמר</span></div>
+          <div class="line"><span class="t num">18:00–19:00</span><span class="l">חדר כושר</span></div>
+        </div>
+        <span class="pill p-chg st">שינוי</span>
+      </div>
+      <div class="trow">
+        <div class="jersey num">04</div>
+        <div class="d">רביעי<small>17 ביוני</small></div>
+        <div class="sess"><div class="line"><span class="t num">17:00–18:30</span><span class="l">אולם מטרו ווסט</span></div></div>
+        <span></span>
+      </div>
+      <div class="trow cancel">
+        <div class="jersey num">05</div>
+        <div class="d">חמישי<small>18 ביוני</small></div>
+        <div class="sess"><div class="line"><span class="t num">16:30–18:00</span><span class="l">אולם זמר</span></div></div>
+        <span class="pill p-cancel st">בוטל</span>
+      </div>
+      <div class="trow">
+        <div class="jersey num">06</div>
+        <div class="d">שבת<small>20 ביוני</small></div>
+        <div class="sess"><div class="line"><span class="t num">10:00–11:30</span><span class="l">אולם זמר</span></div></div>
+        <span></span>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squadio · Agenda (Sport)</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&family=Saira+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f5f5f0; --surface:#ffffff;
+    --line:#ebe9e2; --line2:#e0ddd4;
+    --ink:#21221d; --muted:#6d6c63; --faint:#9a988d;
+    --accent:#0e7c5a; --accent-d:#0a5e44; --accent-l:#15a274; --accent-soft:#e4f4ee;
+    --court:#d2691e; --court-soft:#f8ece0;
+    --amber:#9a7b13; --amber-soft:#f3eedb; --red:#b3414f; --red-soft:#f6e7e9;
+    --radius:18px;
+    --shadow:0 1px 2px rgba(40,40,30,.04), 0 10px 26px -18px rgba(40,40,30,.3);
+    --cond:'Saira Condensed',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+  .num{font-family:var(--cond);font-variant-numeric:tabular-nums}
+  .wrap{max-width:560px;margin:0 auto;padding:18px 16px 60px}
+
+  .top{display:flex;justify-content:space-between;align-items:center;padding:6px 4px 14px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .crest{width:46px;height:46px;border-radius:13px;background:var(--accent);display:grid;place-items:center;color:#fff;font-size:1.3rem;position:relative}
+  .crest::after{content:"";position:absolute;inset:0;border-radius:13px;border-bottom:3px solid var(--court)}
+  .bn{font-weight:800;font-size:1.12rem;line-height:1}
+  .bs{font-size:.75rem;color:var(--muted);margin-top:3px}
+  .icob{width:38px;height:38px;border:1px solid var(--line2);background:var(--surface);border-radius:11px;display:grid;place-items:center;cursor:pointer;font-size:.95rem}
+  .topr{display:flex;gap:8px}
+
+  .teamsel{width:100%;margin-top:4px;border:1px solid var(--line2);background:var(--surface);border-radius:13px;padding:13px 16px;
+    font-family:inherit;font-weight:800;font-size:1rem;color:var(--ink);cursor:pointer;box-shadow:var(--shadow)}
+  .seg{display:flex;gap:6px;margin-top:12px}
+  .seg button{flex:1;border:1px solid var(--line2);background:var(--surface);border-radius:11px;padding:10px;font-weight:700;font-size:.86rem;color:var(--muted);cursor:pointer}
+  .seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  /* week stats chips */
+  .stats{display:flex;gap:8px;margin-top:12px}
+  .stat{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 8px;text-align:center;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .stat::after{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+  .stat.g::after{background:var(--court)} .stat.h::after{background:var(--amber)}
+  .stat b{font-family:var(--cond);font-size:1.6rem;font-weight:800;line-height:1}
+  .stat span{display:block;font-size:.72rem;color:var(--muted);font-weight:600;margin-top:2px}
+
+  .note{margin-top:12px;display:flex;gap:9px;align-items:flex-start;background:var(--court-soft);border-radius:13px;padding:11px 14px;font-size:.87rem;color:#8a4710;font-weight:600}
+
+  /* next card */
+  .next{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .next-top{padding:20px 22px 18px;background:linear-gradient(135deg,var(--accent-l),var(--accent-d));color:#fff;position:relative;overflow:hidden}
+  /* faint court lines on hero */
+  .next-top::before{content:"";position:absolute;inset:0;opacity:.5;pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 120%, transparent 64px, rgba(255,255,255,.25) 64px, rgba(255,255,255,.25) 66px, transparent 66px),
+      linear-gradient(0deg, transparent calc(100% - 2px), rgba(255,255,255,.22) calc(100% - 2px))}
+  .next-top::after{content:"🏀";position:absolute;left:-12px;top:-18px;font-size:5.5rem;opacity:.16}
+  .next-top>*{position:relative}
+  .lbl{font-family:var(--cond);font-size:.92rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.95}
+  .time{font-family:var(--cond);font-size:3rem;font-weight:800;letter-spacing:0;margin:6px 0 2px;line-height:1}
+  .when{font-weight:600;opacity:.92}
+  .next-body{padding:16px 22px 18px}
+  .facts{display:flex;gap:24px}
+  .facts .k{font-size:.72rem;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .facts .v{font-weight:800;font-size:1rem;margin-top:2px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:18px}
+  .btn{border:1px solid var(--line2);background:var(--surface);border-radius:12px;padding:12px;font-weight:700;font-size:.88rem;cursor:pointer;display:flex;gap:7px;align-items:center;justify-content:center;color:var(--ink)}
+  .btn.wa{grid-column:1/-1;background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* agenda list */
+  .sec{margin:26px 4px 6px;font-family:var(--cond);font-size:1.05rem;font-weight:800;letter-spacing:.06em;color:var(--ink);text-transform:uppercase}
+  .day{margin-top:14px}
+  .dayhead{display:flex;align-items:center;gap:11px;margin-bottom:9px}
+  .dayhead .jn{font-family:var(--cond);font-size:1.35rem;font-weight:800;color:transparent;-webkit-text-stroke:1.4px var(--line2);line-height:1;min-width:26px;text-align:center}
+  .dayhead.today .jn{-webkit-text-stroke-color:var(--accent);color:var(--accent-soft)}
+  .dayhead .dn{font-weight:800;font-size:1.02rem}
+  .dayhead .dd{font-size:.82rem;color:var(--muted)}
+  .dayhead.today .dd{color:var(--accent);font-weight:700}
+  .dayhead .rule{flex:1;height:1px;background:var(--line)}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:8px;
+    display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--accent)}
+  .card.game::before{background:var(--court)} .card.cancel::before{background:var(--red)}
+  .card .t{font-family:var(--cond);font-weight:800;font-size:1.3rem;min-width:104px}
+  .card .l{color:var(--muted);font-size:.9rem;flex:1}
+  .chip{font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:7px}
+  .c-game{color:#fff;background:var(--court)}
+  .c-chg{color:var(--amber);background:var(--amber-soft)}
+  .c-cancel{color:var(--red);background:var(--red-soft)}
+  .card.game{border-color:#e8cdab}
+  .card.cancel{opacity:.62}
+  .card.cancel .t{text-decoration:line-through}
+
+  .roles{display:flex;justify-content:center;gap:6px;margin-top:26px}
+  .role{border:1px solid var(--line2);background:var(--surface);border-radius:999px;padding:9px 15px;font-weight:700;font-size:.82rem;color:var(--muted);cursor:pointer}
+  .role.on{background:var(--accent);border-color:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="crest">🏀</div>
+      <div><div class="bn">עירוני רעננה</div><div class="bs">מחלקת הכדורסל · לו"ז שבועי</div></div>
+    </div>
+    <div class="topr"><button class="icob">🌐</button><button class="icob">⚙</button></div>
+  </div>
+
+  <select class="teamsel"><option>עתודה 1 — אבי כהן</option><option>נוער על — דני לוי</option><option>קדטים א' — שרון</option></select>
+  <div class="seg"><button class="on">לו"ז קבוצה</button><button>אולמות</button><button>יומי</button></div>
+
+  <div class="stats">
+    <div class="stat"><b class="num">5</b><span>אימונים</span></div>
+    <div class="stat g"><b class="num">1</b><span>משחק</span></div>
+    <div class="stat h"><b class="num">11.5</b><span>שעות מגרש</span></div>
+  </div>
+
+  <div class="note">🏀 משחק בית מול הפועל ת״א — שבת 19:00 · הרשמה למחנה הקיץ נפתחה</div>
+
+  <div class="next">
+    <div class="next-top">
+      <div class="lbl">● האימון הקרוב · היום</div>
+      <div class="time num">14:30–16:00</div>
+      <div class="when">יום ראשון, 14 ביוני · אולם זמר</div>
+    </div>
+    <div class="next-body">
+      <div class="facts">
+        <div><div class="k">מאמן</div><div class="v">אבי כהן</div></div>
+        <div><div class="k">מיקום</div><div class="v">אולם זמר, רעננה</div></div>
+      </div>
+      <div class="actions">
+        <button class="btn wa">💬 שיתוף בוואטסאפ</button>
+        <button class="btn">📲 יומן מתעדכן</button>
+        <button class="btn">🧭 ניווט</button>
+        <button class="btn">📅 שמור ליומן</button>
+        <button class="btn">🔔 עדכונים</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">לו"ז שבועי מלא</div>
+
+  <div class="day">
+    <div class="dayhead today"><span class="jn num">01</span><span class="dn">ראשון</span><span class="dd">14 ביוני · היום</span><span class="rule"></span></div>
+    <div class="card game"><span class="t num">14:30–16:00</span><span class="l">אולם זמר</span></div>
+    <div class="card game"><span class="t num">19:00</span><span class="l">היכל רעננה · מול הפועל ת״א</span><span class="chip c-game">🏀 משחק</span></div>
+  </div>
+
+  <div class="day">
+    <div class="dayhead"><span class="jn num">02</span><span class="dn">שני</span><span class="dd">15 ביוני</span><span class="rule"></span></div>
+    <div class="card"><span class="t num">17:00–18:30</span><span class="l">אולם מטרו ווסט</span></div>
+  </div>
+
+  <div class="day">
+    <div class="dayhead"><span class="jn num">03</span><span class="dn">שלישי</span><span class="dd">16 ביוני</span><span class="rule"></span></div>
+    <div class="card"><span class="t num">16:00–17:30</span><span class="l">אולם זמר</span></div>
+    <div class="card"><span class="t num">18:00–19:00</span><span class="l">חדר כושר</span><span class="chip c-chg">שינוי</span></div>
+  </div>
+
+  <div class="day">
+    <div class="dayhead"><span class="jn num">04</span><span class="dn">רביעי</span><span class="dd">17 ביוני</span><span class="rule"></span></div>
+    <div class="card"><span class="t num">17:00–18:30</span><span class="l">אולם מטרו ווסט</span></div>
+  </div>
+
+  <div class="day">
+    <div class="dayhead"><span class="jn num">05</span><span class="dn">חמישי</span><span class="dd">18 ביוני</span><span class="rule"></span></div>
+    <div class="card cancel"><span class="t num">16:30–18:00</span><span class="l">אולם זמר</span><span class="chip c-cancel">בוטל</span></div>
+  </div>
+
+  <div class="day">
+    <div class="dayhead"><span class="jn num">06</span><span class="dn">שבת</span><span class="dd">20 ביוני</span><span class="rule"></span></div>
+    <div class="card"><span class="t num">10:00–11:30</span><span class="l">אולם זמר</span></div>
+  </div>
+
+  <div class="roles">
+    <button class="role on">הורים</button><button class="role">מאמן</button><button class="role">ניהול</button><button class="role">מנהל</button>
+  </div>
+</div>
+</body>
+</html>

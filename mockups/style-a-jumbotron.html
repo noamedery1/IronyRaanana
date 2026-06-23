@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Squadio · JUMBOTRON</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#05070d; --steel:#0c111d; --panel:#11192b;
+    --led-green:#39ff14; --led-amber:#ffb300; --led-red:#ff2e4d; --led-cyan:#22e6ff;
+    --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.16);
+    --text:#eaf1ff; --dim:rgba(234,241,255,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Heebo',sans-serif;color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1200px 500px at 50% -200px,rgba(34,230,255,.12),transparent 60%),
+      radial-gradient(900px 500px at 50% 120%,rgba(57,255,20,.06),transparent 60%),
+      linear-gradient(#05070d,#070b15);overflow-x:hidden}
+  /* stadium floor */
+  body::before{content:"";position:fixed;left:50%;bottom:-10%;width:160%;height:55%;transform:translateX(-50%) perspective(700px) rotateX(62deg);
+    background:repeating-linear-gradient(0deg,transparent 0 46px,rgba(34,230,255,.10) 46px 48px),
+      repeating-linear-gradient(90deg,transparent 0 46px,rgba(34,230,255,.10) 46px 48px);
+    z-index:0;pointer-events:none;mask:linear-gradient(0deg,#000,transparent 75%)}
+  /* scanlines */
+  body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 4px)}
+  .wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:18px 18px 64px}
+
+  /* LED dot-matrix ticker */
+  .ledbar{border:2px solid #1a2740;border-radius:10px;background:#070d1a;padding:9px 14px;overflow:hidden;display:flex;gap:12px;align-items:center;
+    box-shadow:inset 0 0 22px rgba(34,230,255,.18)}
+  .ledbar .lab{font-family:'Orbitron';font-weight:900;font-size:.7rem;color:var(--led-amber);letter-spacing:.12em;flex:none;text-shadow:0 0 8px var(--led-amber)}
+  .ledbar .roll{display:flex;gap:42px;white-space:nowrap;animation:roll 22s linear infinite;
+    font-family:'Rajdhani';font-weight:700;letter-spacing:.04em;color:var(--led-green);text-shadow:0 0 9px rgba(57,255,20,.6)}
+  @keyframes roll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* top brand */
+  .top{display:flex;justify-content:space-between;align-items:center;margin:14px 0}
+  .brand{display:flex;align-items:center;gap:12px}
+  .crest{width:50px;height:50px;border-radius:12px;border:2px solid var(--led-cyan);display:grid;place-items:center;font-size:1.4rem;
+    background:#091327;box-shadow:0 0 18px rgba(34,230,255,.45),inset 0 0 14px rgba(34,230,255,.25)}
+  .bn{font-family:'Orbitron';font-weight:900;font-size:1.2rem;letter-spacing:.02em}
+  .bs{font-size:.78rem;color:var(--dim);letter-spacing:.05em}
+  .topbtns{display:flex;gap:8px}
+  .tb{border:2px solid #1c2a44;background:#0a1426;color:var(--text);border-radius:9px;padding:8px 12px;font-family:'Rajdhani';font-weight:700;cursor:pointer}
+
+  /* SCOREBOARD HERO */
+  .board{margin-top:14px;border:3px solid #1d2c49;border-radius:18px;background:
+      linear-gradient(180deg,#0b1426,#070d1a);padding:6px;box-shadow:0 0 60px rgba(34,230,255,.12),0 30px 60px -30px #000}
+  .board-inner{border:1px solid var(--line);border-radius:13px;background:#060b16;padding:22px 24px;position:relative;overflow:hidden}
+  .board-inner::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 200px at 50% -40px,rgba(34,230,255,.16),transparent)}
+  .board-top{display:flex;justify-content:space-between;align-items:center;position:relative}
+  .live{display:flex;align-items:center;gap:8px;font-family:'Orbitron';font-weight:900;font-size:.78rem;color:var(--led-red);letter-spacing:.12em}
+  .live .dot{width:9px;height:9px;border-radius:50%;background:var(--led-red);box-shadow:0 0 10px var(--led-red);animation:blink 1.1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .nextlbl{font-family:'Orbitron';font-weight:700;font-size:.74rem;color:var(--led-amber);letter-spacing:.14em}
+  .scoreline{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;margin-top:14px;position:relative}
+  .side{text-align:center}
+  .side .role{font-family:'Rajdhani';font-weight:700;font-size:.85rem;color:var(--led-cyan);letter-spacing:.16em}
+  .side .nm{font-family:'Orbitron';font-weight:900;font-size:1.5rem;margin-top:4px;text-shadow:0 0 14px rgba(34,230,255,.35)}
+  .side .sub{font-size:.78rem;color:var(--dim);margin-top:3px}
+  .clock{font-family:'Orbitron';font-weight:900;font-size:clamp(2.4rem,7vw,4rem);color:var(--led-green);
+    text-shadow:0 0 16px rgba(57,255,20,.65),0 0 40px rgba(57,255,20,.25);white-space:nowrap;letter-spacing:.02em}
+  .vs{font-family:'Orbitron';font-weight:900;color:var(--led-amber);font-size:1.1rem;text-shadow:0 0 10px var(--led-amber)}
+  .board-foot{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;position:relative;justify-content:center}
+  .bbtn{border:2px solid #22344f;border-radius:11px;padding:11px 16px;font-family:'Rajdhani';font-weight:700;font-size:1rem;cursor:pointer;
+    display:flex;gap:8px;align-items:center;background:#0a1426;color:var(--text);letter-spacing:.03em;transition:.15s}
+  .bbtn:hover{transform:translateY(-2px)}
+  .bbtn.wa{border-color:var(--led-green);color:var(--led-green);box-shadow:0 0 18px rgba(57,255,20,.25)}
+  .bbtn.cal{border-color:var(--led-cyan);color:var(--led-cyan);box-shadow:0 0 18px rgba(34,230,255,.25)}
+
+  /* controls */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:18px}
+  .select{background:#0a1426;border:2px solid #1c2a44;color:var(--text);border-radius:11px;padding:12px 16px;font-family:'Rajdhani';font-weight:700;font-size:1.05rem;min-width:230px}
+  .tabs{display:flex;gap:6px}
+  .tab{border:2px solid #1c2a44;background:#0a1426;color:var(--dim);padding:9px 15px;border-radius:10px;font-family:'Rajdhani';font-weight:700;cursor:pointer;letter-spacing:.04em}
+  .tab.on{border-color:var(--led-amber);color:var(--led-amber);box-shadow:0 0 16px rgba(255,179,0,.3)}
+
+  /* week as scoreboard rows */
+  .sec{font-family:'Orbitron';font-weight:900;font-size:1.1rem;letter-spacing:.1em;margin:28px 2px 14px;color:var(--text);display:flex;gap:10px;align-items:center}
+  .sec .bar{width:6px;height:22px;background:var(--led-cyan);box-shadow:0 0 12px var(--led-cyan)}
+  .rows{display:flex;flex-direction:column;gap:9px}
+  .row{display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:14px;border:1px solid var(--line);border-left:none;
+    background:linear-gradient(90deg,#0a1224,#070d18);border-radius:12px;padding:13px 16px;position:relative;overflow:hidden}
+  .row::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--led-cyan);box-shadow:0 0 12px var(--led-cyan)}
+  .row .day{font-family:'Rajdhani';font-weight:700}
+  .row .day b{display:block;font-size:1.15rem;letter-spacing:.05em}
+  .row .day span{font-size:.78rem;color:var(--dim)}
+  .row .info .time{font-family:'Orbitron';font-weight:700;font-size:1.15rem;color:var(--led-green);text-shadow:0 0 10px rgba(57,255,20,.4)}
+  .row .info .loc{font-size:.86rem;color:var(--dim);margin-top:2px}
+  .pin{font-family:'Rajdhani';font-weight:700;font-size:.78rem;padding:6px 12px;border-radius:8px;letter-spacing:.06em;border:2px solid}
+  .p-game{color:var(--led-amber);border-color:var(--led-amber);box-shadow:0 0 14px rgba(255,179,0,.3)}
+  .p-chg{color:var(--led-cyan);border-color:var(--led-cyan)}
+  .p-cancel{color:var(--led-red);border-color:var(--led-red)}
+  .row.game::before{background:var(--led-amber);box-shadow:0 0 14px var(--led-amber)}
+  .row.cancel{opacity:.5}
+  .row.cancel .time{text-decoration:line-through;color:var(--dim);text-shadow:none}
+
+  .roles{display:flex;justify-content:center;gap:7px;margin-top:30px}
+  .role{border:2px solid #1c2a44;background:#0a1426;color:var(--dim);padding:9px 16px;border-radius:999px;font-family:'Rajdhani';font-weight:700;cursor:pointer}
+  .role.on{border-color:var(--led-green);color:var(--led-green);box-shadow:0 0 14px rgba(57,255,20,.3)}
+  .float{position:fixed;bottom:20px;inset-inline-start:20px;border:2px solid var(--led-amber);background:#0a1426;color:var(--led-amber);
+    border-radius:999px;padding:11px 18px;font-family:'Rajdhani';font-weight:700;cursor:pointer;box-shadow:0 0 20px rgba(255,179,0,.35)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ledbar">
+    <span class="lab">◉ LIVE</span>
+    <div class="roll">
+      <span>★ משחק בית מול הפועל ת״א — שבת 19:00</span><span>★ הרשמה למחנה הקיץ נפתחה</span><span>★ אין אימון ביום שישי</span>
+      <span>★ משחק בית מול הפועל ת״א — שבת 19:00</span><span>★ הרשמה למחנה הקיץ נפתחה</span><span>★ אין אימון ביום שישי</span>
+    </div>
+  </div>
+
+  <div class="top">
+    <div class="brand">
+      <div class="crest">🏀</div>
+      <div><div class="bn">עירוני רעננה</div><div class="bs">מחלקת הכדורסל · לו"ז שבועי</div></div>
+    </div>
+    <div class="topbtns"><button class="tb">🌐 עב</button><button class="tb">⚙</button></div>
+  </div>
+
+  <!-- SCOREBOARD -->
+  <div class="board">
+    <div class="board-inner">
+      <div class="board-top">
+        <span class="live"><span class="dot"></span> NEXT UP</span>
+        <span class="nextlbl">עתודה 1 · האימון הקרוב</span>
+      </div>
+      <div class="scoreline">
+        <div class="side">
+          <div class="role">TEAM</div>
+          <div class="nm">עתודה 1</div>
+          <div class="sub">אבי כהן · מאמן</div>
+        </div>
+        <div style="text-align:center">
+          <div class="clock">14:30-16:00</div>
+          <div class="vs">— ראשון 14/6 · היום —</div>
+        </div>
+        <div class="side">
+          <div class="role">VENUE</div>
+          <div class="nm">אולם זמר</div>
+          <div class="sub">רעננה</div>
+        </div>
+      </div>
+      <div class="board-foot">
+        <button class="bbtn wa">💬 שיתוף בוואטסאפ</button>
+        <button class="bbtn cal">📲 יומן מתעדכן</button>
+        <button class="bbtn">📅 שמור ליומן</button>
+        <button class="bbtn">🔔 עדכונים</button>
+        <button class="bbtn">🧭 ניווט</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <select class="select"><option>עתודה 1 — אבי כהן</option><option>נוער על — דני לוי</option><option>קדטים א' — שרון</option></select>
+    <div class="tabs"><button class="tab on">לו"ז קבוצה</button><button class="tab">📍 אולמות</button><button class="tab">📅 יומי</button></div>
+  </div>
+
+  <div class="sec"><span class="bar"></span> GAME SCHEDULE · לו"ז שבועי</div>
+  <div class="rows">
+    <div class="row game">
+      <div class="day"><b>ראשון</b><span>14/6</span></div>
+      <div class="info"><div class="time">19:00</div><div class="loc">היכל רעננה · מול הפועל ת״א</div></div>
+      <span class="pin p-game">🏀 משחק</span>
+    </div>
+    <div class="row">
+      <div class="day"><b>ראשון</b><span>14/6</span></div>
+      <div class="info"><div class="time">14:30-16:00</div><div class="loc">אולם זמר</div></div>
+    </div>
+    <div class="row">
+      <div class="day"><b>שני</b><span>15/6</span></div>
+      <div class="info"><div class="time">17:00-18:30</div><div class="loc">אולם מטרו ווסט</div></div>
+    </div>
+    <div class="row">
+      <div class="day"><b>שלישי</b><span>16/6</span></div>
+      <div class="info"><div class="time">18:00-19:00</div><div class="loc">חדר כושר</div></div>
+      <span class="pin p-chg">⚠ שינוי</span>
+    </div>
+    <div class="row">
+      <div class="day"><b>רביעי</b><span>17/6</span></div>
+      <div class="info"><div class="time">17:00-18:30</div><div class="loc">אולם מטרו ווסט</div></div>
+    </div>
+    <div class="row cancel">
+      <div class="day"><b>חמישי</b><span>18/6</span></div>
+      <div class="info"><div class="time">16:30-18:00</div><div class="loc">אולם זמר</div></div>
+      <span class="pin p-cancel">✕ בוטל</span>
+    </div>
+    <div class="row">
+      <div class="day"><b>שבת</b><span>20/6</span></div>
+      <div class="info"><div class="time">10:00-11:30</div><div class="loc">אולם זמר</div></div>
+    </div>
+  </div>
+
+  <div class="roles">
+    <button class="role on">👨‍👩‍👧 הורים</button><button class="role">🏀 מאמן</button><button class="role">📋 ניהול</button><button class="role">⚙ מנהל</button>
+  </div>
+</div>
+<button class="float">💡 הצעה לשיפור</button>
+</body>
+</html>
