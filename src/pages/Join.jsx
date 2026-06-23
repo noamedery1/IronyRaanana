@@ -69,7 +69,9 @@ export default function Join() {
                     </button>
                 </form>
                 {error && <div style={{ color: '#f87171', marginTop: '1rem', fontSize: '0.9rem' }}>{error}</div>}
-                <p style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '1.2rem', lineHeight: 1.5 }}>בהצטרפות תקבלו עדכונים על הלו"ז הרלוונטי אליכם.</p>
+                <p style={{ color: '#64748b', fontSize: '0.72rem', marginTop: '1.2rem', lineHeight: 1.5 }}>
+                    בהצטרפות תקבלו עדכונים על הלו"ז הרלוונטי אליכם, ואתם מאשרים את <a href="/privacy.html" target="_blank" rel="noopener" style={{ color: '#5eead4' }}>מדיניות הפרטיות</a>.
+                </p>
             </div>
         </div>
     );
