@@ -48,6 +48,12 @@ export function getClubSlug() {
     return DEFAULT_CLUB;
 }
 
+// Strict check: is this URL segment a real, registered club? (No raanana fallback.)
+// Used to gate routes — a link without a valid club shows "not connected to a club".
+export function isKnownClub(slug) {
+    return Boolean(slug && !RESERVED.has(slug) && REGISTRY[slug]);
+}
+
 export function getActiveClub() {
     return REGISTRY[getClubSlug()] || REGISTRY[DEFAULT_CLUB];
 }

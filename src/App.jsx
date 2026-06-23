@@ -1,32 +1,40 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import PublicSchedule from './pages/PublicSchedule';
 import PublicScheduleWomen from './pages/PublicScheduleWomen';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
-import WomenDashboard from './pages/WomenDashboard';
 import TrainerPortal from './pages/TrainerPortal';
 import Join from './pages/Join';
 import SuperUser from './pages/SuperUser';
+import NoClub from './pages/NoClub';
 import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
 import AdminSwitcher from './components/AdminSwitcher';
 import { useI18n } from './i18n.jsx';
-import { DEFAULT_CLUB } from './clubConfig.js';
+import { isKnownClub } from './clubConfig.js';
 import './App.css';
 
-// Launch redirect: trainer devices → trainer portal; everyone else → public schedule.
+// Root ("/") → the product sales page (the server also serves it; this covers in-app nav).
 const RootRedirect = () => {
-  const dest = localStorage.getItem('trainerToken') ? `/${DEFAULT_CLUB}/trainer` : `/${DEFAULT_CLUB}`;
-  return <Navigate to={dest} replace />;
+  window.location.replace('/sales-landing.html');
+  return null;
 };
 
-// Protected Route Component
+// Gate every club-scoped route: the URL must carry a real, registered club slug.
+// A link without a valid club (e.g. /admin, an unknown slug) shows "not connected to a club".
+const RequireClub = ({ children }) => {
+  const { club } = useParams();
+  if (!isKnownClub(club)) return <NoClub />;
+  return children;
+};
+
+// Manager dashboard guard — must be inside a known club AND logged in.
 const ProtectedRoute = ({ children }) => {
+  const { club } = useParams();
+  if (!isKnownClub(club)) return <NoClub />;
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
-  if (!isAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
+  if (!isAdmin) return <Navigate to={`/${club}/admin`} replace />;
   return children;
 };
 
@@ -37,39 +45,17 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Launch (start_url "/"): a device where a trainer logged in opens straight to
-            the trainer portal; everyone else lands on the public schedule. Navigating to
-            /raanana directly still shows the parent view (so a trainer can view it). */}
+        {/* Root → product sales page. Clubs are only reachable via /<slug>. */}
         <Route path="/" element={<RootRedirect />} />
-        <Route path="/women" element={<Navigate to={`/${DEFAULT_CLUB}/women`} replace />} />
 
-        {/* Superuser console (general manager) */}
+        {/* Superuser console (system owner) */}
         <Route path="/superuser" element={<SuperUser />} />
 
-        {/* Admin (cross-club for now) */}
-        <Route path="/admin" element={<AdminLogin />} />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/dashboard-women"
-          element={
-            <ProtectedRoute>
-              <WomenDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Invite-based registration (parent/trainee per team, or operator) */}
-        <Route path="/:club/join" element={<Join />} />
+        {/* Invite-based registration — only valid inside a real club link */}
+        <Route path="/:club/join" element={<RequireClub><Join /></RequireClub>} />
 
         {/* Per-club manager dashboard — each manager manages only their own club */}
-        <Route path="/:club/admin" element={<AdminLogin />} />
+        <Route path="/:club/admin" element={<RequireClub><AdminLogin /></RequireClub>} />
         <Route
           path="/:club/admin/dashboard"
           element={
@@ -80,12 +66,13 @@ function App() {
         />
 
         {/* Per-club public routes — club slug is the first path segment */}
-        <Route path="/:club" element={<PublicSchedule />} />
-        <Route path="/:club/women" element={<PublicScheduleWomen />} />
-        <Route path="/:club/trainer" element={<TrainerPortal />} />
+        <Route path="/:club" element={<RequireClub><PublicSchedule /></RequireClub>} />
+        <Route path="/:club/women" element={<RequireClub><PublicScheduleWomen /></RequireClub>} />
+        <Route path="/:club/trainer" element={<RequireClub><TrainerPortal /></RequireClub>} />
 
-        {/* Legacy unprefixed trainer link */}
-        <Route path="/trainer" element={<Navigate to={`/${DEFAULT_CLUB}/trainer`} replace />} />
+        {/* Anything else — including legacy un-prefixed links (/admin, /trainer, /women)
+            and unknown slugs — is "not connected to a club". */}
+        <Route path="*" element={<NoClub />} />
       </Routes>
 
       {/* Floating Feedback Button - Shows on all pages (or conditionally if needed) */}
