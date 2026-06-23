@@ -13,6 +13,7 @@ import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmai
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
 import { requireManager } from './server/auth.js';
+import { pool } from './server/db.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveAsset, getAsset, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -47,6 +48,23 @@ if (pushReady) {
 }
 
 app.use(express.json({ limit: '6mb' })); // larger to allow base64 icon uploads
+
+// Diagnostics: confirms the server is connected to Postgres and that migrations ran.
+// Open <APP_BASE_URL>/api/health — no secrets are exposed (host only, no credentials).
+app.get('/api/health', async (req, res) => {
+    const out = { ok: false, db: false, migrationsRan: false, clubs: 0, dbHost: null, pushReady };
+    try { out.dbHost = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).host : '(DATABASE_URL not set)'; }
+    catch { out.dbHost = '(unparseable DATABASE_URL)'; }
+    try {
+        await pool.query('SELECT 1');
+        out.db = true;
+        const r = await pool.query("SELECT to_regclass('public.pgmigrations') IS NOT NULL AS pm, to_regclass('public.clubs') IS NOT NULL AS clubs");
+        out.migrationsRan = Boolean(r.rows[0].pm && r.rows[0].clubs);
+        if (out.migrationsRan) out.clubs = (await pool.query('SELECT count(*)::int n FROM clubs')).rows[0].n;
+        out.ok = out.db && out.migrationsRan;
+    } catch (e) { out.error = e.message; }
+    res.status(out.ok ? 200 : 503).json(out);
+});
 
 // ===== Superuser auth =====
 const SUPERUSER_PASSWORD = process.env.SUPERUSER_PASSWORD || '';
