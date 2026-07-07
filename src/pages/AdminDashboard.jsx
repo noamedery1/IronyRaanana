@@ -6,6 +6,7 @@ import Preview from '../components/Preview';
 import HallsConfig from '../components/HallsConfig';
 import FloatingMessage from '../components/FloatingMessage';
 import MessageCenter from '../components/MessageCenter';
+import SocialPostBroadcast from '../components/SocialPostBroadcast';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
 import PublishPanel from '../components/PublishPanel';
@@ -614,6 +615,8 @@ const AdminDashboard = () => {
                 return <FloatingMessage clubSlug={getActiveClub().slug} />;
             case 'trainerPush':
                 return <MessageCenter />;
+            case 'socialPost':
+                return <SocialPostBroadcast />;
             case 'invites':
                 return <InviteLinks />;
             case 'trainersAdmin':
@@ -696,6 +699,9 @@ const AdminDashboard = () => {
                         </button>
                         <button style={menuButtonStyle(activeTab === 'trainerPush')} onClick={() => selectTab('trainerPush')}>
                             📢 הודעות
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'socialPost')} onClick={() => selectTab('socialPost')}>
+                            📱 פרסום ברשתות
                         </button>
                         <button style={menuButtonStyle(activeTab === 'invites')} onClick={() => selectTab('invites')}>
                             🔗 לינקי הזמנה
