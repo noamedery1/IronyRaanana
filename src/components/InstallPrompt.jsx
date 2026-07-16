@@ -19,6 +19,11 @@ export default function InstallPrompt() {
 
     if (isStandalone()) return null; // already installed → nothing to do
 
+    // Install is a parent-facing action. Hide it on manager/superuser screens — its
+    // floating pill would otherwise overlap the admin sidebar menu.
+    const path = typeof window !== 'undefined' ? window.location.pathname : '';
+    if (/\/admin(\/|$)/.test(path) || path.startsWith('/superuser')) return null;
+
     const ios = isIOS();
     const tipText = ios ? t('install_ios') : t('install_manual');
     const club = getActiveClub();
