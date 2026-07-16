@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { authHeaders } from '../adminApi.js';
+import { venue, venues } from '../sportLabels.js';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -927,7 +928,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             const hall = findFreeHallAt(col, row, startMin, endMin);
             if (hall) {
                 return {
-                    text: `להעביר את "${detail.team}" לאולם "${hall}" באותה שעה (${formatTimeToken(range.start)}–${formatTimeToken(range.end)})`,
+                    text: `להעביר את "${detail.team}" ל${venue()} "${hall}" באותה שעה (${formatTimeToken(range.start)}–${formatTimeToken(range.end)})`,
                     row, col, newContent: rebuildContent(cell, hall, range.start, range.end)
                 };
             }
@@ -939,7 +940,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 const hall = findFreeHallAt(col, row, s, e);
                 if (hall) {
                     return {
-                        text: `להעביר את "${detail.team}" לשעה ${formatTimeToken(minsToTok(s))}–${formatTimeToken(minsToTok(e))} באולם "${hall}"`,
+                        text: `להעביר את "${detail.team}" לשעה ${formatTimeToken(minsToTok(s))}–${formatTimeToken(minsToTok(e))} ב${venue()} "${hall}"`,
                         row, col, newContent: rebuildContent(cell, hall, minsToTok(s), minsToTok(e))
                     };
                 }
@@ -1003,7 +1004,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         <>
             {selectedConflicts.length > 0 && (
                 <div className="cc-insp-warn">
-                    ⚠️ {selectedConflicts.map(c => c.reason === 'מאמן' ? `המאמן "${c.resource}" משובץ במקביל` : `האולם "${c.resource}" תפוס באותה שעה`).join(' · ')}
+                    ⚠️ {selectedConflicts.map(c => c.reason === 'מאמן' ? `המאמן "${c.resource}" משובץ במקביל` : `ה${venue()} "${c.resource}" תפוס באותה שעה`).join(' · ')}
                     <button className="cc-btn amber full" style={{ marginTop: '0.5rem' }} onClick={() => resolveConflict(selectedConflicts[0])}>🛠 פתור אוטומטית</button>
                 </div>
             )}
@@ -1057,15 +1058,15 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             </div>
 
             <div className="cc-field">
-                <label>אולם</label>
-                <input list="cc-halls" value={inspHall} onChange={e => setInspHall(e.target.value)} placeholder="שם אולם" />
+                <label>{venue()}</label>
+                <input list="cc-halls" value={inspHall} onChange={e => setInspHall(e.target.value)} placeholder={`שם ${venue()}`} />
                 <datalist id="cc-halls">
                     {knownHalls.map(h => <option key={h} value={h} />)}
                 </datalist>
             </div>
 
             <button className="cc-btn blue full" onClick={() => openHallPicker(selectedCell.rowIndex, selectedCell.colIndex, selectedCell.dayLabel, selectedCell.teamName, dataToShow[selectedCell.rowIndex]?.[selectedCell.colIndex] || '')}>
-                🔍 מצא אולם פנוי בשעה זו
+                🔍 מצא {venue()} פנוי בשעה זו
             </button>
 
             <div className="cc-insp-actions">
@@ -1081,7 +1082,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     if (!teams || teams.length === 0) {
         return (
             <div style={{ textAlign: 'center', color: 'var(--text-dim)', marginTop: '2rem' }}>
-                <p>אין עדיין קבוצות בטיוטה. ייבאו לו"ז קיים פעם אחת ב"⚙️ הגדרות וייבוא" כדי להתחיל — הקבוצות והאימונים ייטענו לכאן לעריכה.</p>
+                <p>אין עדיין קבוצות. הקימו קבוצות ב"👥 ניהול קבוצות" — הן יופיעו כאן כשורות ריקות מוכנות לשיבוץ.<br />
+                    (אפשר גם לייבא לו"ז קיים פעם אחת ב"⚙️ הגדרות וייבוא".)</p>
             </div>
         );
     }
@@ -1146,7 +1148,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                         {conflictDetails.map((c, i) => (
                             <div key={i} className="cc-alert">
                                 <span className="cc-alert-info" onClick={() => selectCell(c.rowIndex, c.colIndex, c.team, dayNameForIndex(c.dayIndex), dataToShow[c.rowIndex]?.[c.colIndex] || '')}>
-                                    <b>{c.team}</b> · {dayNameForIndex(c.dayIndex)} — {c.reason === 'מאמן' ? `מאמן "${c.resource}" משובץ במקביל` : `אולם "${c.resource}" תפוס באותה שעה`}
+                                    <b>{c.team}</b> · {dayNameForIndex(c.dayIndex)} — {c.reason === 'מאמן' ? `מאמן "${c.resource}" משובץ במקביל` : `${venue()} "${c.resource}" תפוס באותה שעה`}
                                 </span>
                                 <button className="cc-alert-fix" onClick={() => resolveConflict(c)}>🛠 פתור</button>
                             </div>
@@ -1322,7 +1324,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 <div className="cc-modal-overlay">
                     <div className="cc-modal">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h4 style={{ margin: 0 }}>בחירת אולם פנוי</h4>
+                            <h4 style={{ margin: 0 }}>בחירת {venue()} פנוי</h4>
                             <button onClick={closeHallPicker} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text)' }}>✕</button>
                         </div>
                         <div style={{ marginTop: '0.6rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
@@ -1335,16 +1337,16 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                             <input type="time" value={hallEndTime} onChange={(e) => setHallEndTime(e.target.value)} className="cc-time" />
                         </div>
                         <div style={{ marginTop: '1rem' }}>
-                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#34d399' }}>אולמות פנויים ({hallAvailability.available.length})</h5>
+                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#34d399' }}>{venues()} פנויים ({hallAvailability.available.length})</h5>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 {hallAvailability.available.map((item) => (
                                     <button key={item.hall} onClick={() => applyHallToTargetCell(item.hall)} className="cc-hall-free">{item.hall}</button>
                                 ))}
-                                {hallAvailability.available.length === 0 && <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>אין אולמות פנויים בטווח שנבחר.</div>}
+                                {hallAvailability.available.length === 0 && <div style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>אין {venues()} פנויים בטווח שנבחר.</div>}
                             </div>
                         </div>
                         <div style={{ marginTop: '1rem' }}>
-                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#fbbf24' }}>אולמות תפוסים ({hallAvailability.unavailable.length})</h5>
+                            <h5 style={{ margin: '0 0 0.5rem 0', color: '#fbbf24' }}>{venues()} תפוסים ({hallAvailability.unavailable.length})</h5>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                 {hallAvailability.unavailable.map((item) => (
                                     <div key={item.hall} className="cc-hall-busy"><strong>{item.hall}</strong> — {item.reason}</div>

@@ -9,9 +9,12 @@ import MessageCenter from '../components/MessageCenter';
 import SocialPostBroadcast from '../components/SocialPostBroadcast';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
+import TeamManager from '../components/TeamManager';
+import QuickStart from '../components/QuickStart';
 import PublishPanel from '../components/PublishPanel';
 import ApprovalsPanel from '../components/ApprovalsPanel';
 import { getActiveClub } from '../clubConfig.js';
+import { venues } from '../sportLabels.js';
 import { subscribeToPush } from '../push.js';
 import { authHeaders } from '../adminApi.js';
 import { sessionsToSheet, sheetToSessions } from '../draftBridge.js';
@@ -65,6 +68,7 @@ const AdminDashboard = () => {
     const [draftSavedAt, setDraftSavedAt] = useState(null);
     const [draftRestored, setDraftRestored] = useState(false);
     const sheetDataRef = useRef(null);             // mirror of {teams, indices, hallColors, weekStart}
+    const didAutoLand = useRef(false);             // only auto-open the checklist once per session
 
     // Track viewport so the dashboard becomes a phone-friendly layout (drawer sidebar).
     useEffect(() => {
@@ -111,14 +115,30 @@ const AdminDashboard = () => {
     // Load the DB draft → populate the preview (sheet-shaped) + WeekBuilder teams.
     const loadDraft = async ({ silent } = {}) => {
         try {
-            // load the draft AND the saved scheduling rules together (single source → no race)
-            const [draftR, rulesR] = await Promise.all([
+            // load the draft, the saved scheduling rules, AND the manual teams together
+            // (single source → no race)
+            const [draftR, rulesR, teamsR] = await Promise.all([
                 fetch(`/api/${club.slug}/draft`, { headers: authHeaders(club.slug) }),
                 fetch(`/api/${club.slug}/settings/teamRules`).then((x) => x.json()).catch(() => ({})),
+                fetch(`/api/${club.slug}/teams`).then((x) => x.json()).catch(() => ({ teams: [] })),
             ]);
             if (!draftR.ok) return;
             const draft = await draftR.json();
             const sheet = sessionsToSheet(draft);
+
+            // Merge manually-created teams (DB teams table) as empty rows, so a brand-new
+            // club can build a schedule from scratch — no Excel import required. Teams that
+            // already have sessions in the draft are left as-is.
+            const dbTeams = Array.isArray(teamsR.teams) ? teamsR.teams : [];
+            const present = new Set(sheet.teams.map((t) => `${t.name}|${t.coach || ''}`));
+            dbTeams.forEach((t) => {
+                const key = `${t.name}|${t.coach || ''}`;
+                if (present.has(key)) return;
+                present.add(key);
+                sheet.teams.push({ name: t.name, coach: t.coach || '', type: t.gender || 'M', rowIndex: sheet.teams.length });
+                sheet.rawRows.push([t.name, t.coach || '', '', '', '', '', '', '', '']);
+            });
+
             setSheetData({ headers: sheet.headers, teams: sheet.teams, rawRows: sheet.rawRows, hallColors: sheet.hallColors, indices: sheet.indices });
             setCurrentSchedule(sheet.rawRows);
             setSheetName('draft');
@@ -135,7 +155,18 @@ const AdminDashboard = () => {
                 return s ? { ...s, type: t.type } : { name: t.name, coach: t.coach, type: t.type, sessionsPerWeek: 3, constraints: [] };
             });
             const rulesOnly = saved.filter((t) => !draftKeys.has(`${t.name}|${t.coach || ''}`));
-            setTeamConfig([...fromDraft, ...rulesOnly]);
+            // manual teams with neither a draft session nor saved rules yet
+            const covered = new Set([...fromDraft, ...rulesOnly].map((t) => `${t.name}|${t.coach || ''}`));
+            const teamsOnly = dbTeams
+                .filter((t) => !covered.has(`${t.name}|${t.coach || ''}`))
+                .map((t) => ({ name: t.name, coach: t.coach || '', type: t.gender || 'M', sessionsPerWeek: 3, constraints: [] }));
+            setTeamConfig([...fromDraft, ...rulesOnly, ...teamsOnly]);
+
+            // First run (empty club): land the manager on the getting-started checklist.
+            if (!didAutoLand.current && sheet.teams.length === 0 && (draft.sessions || []).length === 0) {
+                didAutoLand.current = true;
+                setActiveTab('quickStart');
+            }
         } catch { /* offline */ }
     };
 
@@ -609,6 +640,10 @@ const AdminDashboard = () => {
                         draftRestored={draftRestored}
                     />
                 );
+            case 'quickStart':
+                return <QuickStart go={selectTab} />;
+            case 'teamsAdmin':
+                return <TeamManager onChanged={loadDraft} />;
             case 'halls':
                 return <HallsConfig clubSlug={getActiveClub().slug} />;
             case 'messages':
@@ -679,6 +714,12 @@ const AdminDashboard = () => {
                     ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: '1.2rem 0', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
                     : { width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
+                        <button style={menuButtonStyle(activeTab === 'quickStart')} onClick={() => selectTab('quickStart')}>
+                            🚀 התחלה מהירה
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'teamsAdmin')} onClick={() => selectTab('teamsAdmin')}>
+                            👥 ניהול קבוצות
+                        </button>
                         <button style={menuButtonStyle(activeTab === 'preview')} onClick={() => selectTab('preview')}>
                             👁️ בניית הלו"ז (טיוטה)
                         </button>
@@ -692,7 +733,7 @@ const AdminDashboard = () => {
                             📅 חוקי שיבוץ
                         </button>
                         <button style={menuButtonStyle(activeTab === 'halls')} onClick={() => selectTab('halls')}>
-                            🏟️ אולמות
+                            🏟️ {venues()}
                         </button>
                         <button style={menuButtonStyle(activeTab === 'messages')} onClick={() => selectTab('messages')}>
                             📣 הודעה צפה
