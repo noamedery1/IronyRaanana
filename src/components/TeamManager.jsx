@@ -13,6 +13,7 @@ export default function TeamManager({ onChanged }) {
     const [coach, setCoach] = useState('');
     const [gender, setGender] = useState('M');
     const [age, setAge] = useState('');
+    const [grade, setGrade] = useState('');
     const [sortMode, setSortMode] = useState('name');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
@@ -27,17 +28,17 @@ export default function TeamManager({ onChanged }) {
 
     useEffect(() => { load(); }, [load]);
 
-    const resetForm = () => { setEditing(null); setName(''); setCoach(''); setGender('M'); setAge(''); };
+    const resetForm = () => { setEditing(null); setName(''); setCoach(''); setGender('M'); setAge(''); setGrade(''); };
 
     const startEdit = (t) => {
-        setEditing(t.id); setName(t.name || ''); setCoach(t.coach || ''); setGender(t.gender || 'M'); setAge(t.age || '');
+        setEditing(t.id); setName(t.name || ''); setCoach(t.coach || ''); setGender(t.gender || 'M'); setAge(t.age || ''); setGrade(t.grade || '');
         setMsg(''); window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const save = async () => {
         if (!name.trim()) { setMsg('הקלד שם קבוצה'); return; }
         setBusy(true); setMsg('');
-        const body = { name: name.trim(), coach: coach.trim(), gender, age: age.trim() };
+        const body = { name: name.trim(), coach: coach.trim(), gender, age: age.trim(), grade: grade.trim() };
         if (editing) body.id = editing;
         const d = await fetch(`/api/${slug}/teams`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
@@ -69,15 +70,17 @@ export default function TeamManager({ onChanged }) {
             {/* Add / edit form */}
             <div style={{ background: editing ? '#fff7ed' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem', marginBottom: '1.2rem' }}>
                 <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>{editing ? 'עריכת קבוצה' : 'הוספת קבוצה'}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 0.9fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 0.8fr 0.8fr auto', gap: '0.6rem', alignItems: 'center' }}>
                     <input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם הקבוצה (למשל: ילדים א')" style={input} />
-                    <input value={coach} onChange={(e) => setCoach(e.target.value)} placeholder="מאמן (לא חובה — משייכים בשלב המאמנים)" style={input} />
-                    <input value={age} onChange={(e) => setAge(e.target.value)} placeholder="גיל / שכבה (2015, נוער...)" style={input} />
+                    <input value={coach} onChange={(e) => setCoach(e.target.value)} placeholder="מאמן (לא חובה)" style={input} />
+                    <input value={age} onChange={(e) => setAge(e.target.value)} placeholder="גיל (לא חובה)" style={input} />
+                    <input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="כיתה (לא חובה)" style={input} />
                     <select value={gender} onChange={(e) => setGender(e.target.value)} style={{ ...input, width: 'auto' }}>
                         <option value="M">בנים</option>
                         <option value="W">בנות</option>
                     </select>
                 </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.4rem' }}>רק שם ומגדר נדרשים — גיל, כיתה ומאמן אפשר להשלים מאוחר יותר.</div>
                 <div style={{ marginTop: '0.8rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <button onClick={save} disabled={busy} style={{ background: '#ff7a18', color: 'white', border: 'none', padding: '0.6rem 1.3rem', borderRadius: '8px', fontWeight: 'bold', cursor: busy ? 'wait' : 'pointer' }}>
                         {busy ? 'שומר...' : (editing ? '💾 שמור שינויים' : '➕ הוסף קבוצה')}
@@ -105,6 +108,7 @@ export default function TeamManager({ onChanged }) {
                             <b>{t.name}</b>
                             <span style={{ color: '#94a3b8', fontSize: '0.8rem', marginInlineStart: '0.5rem' }}>{t.gender === 'W' ? 'בנות' : 'בנים'}</span>
                             {t.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.72rem', borderRadius: 10, padding: '0.1rem 0.5rem', marginInlineStart: '0.5rem' }}>גיל {t.age}</span> : null}
+                            {t.grade ? <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.72rem', borderRadius: 10, padding: '0.1rem 0.5rem', marginInlineStart: '0.4rem' }}>כיתה {t.grade}</span> : null}
                             {t.coach ? <div style={{ color: '#64748b', fontSize: '0.82rem' }}>מאמן: {t.coach}</div> : null}
                         </div>
                         <button onClick={() => startEdit(t)} style={{ background: 'none', border: '1px solid #cbd5e1', color: '#334155', borderRadius: 6, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>עריכה</button>

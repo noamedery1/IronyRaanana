@@ -50,7 +50,10 @@ export async function ensureStore() {
     );
     // Belt-and-suspenders: guarantee newer team columns exist even if the formal
     // migration hasn't been run on this DB yet (idempotent; safe on every boot).
-    try { await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS age text'); } catch { /* teams table not created yet — migration will handle it */ }
+    try {
+        await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS age text');
+        await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS grade text');
+    } catch { /* teams table not created yet — migration will handle it */ }
 }
 
 export async function listClubs() {

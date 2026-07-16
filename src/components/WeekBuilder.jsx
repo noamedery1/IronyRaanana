@@ -268,7 +268,10 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                         backgroundColor: index % 2 === 0 ? 'white' : '#fafafa'
                     }}>
                         <div style={{ paddingRight: '0.5rem' }}>
-                            <div style={{ fontWeight: '500' }}>{team.name}{team.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.7rem', borderRadius: 10, padding: '0.05rem 0.45rem', marginInlineStart: '0.4rem' }}>גיל {team.age}</span> : null}</div>
+                            <div style={{ fontWeight: '500' }}>{team.name}
+                                {team.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.7rem', borderRadius: 10, padding: '0.05rem 0.45rem', marginInlineStart: '0.4rem' }}>גיל {team.age}</span> : null}
+                                {team.grade ? <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.7rem', borderRadius: 10, padding: '0.05rem 0.45rem', marginInlineStart: '0.3rem' }}>כיתה {team.grade}</span> : null}
+                            </div>
                             {team.coach && <div style={{ fontSize: '0.85rem', color: '#666' }}>{team.coach}</div>}
                         </div>
 
