@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useI18n } from '../i18n.jsx';
 import { hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall } from '../installState.js';
+import { getActiveClub } from '../clubConfig.js';
 
 // Install affordances (shown on every screen until the app is installed):
 // - First visit (not dismissed): a prominent centered modal.
@@ -20,6 +21,8 @@ export default function InstallPrompt() {
 
     const ios = isIOS();
     const tipText = ios ? t('install_ios') : t('install_manual');
+    const club = getActiveClub();
+    const installIcon = club.icon192 || club.icon512 || club.logo || '/pwa-192x192.png';
 
     const doInstall = async () => {
         if (hasNativePrompt()) { await promptInstall(); return; }
@@ -56,7 +59,7 @@ export default function InstallPrompt() {
                         width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: '0.95rem',
                     }}>✕</button>
 
-                    <img src="/pwa-192x192.png" alt="" style={{
+                    <img src={installIcon} alt="" style={{
                         width: 72, height: 72, borderRadius: 18, margin: '0 auto 0.9rem',
                         boxShadow: '0 12px 30px -10px rgba(0,0,0,0.7)',
                     }} />

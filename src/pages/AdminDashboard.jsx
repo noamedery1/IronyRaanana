@@ -641,7 +641,7 @@ const AdminDashboard = () => {
                         style={{ background: 'var(--glass-2)', color: 'var(--text)', border: '1px solid var(--glass-border)', width: '40px', height: '40px', borderRadius: '11px', cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}
                     >☰</button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0 }}>
-                        <img src="/men_logo.png" alt="Logo" style={{ height: isMobile ? '36px' : '48px', width: 'auto', borderRadius: '12px', background: '#fff', padding: '3px', flexShrink: 0 }} />
+                        <img src={club.logo || club.icon512 || club.icon192 || '/men_logo.png'} alt={club.name || 'Logo'} style={{ height: isMobile ? '36px' : '48px', width: 'auto', borderRadius: '12px', background: '#fff', padding: '3px', flexShrink: 0 }} />
                         <div style={{ minWidth: 0 }}>
                             <h2 style={{ margin: 0, color: 'var(--text)', fontSize: isMobile ? '0.95rem' : '1.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{isMobile ? 'ניהול המועדון' : 'מערכת ניהול · פורטל ראשי'}</h2>
                             {!isMobile && <span style={{ fontSize: '0.82rem', color: 'var(--text-dim)' }}>ניהול גברים ונשים (משותף)</span>}
