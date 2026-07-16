@@ -60,6 +60,7 @@ export default function TeamManager({ onChanged }) {
             <h3 style={{ marginTop: 0 }}>👥 ניהול קבוצות</h3>
             <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '-0.4rem' }}>
                 כאן מקימים את קבוצות המועדון. כל קבוצה שתיצור תופיע כשורה ריקה בלוח השיבוץ ("בניית הלו"ז"), מוכנה למילוי.
+                <br />שם המאמן אינו חובה — אפשר להשאיר ריק ולשייך מאמנים (עם קוד כניסה) בשלב "👤 ניהול מאמנים".
             </p>
 
             {/* Add / edit form */}
@@ -67,7 +68,7 @@ export default function TeamManager({ onChanged }) {
                 <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>{editing ? 'עריכת קבוצה' : 'הוספת קבוצה'}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
                     <input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם הקבוצה (למשל: ילדים א')" style={input} />
-                    <input value={coach} onChange={(e) => setCoach(e.target.value)} placeholder="מאמן (לא חובה)" style={input} />
+                    <input value={coach} onChange={(e) => setCoach(e.target.value)} placeholder="מאמן (לא חובה — משייכים בשלב המאמנים)" style={input} />
                     <select value={gender} onChange={(e) => setGender(e.target.value)} style={{ ...input, width: 'auto' }}>
                         <option value="M">בנים</option>
                         <option value="W">בנות</option>

@@ -32,9 +32,9 @@ export default function QuickStart({ go }) {
     }, [slug]);
 
     const steps = [
-        { key: 'teams', done: s.teams > 0, tab: 'teamsAdmin', icon: '👥', title: 'הקמת קבוצות', desc: 'הוסף את קבוצות המועדון (שם, מאמן, בנים/בנות).', count: s.teams && `${s.teams} קבוצות` },
+        { key: 'teams', done: s.teams > 0, tab: 'teamsAdmin', icon: '👥', title: 'הקמת קבוצות', desc: 'הוסף את קבוצות המועדון (שם + בנים/בנות). שם מאמן אינו חובה — משייכים מאמנים בשלב 3.', count: s.teams && `${s.teams} קבוצות` },
         { key: 'fields', done: s.fields > 0, tab: 'halls', icon: '🏟️', title: `הקמת ${venues()}`, desc: `הגדר את ה${venues()} של המועדון וכתובת לניווט.`, count: s.fields && `${s.fields}` },
-        { key: 'trainers', done: s.trainers > 0, tab: 'trainersAdmin', icon: '👤', title: 'הקמת מאמנים', desc: 'הוסף מאמנים ושייך אותם לקבוצות (עם קוד כניסה).', count: s.trainers && `${s.trainers} מאמנים` },
+        { key: 'trainers', done: s.trainers > 0, tab: 'trainersAdmin', icon: '👤', title: 'הקמת מאמנים', desc: 'צור חשבונות מאמנים (עם קוד כניסה) ושייך כל מאמן לקבוצות שלו — הן כבר קיימות משלב 1.', count: s.trainers && `${s.trainers} מאמנים` },
         { key: 'build', done: s.draft > 0, tab: 'preview', icon: '📅', title: 'בניית לו"ז', desc: 'שבץ אימונים בלוח — התחל מלו"ז ריק, בלי אקסל.', count: s.draft && `${s.draft} אימונים` },
         { key: 'publish', done: s.published, tab: 'publish', icon: '🚀', title: 'פרסום הלו"ז', desc: 'פרסם את הלו"ז כדי שההורים יראו אותו.', count: s.published && 'פורסם' },
         { key: 'links', done: false, tab: 'invites', icon: '🔗', title: 'שליחת לינקים', desc: 'צור לינקי הזמנה להורים, שחקנים ומאמנים.', count: '' },
