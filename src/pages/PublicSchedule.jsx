@@ -373,7 +373,7 @@ function PublicSchedule() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <LanguageSwitcher />
-                    {!memberTeam && <Link to="/admin" className="admin-gear" title={t('admin')}>⚙</Link>}
+                    {!memberTeam && <Link to={`/${club.slug}/admin`} className="admin-gear" title={t('admin')}>⚙</Link>}
                 </div>
             </nav>
 

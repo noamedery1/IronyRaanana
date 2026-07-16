@@ -33,7 +33,7 @@ export default function AdminSwitcher() {
             <span style={{ color: '#22d3ee', fontWeight: 800, fontSize: '0.72rem', padding: '0 0.3rem' }}>{isManager ? 'מנהל' : 'מאמן'}</span>
             <a href={`/${slug}`} style={link(onParent)}>👨‍👩‍👧 הורים</a>
             <a href={`/${slug}/trainer`} style={link(onTrainer)}>🏀 מאמן</a>
-            {isManager && <a href="/admin/dashboard" style={link(onAdmin)}>🗂️ ניהול</a>}
+            {isManager && <a href={`/${slug}/admin/dashboard`} style={link(onAdmin)}>🗂️ ניהול</a>}
         </div>
     );
 }
