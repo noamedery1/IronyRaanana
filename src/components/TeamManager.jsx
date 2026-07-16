@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import { authHeaders } from '../adminApi.js';
+import { sortTeams, SORT_MODES } from '../teamSort.js';
 
 // Manager tool: create / edit / delete teams manually (DB `teams` table), so a brand-new
 // club can set up its teams before importing or building any schedule. Teams created here
@@ -11,6 +12,8 @@ export default function TeamManager({ onChanged }) {
     const [name, setName] = useState('');
     const [coach, setCoach] = useState('');
     const [gender, setGender] = useState('M');
+    const [age, setAge] = useState('');
+    const [sortMode, setSortMode] = useState('name');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
 
@@ -24,17 +27,17 @@ export default function TeamManager({ onChanged }) {
 
     useEffect(() => { load(); }, [load]);
 
-    const resetForm = () => { setEditing(null); setName(''); setCoach(''); setGender('M'); };
+    const resetForm = () => { setEditing(null); setName(''); setCoach(''); setGender('M'); setAge(''); };
 
     const startEdit = (t) => {
-        setEditing(t.id); setName(t.name || ''); setCoach(t.coach || ''); setGender(t.gender || 'M');
+        setEditing(t.id); setName(t.name || ''); setCoach(t.coach || ''); setGender(t.gender || 'M'); setAge(t.age || '');
         setMsg(''); window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const save = async () => {
         if (!name.trim()) { setMsg('הקלד שם קבוצה'); return; }
         setBusy(true); setMsg('');
-        const body = { name: name.trim(), coach: coach.trim(), gender };
+        const body = { name: name.trim(), coach: coach.trim(), gender, age: age.trim() };
         if (editing) body.id = editing;
         const d = await fetch(`/api/${slug}/teams`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
@@ -66,9 +69,10 @@ export default function TeamManager({ onChanged }) {
             {/* Add / edit form */}
             <div style={{ background: editing ? '#fff7ed' : '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '1rem', marginBottom: '1.2rem' }}>
                 <div style={{ fontWeight: 700, marginBottom: '0.6rem' }}>{editing ? 'עריכת קבוצה' : 'הוספת קבוצה'}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 0.9fr auto', gap: '0.6rem', alignItems: 'center' }}>
                     <input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם הקבוצה (למשל: ילדים א')" style={input} />
                     <input value={coach} onChange={(e) => setCoach(e.target.value)} placeholder="מאמן (לא חובה — משייכים בשלב המאמנים)" style={input} />
+                    <input value={age} onChange={(e) => setAge(e.target.value)} placeholder="גיל / שכבה (2015, נוער...)" style={input} />
                     <select value={gender} onChange={(e) => setGender(e.target.value)} style={{ ...input, width: 'auto' }}>
                         <option value="M">בנים</option>
                         <option value="W">בנות</option>
@@ -84,14 +88,23 @@ export default function TeamManager({ onChanged }) {
             </div>
 
             {/* List */}
-            <div style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '0.5rem' }}>קבוצות ({teams.length})</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <div style={{ color: '#64748b', fontSize: '0.85rem' }}>קבוצות ({teams.length})</div>
+                <label style={{ color: '#64748b', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    מיון:
+                    <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} style={{ ...input, width: 'auto', padding: '0.3rem 0.5rem' }}>
+                        {SORT_MODES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                </label>
+            </div>
             <div style={{ display: 'grid', gap: '0.4rem' }}>
                 {teams.length === 0 && <div style={{ color: '#94a3b8' }}>אין קבוצות עדיין — הוסף את הקבוצה הראשונה למעלה.</div>}
-                {teams.map((t) => (
+                {sortTeams(teams, sortMode).map((t) => (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.5rem 0.8rem' }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <b>{t.name}</b>
                             <span style={{ color: '#94a3b8', fontSize: '0.8rem', marginInlineStart: '0.5rem' }}>{t.gender === 'W' ? 'בנות' : 'בנים'}</span>
+                            {t.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.72rem', borderRadius: 10, padding: '0.1rem 0.5rem', marginInlineStart: '0.5rem' }}>גיל {t.age}</span> : null}
                             {t.coach ? <div style={{ color: '#64748b', fontSize: '0.82rem' }}>מאמן: {t.coach}</div> : null}
                         </div>
                         <button onClick={() => startEdit(t)} style={{ background: 'none', border: '1px solid #cbd5e1', color: '#334155', borderRadius: 6, padding: '0.3rem 0.7rem', cursor: 'pointer' }}>עריכה</button>

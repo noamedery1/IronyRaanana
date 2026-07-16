@@ -3,12 +3,14 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { authHeaders } from '../adminApi.js';
 import { venue, venues } from '../sportLabels.js';
+import { sortTeams, SORT_MODES } from '../teamSort.js';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {}, onChange, onSaveDraft, onDiscardDraft, draftSavedAt, draftRestored, clubSlug }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [sortMode, setSortMode] = useState('name'); // board row order: name / age / gender
     const [dragStart, setDragStart] = useState(null);
     const [isHallPickerOpen, setIsHallPickerOpen] = useState(false);
     const [hallPickerTarget, setHallPickerTarget] = useState(null);
@@ -1096,6 +1098,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     <div className="cc-fsbar-title">🏀 לו"ז שבועי — {selectedDate ? `שבוע ${selectedDate.split('-').reverse().slice(0, 2).join('/')}` : ''}
                         {draftMsg ? <span className="cc-dirty"> · {draftMsg}</span> : draftSavedAt ? <span className="cc-dirty" style={{ color: '#86efac' }}> · 💾 נשמר {draftTime}</span> : null}</div>
                     <div className="cc-actions">
+                        <label className="cc-date">↕ מיון
+                            <select value={sortMode} onChange={(e) => setSortMode(e.target.value)}>
+                                {SORT_MODES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                        </label>
                         <button className={`cc-btn ${showConflictsFS ? 'amber' : 'ghost'}`} onClick={() => setShowConflictsFS(v => !v)}>
                             {showConflictsFS ? '⚠️ מסתיר התנגשויות' : '⚠️ הצג התנגשויות'}{conflictDetails.length > 0 ? ` (${conflictDetails.length})` : ''}
                         </button>
@@ -1121,6 +1128,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 <div className="cc-actions">
                     <label className="cc-date">📅 תאריך התחלה
                         <input type="date" value={selectedDate} onChange={handleDateChange} />
+                    </label>
+                    <label className="cc-date">↕ מיון
+                        <select value={sortMode} onChange={(e) => setSortMode(e.target.value)}>
+                            {SORT_MODES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
                     </label>
                     <button className="cc-btn blue" onClick={() => setFullScreen(true)}>🖥 עבודה על מסך מלא</button>
                     <button className="cc-btn green" onClick={handleSaveDraft}>💾 שמור טיוטה</button>
@@ -1176,7 +1188,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                             </tr>
                         </thead>
                         <tbody>
-                            {teams.map((teamObj, i) => {
+                            {sortTeams(teams, sortMode).map((teamObj, i) => {
                                 const teamName = teamObj.name || teamObj;
                                 let rowIndex = teamObj.rowIndex;
                                 if (rowIndex === undefined) {

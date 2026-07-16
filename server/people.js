@@ -106,26 +106,27 @@ export async function authUser(slug, { token }) {
 // ===== Teams =====
 export async function listTeams(slug) {
     const cid = await clubId(slug);
-    const r = await pool.query('SELECT id, name, gender, coach, active FROM teams WHERE club_id=$1 ORDER BY name', [cid]);
+    const r = await pool.query('SELECT id, name, gender, coach, age, active FROM teams WHERE club_id=$1 ORDER BY name', [cid]);
     return r.rows;
 }
 
-export async function upsertTeam(slug, { id, name, gender, coach, active }) {
+export async function upsertTeam(slug, { id, name, gender, coach, age, active }) {
     const nm = (name || '').trim();
     if (!nm) throw new Error('חסר שם קבוצה');
+    const ag = (age || '').toString().trim() || null;
     const cid = await clubId(slug);
     if (id) {
         const r = await pool.query(
-            `UPDATE teams SET name=$1, gender=$2, coach=$3, active=COALESCE($4, active) WHERE id=$5 AND club_id=$6 RETURNING *`,
-            [nm, gender || 'M', coach || null, active, id, cid],
+            `UPDATE teams SET name=$1, gender=$2, coach=$3, age=$4, active=COALESCE($5, active) WHERE id=$6 AND club_id=$7 RETURNING *`,
+            [nm, gender || 'M', coach || null, ag, active, id, cid],
         );
         return r.rows[0];
     }
     const r = await pool.query(
-        `INSERT INTO teams (club_id, name, gender, coach) VALUES ($1,$2,$3,$4)
-         ON CONFLICT (club_id, lower(name)) DO UPDATE SET gender=excluded.gender, coach=excluded.coach, active=true
+        `INSERT INTO teams (club_id, name, gender, coach, age) VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (club_id, lower(name)) DO UPDATE SET gender=excluded.gender, coach=excluded.coach, age=excluded.age, active=true
          RETURNING *`,
-        [cid, nm, gender || 'M', coach || null],
+        [cid, nm, gender || 'M', coach || null, ag],
     );
     return r.rows[0];
 }

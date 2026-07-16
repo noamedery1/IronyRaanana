@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { sortTeams, SORT_MODES } from '../teamSort.js';
 
 const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, hallColors }) => {
     // teamConfig and setTeamConfig are now passed from props for persistence
+    const [sortMode, setSortMode] = useState('name');
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTeamIndex, setSelectedTeamIndex] = useState(null);
@@ -233,7 +235,15 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
 
     return (
         <div style={{ background: 'white', padding: 'clamp(0.8rem, 3vw, 2rem)', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '1.5rem' }}>הגדרות שבועיות לאימון</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0 }}>הגדרות שבועיות לאימון</h3>
+                <label style={{ color: '#64748b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    מיון:
+                    <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} style={{ padding: '0.35rem 0.5rem', borderRadius: 6, border: '1px solid #ddd' }}>
+                        {SORT_MODES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                </label>
+            </div>
 
             <div style={{ minWidth: 620, display: 'grid', gridTemplateColumns: 'minmax(160px, 1.5fr) 60px 100px 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
                 <div>קבוצה</div>
@@ -244,7 +254,9 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
             </div>
 
             <div style={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
-                {teamConfig.map((team, index) => (
+                {sortTeams(teamConfig.map((t, i) => ({ ...t, _idx: i })), sortMode).map((team) => {
+                    const index = team._idx; // original teamConfig index — handlers mutate by this
+                    return (
                     <div key={index} style={{
                         minWidth: 620,
                         display: 'grid',
@@ -256,7 +268,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                         backgroundColor: index % 2 === 0 ? 'white' : '#fafafa'
                     }}>
                         <div style={{ paddingRight: '0.5rem' }}>
-                            <div style={{ fontWeight: '500' }}>{team.name}</div>
+                            <div style={{ fontWeight: '500' }}>{team.name}{team.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.7rem', borderRadius: 10, padding: '0.05rem 0.45rem', marginInlineStart: '0.4rem' }}>גיל {team.age}</span> : null}</div>
                             {team.coach && <div style={{ fontSize: '0.85rem', color: '#666' }}>{team.coach}</div>}
                         </div>
 
@@ -369,7 +381,8 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                             </button>
                         </div>
                     </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Modal */}

@@ -130,14 +130,18 @@ const AdminDashboard = () => {
             // club can build a schedule from scratch — no Excel import required. Teams that
             // already have sessions in the draft are left as-is.
             const dbTeams = Array.isArray(teamsR.teams) ? teamsR.teams : [];
+            // name(lower) → age, so builder/constraints rows can be sorted by age too.
+            const ageOf = {}; dbTeams.forEach((t) => { ageOf[(t.name || '').toLowerCase()] = t.age || ''; });
             const present = new Set(sheet.teams.map((t) => `${t.name}|${t.coach || ''}`));
             dbTeams.forEach((t) => {
                 const key = `${t.name}|${t.coach || ''}`;
                 if (present.has(key)) return;
                 present.add(key);
-                sheet.teams.push({ name: t.name, coach: t.coach || '', type: t.gender || 'M', rowIndex: sheet.teams.length });
+                sheet.teams.push({ name: t.name, coach: t.coach || '', type: t.gender || 'M', age: t.age || '', rowIndex: sheet.teams.length });
                 sheet.rawRows.push([t.name, t.coach || '', '', '', '', '', '', '', '']);
             });
+            // Carry age onto every team row (incl. draft-derived ones) for sorting.
+            sheet.teams = sheet.teams.map((t) => ({ ...t, age: t.age || ageOf[(t.name || '').toLowerCase()] || '' }));
 
             setSheetData({ headers: sheet.headers, teams: sheet.teams, rawRows: sheet.rawRows, hallColors: sheet.hallColors, indices: sheet.indices });
             setCurrentSchedule(sheet.rawRows);
@@ -152,14 +156,16 @@ const AdminDashboard = () => {
             const draftKeys = new Set(sheet.teams.map((t) => `${t.name}|${t.coach || ''}`));
             const fromDraft = sheet.teams.map((t) => {
                 const s = byKey[`${t.name}|${t.coach || ''}`];
-                return s ? { ...s, type: t.type } : { name: t.name, coach: t.coach, type: t.type, sessionsPerWeek: 3, constraints: [] };
+                const age = t.age || ageOf[(t.name || '').toLowerCase()] || '';
+                return s ? { ...s, type: t.type, age } : { name: t.name, coach: t.coach, type: t.type, age, sessionsPerWeek: 3, constraints: [] };
             });
-            const rulesOnly = saved.filter((t) => !draftKeys.has(`${t.name}|${t.coach || ''}`));
+            const rulesOnly = saved.filter((t) => !draftKeys.has(`${t.name}|${t.coach || ''}`))
+                .map((t) => ({ ...t, age: t.age || ageOf[(t.name || '').toLowerCase()] || '' }));
             // manual teams with neither a draft session nor saved rules yet
             const covered = new Set([...fromDraft, ...rulesOnly].map((t) => `${t.name}|${t.coach || ''}`));
             const teamsOnly = dbTeams
                 .filter((t) => !covered.has(`${t.name}|${t.coach || ''}`))
-                .map((t) => ({ name: t.name, coach: t.coach || '', type: t.gender || 'M', sessionsPerWeek: 3, constraints: [] }));
+                .map((t) => ({ name: t.name, coach: t.coach || '', type: t.gender || 'M', age: t.age || '', sessionsPerWeek: 3, constraints: [] }));
             setTeamConfig([...fromDraft, ...rulesOnly, ...teamsOnly]);
 
             // First run (empty club): land the manager on the getting-started checklist.
