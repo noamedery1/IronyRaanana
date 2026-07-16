@@ -19,3 +19,25 @@ export function venueLabels(sport) {
 // Singular ("מגרש"/"אולם") and plural ("מגרשים"/"אולמות") for the active (or given) sport.
 export const venue = (sport) => venueLabels(sport).one;
 export const venues = (sport) => venueLabels(sport).many;
+
+// Decorative sport icon used where there's no uploaded club logo to show.
+const EMOJI = {
+    football: '⚽', soccer: '⚽', basketball: '🏀', handball: '🤾',
+    volleyball: '🏐', tennis: '🎾', swimming: '🏊', athletics: '🏃',
+};
+
+export function sportEmoji(sport) {
+    const s = String(sport ?? getActiveClub()?.sport ?? '').toLowerCase().trim();
+    return EMOJI[s] || '🏆';
+}
+
+// Common sports offered in the superuser club form (value = stored sport key).
+export const SPORTS = [
+    { value: 'football', label: 'כדורגל ⚽' },
+    { value: 'basketball', label: 'כדורסל 🏀' },
+    { value: 'handball', label: 'כדוריד 🤾' },
+    { value: 'volleyball', label: 'כדורעף 🏐' },
+    { value: 'tennis', label: 'טניס 🎾' },
+    { value: 'swimming', label: 'שחייה 🏊' },
+    { value: 'athletics', label: 'אתלטיקה 🏃' },
+];

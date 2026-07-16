@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { parseCellContent } from '../utils/scheduleUtils';
 import { getActiveClub } from '../clubConfig.js';
+import BrandMark from '../components/BrandMark';
+import { venues } from '../sportLabels.js';
 import { subscribeToPush } from '../push.js';
 
 // Trainer devices register under "__TRAINER__:<name>" so the manager can push to all
@@ -363,7 +365,7 @@ const TrainerPortal = () => {
         return (
             <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Assistant, sans-serif', padding: '1rem' }}>
                 <div style={{ background: 'rgba(12,19,36,0.96)', backdropFilter: 'blur(20px)', padding: '2rem 1.6rem', borderRadius: '20px', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.08)', width: '90%', maxWidth: '360px', textAlign: 'center' }}>
-                    <div style={{ width: 64, height: 64, margin: '0 auto 1rem', borderRadius: 16, background: 'linear-gradient(135deg,#3b82f6,#0891b2)', display: 'grid', placeItems: 'center', fontSize: 30, boxShadow: '0 12px 30px -10px rgba(255,122,24,0.6)' }}>🏀</div>
+                    <BrandMark size={64} />
                     <h2 style={{ color: '#fff', margin: '0 0 0.3rem', fontSize: '1.4rem', fontWeight: 800 }}>פורטל מאמנים</h2>
                     <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 1.5rem' }}>כניסה לניהול לוח האימונים שלך</p>
                     <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -404,7 +406,7 @@ const TrainerPortal = () => {
                     שלום, {trainer.name}
                 </h3>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <a href={`/${getActiveClub().slug}`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', textDecoration: 'none' }}>👁️ לוח מלא / אולמות</a>
+                    <a href={`/${getActiveClub().slug}`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', textDecoration: 'none' }}>👁️ לוח מלא / {venues()}</a>
                     <button onClick={logout} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>יציאה</button>
                 </div>
             </header>

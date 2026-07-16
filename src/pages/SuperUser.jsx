@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { SPORTS } from '../sportLabels.js';
 
 // Superuser console (general manager). Password-gated. Lets you add/edit clubs and
 // upload their logo/icons without touching code — images are stored in the DB and
@@ -207,7 +208,12 @@ export default function SuperUser() {
                     </div>
                     <div><label style={labelStyle}>קישור ללוז המנהל (Google Sheet CSV) — המערכת קוראת ממנו בלחיצת "פרסם לוז"</label><input value={form.publishUrl} onChange={(e) => setForm({ ...form, publishUrl: e.target.value })} placeholder="https://docs.google.com/.../export?format=csv&gid=0" style={{ ...inputStyle, direction: 'ltr' }} /></div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.8rem' }}>
-                        <div><label style={labelStyle}>ענף</label><input value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} placeholder="football / basketball" style={{ ...inputStyle, direction: 'ltr' }} /></div>
+                        <div><label style={labelStyle}>ענף ספורט (קובע את האייקון והמינוח: מגרש/אולם)</label>
+                            <select value={form.sport} onChange={(e) => setForm({ ...form, sport: e.target.value })} style={inputStyle}>
+                                <option value="">— בחר ענף —</option>
+                                {SPORTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                        </div>
                         <div><label style={{ ...labelStyle, color: '#fbbf24' }}>📧 מיילי מנהלים לקבלת בקשות לאישור (מופרד בפסיק)</label><input value={form.managerEmails} onChange={(e) => setForm({ ...form, managerEmails: e.target.value })} placeholder="manager@club.com, second@club.com" style={{ ...inputStyle, direction: 'ltr', border: '1px solid #fbbf24' }} /></div>
                     </div>
 

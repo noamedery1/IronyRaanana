@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getActiveClub } from '../clubConfig.js';
+import BrandMark from '../components/BrandMark';
 import { setIdentity, registerIdentityPush } from '../userIdentity.js';
 
 // Invite-based registration. Opened from a manager-generated link:
@@ -54,7 +55,7 @@ export default function Join() {
     return (
         <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Assistant, sans-serif', padding: '1rem' }}>
             <div style={{ background: 'rgba(12,19,36,0.96)', padding: '2rem 1.6rem', borderRadius: '20px', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.08)', width: '90%', maxWidth: '380px', textAlign: 'center' }}>
-                <div style={{ width: 60, height: 60, margin: '0 auto 0.9rem', borderRadius: 16, background: 'linear-gradient(135deg,#3b82f6,#0891b2)', display: 'grid', placeItems: 'center', fontSize: 28 }}>🏀</div>
+                <BrandMark size={60} />
                 <h2 style={{ color: '#fff', margin: '0 0 0.3rem', fontSize: '1.3rem', fontWeight: 800 }}>הצטרפות למערכת</h2>
                 <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: '0 0 0.4rem' }}>{getActiveClub().shortName}</p>
                 <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.15)', color: '#a5f3fc', borderRadius: 20, padding: '0.25rem 0.9rem', fontSize: '0.82rem', fontWeight: 700, marginBottom: '1.3rem' }}>

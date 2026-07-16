@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getActiveClub } from '../clubConfig.js';
+import BrandMark from '../components/BrandMark';
 import '../ActionStyles.css'; // Re-use button styles
 
 const AdminLogin = () => {
@@ -50,7 +51,7 @@ const AdminLogin = () => {
                 maxWidth: '400px',
                 textAlign: 'center'
             }}>
-                <div style={{ fontSize: '2.4rem', marginBottom: '0.4rem' }}>🏀</div>
+                <BrandMark size={60} />
                 <h1 className="title" style={{ fontSize: '1.9rem', marginBottom: '0.3rem' }}>כניסת מנהל</h1>
                 <p className="subtitle" style={{ fontSize: '0.9rem', marginBottom: '1.6rem' }}>מערכת ניהול הלו"ז · {getActiveClub().name}</p>
 
