@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import { authHeaders } from '../adminApi.js';
+import { sortTeams, SORT_MODES } from '../teamSort.js';
 
 // Manager tool: add / edit / delete trainers (in the DB). One row per trainer (teams
 // merged), search + sort by name, team selection from the DB teams list (+ free-text extra).
@@ -13,10 +14,12 @@ export default function TrainerManager() {
     const [code, setCode] = useState('');
     const [sel, setSel] = useState({});   // selected team -> bool
     const [extra, setExtra] = useState(''); // free-text extra teams (comma separated)
+    const [teamSort, setTeamSort] = useState('name'); // how the pickable team list is ordered
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
 
     const slug = getActiveClub().slug;
+    const boardTeamNames = boardTeams.map((t) => t.name);
 
     const load = useCallback(() => {
         fetch(`/api/${slug}/trainers`).then((r) => r.json())
@@ -28,7 +31,7 @@ export default function TrainerManager() {
 
     useEffect(() => {
         fetch(`/api/${slug}/teams`).then((r) => r.json())
-            .then((d) => { if (d.teams) setBoardTeams(d.teams.map((t) => t.name).sort((a, b) => a.localeCompare(b, 'he'))); })
+            .then((d) => { if (d.teams) setBoardTeams(d.teams); }) // full objects: name/gender/age/grade
             .catch(() => { /* server may be down in dev */ });
     }, [slug]);
 
@@ -40,7 +43,7 @@ export default function TrainerManager() {
         (t.teams || '').split(',').map((x) => x.trim()).filter(Boolean).forEach((tm) => { map[tm] = true; });
         setSel(map);
         // teams not in the board list go into the free-text box
-        const extras = (t.teams || '').split(',').map((x) => x.trim()).filter(Boolean).filter((tm) => !boardTeams.includes(tm));
+        const extras = (t.teams || '').split(',').map((x) => x.trim()).filter(Boolean).filter((tm) => !boardTeamNames.includes(tm));
         setExtra(extras.join(', '));
         setMsg(''); window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -49,7 +52,7 @@ export default function TrainerManager() {
         if (!name.trim()) { setMsg('הקלד שם'); return; }
         if (!editing && !code.trim()) { setMsg('מאמן חדש דורש קוד'); return; }
         const teams = [
-            ...boardTeams.filter((tm) => sel[tm]),
+            ...boardTeamNames.filter((tm) => sel[tm]),
             ...extra.split(',').map((x) => x.trim()).filter(Boolean),
         ];
         // de-dup
@@ -86,12 +89,26 @@ export default function TrainerManager() {
                     <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={editing ? 'קוד חדש (ריק = ללא שינוי)' : 'קוד ראשוני'} style={input} />
                 </div>
 
-                <div style={{ margin: '0.8rem 0 0.4rem', fontWeight: 600, fontSize: '0.9rem' }}>קבוצות</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.3rem', maxHeight: 180, overflowY: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.6rem' }}>
+                <div style={{ margin: '0.8rem 0 0.4rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>קבוצות (שייך את המאמן)</span>
+                    <label style={{ color: '#64748b', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        מיון:
+                        <select value={teamSort} onChange={(e) => setTeamSort(e.target.value)} style={{ ...input, width: 'auto', padding: '0.3rem 0.5rem' }}>
+                            {SORT_MODES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                    </label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: '0.3rem', maxHeight: 220, overflowY: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.6rem' }}>
                     {boardTeams.length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>טוען קבוצות...</span>}
-                    {boardTeams.map((tm) => (
-                        <label key={tm} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.88rem' }}>
-                            <input type="checkbox" checked={!!sel[tm]} onChange={() => setSel((s) => ({ ...s, [tm]: !s[tm] }))} /> {tm}
+                    {sortTeams(boardTeams, teamSort).map((tm) => (
+                        <label key={tm.name} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.88rem', padding: '0.15rem 0' }}>
+                            <input type="checkbox" checked={!!sel[tm.name]} onChange={() => setSel((s) => ({ ...s, [tm.name]: !s[tm.name] }))} />
+                            <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+                                {tm.name}
+                                <span style={{ background: tm.gender === 'W' ? '#fce7f3' : '#dbeafe', color: tm.gender === 'W' ? '#9d174d' : '#1e40af', fontSize: '0.68rem', borderRadius: 8, padding: '0.02rem 0.4rem' }}>{tm.gender === 'W' ? 'בנות' : 'בנים'}</span>
+                                {tm.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.68rem', borderRadius: 8, padding: '0.02rem 0.4rem' }}>גיל {tm.age}</span> : null}
+                                {tm.grade ? <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.68rem', borderRadius: 8, padding: '0.02rem 0.4rem' }}>כיתה {tm.grade}</span> : null}
+                            </span>
                         </label>
                     ))}
                 </div>
