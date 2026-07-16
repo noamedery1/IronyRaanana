@@ -225,7 +225,8 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
     if (!teams || teams.length === 0) {
         return (
             <div style={{ textAlign: 'center', color: '#666', marginTop: '2rem' }}>
-                <p>לא נטענו קבוצות. אנא התחבר לגיליון בלשונית ההגדרות.</p>
+                <p>אין קבוצות עדיין. הקימו קבוצות ב"👥 ניהול קבוצות" והן יופיעו כאן להגדרת אילוצים ושריון מגרשים — אין צורך באקסל.<br />
+                    (אפשר גם לייבא לו"ז קיים ב"⚙️ הגדרות וייבוא".)</p>
             </div>
         );
     }
