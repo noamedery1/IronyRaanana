@@ -719,7 +719,7 @@ const AdminDashboard = () => {
                 {/* Sidebar — inline column on desktop, fixed drawer on mobile */}
                 {sidebarOpen && <aside style={isMobile
                     ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: '1.2rem 0', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
-                    : { width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0' }}>
+                    : { width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0', overflowY: 'auto', maxHeight: '100%' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
                         <button style={menuButtonStyle(activeTab === 'quickStart')} onClick={() => selectTab('quickStart')}>
                             🚀 התחלה מהירה

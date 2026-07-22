@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'node:fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
@@ -429,9 +430,68 @@ app.get('/sales-landing', (req, res) => {
 
 // (Per-club calendar feed is served from /api/:club/calendar.ics — DB-backed.)
 
-// Handle React routing, return all requests to React app
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+// ---- Per-club HTML head (link previews + tab title/icon) --------------------
+// Link unfurlers (WhatsApp/Telegram/…) don't run JS, so they read the STATIC
+// index.html head. We rewrite it per club so a shared link shows THAT club's
+// name + logo, not the built-in raanana defaults.
+const INDEX_PATH = path.join(__dirname, 'dist', 'index.html');
+let _indexHtml = null;
+const readIndexHtml = () => {
+    if (_indexHtml == null) { try { _indexHtml = fs.readFileSync(INDEX_PATH, 'utf8'); } catch { _indexHtml = ''; } }
+    return _indexHtml;
+};
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function clubHead(club, origin) {
+    const name = club.name || 'Squadio';
+    const short = club.shortName || name;
+    const desc = club.description || `לו"ז אימונים, משחקים ועדכונים — ${name}`;
+    const abs = (p) => (!p ? '' : (/^https?:\/\//.test(p) ? p : origin + p));
+    const preview = abs(club.logo || club.icon512 || club.icon192 || '/pwa-512x512.png');
+    const favicon = club.icon192 || club.logo || '/pwa-192x192.png';
+    const apple = club.appleIcon || club.icon192 || '/apple-touch-icon.png';
+    const theme = club.themeColor || '#ff7a18';
+    const url = `${origin}/${club.slug}`;
+    return [
+        `<title>${esc(name)}</title>`,
+        `<meta name="theme-color" content="${esc(theme)}" />`,
+        `<link rel="icon" type="image/png" href="${esc(favicon)}" />`,
+        `<link rel="apple-touch-icon" href="${esc(apple)}" />`,
+        `<meta name="apple-mobile-web-app-title" content="${esc(short)}" />`,
+        `<meta property="og:type" content="website" />`,
+        `<meta property="og:site_name" content="${esc(name)}" />`,
+        `<meta property="og:title" content="${esc(name)}" />`,
+        `<meta property="og:description" content="${esc(desc)}" />`,
+        preview ? `<meta property="og:image" content="${esc(preview)}" />` : '',
+        `<meta property="og:url" content="${esc(url)}" />`,
+        `<meta name="twitter:card" content="summary" />`,
+        `<meta name="twitter:title" content="${esc(name)}" />`,
+        `<meta name="twitter:description" content="${esc(desc)}" />`,
+        preview ? `<meta name="twitter:image" content="${esc(preview)}" />` : '',
+    ].filter(Boolean).join('\n    ');
+}
+
+// Handle React routing, return all requests to React app (with per-club head when applicable).
+app.get(/.*/, async (req, res) => {
+    try {
+        const seg = req.path.split('/').filter(Boolean)[0];
+        const club = seg ? await getClub(seg) : null;
+        const html = readIndexHtml();
+        if (club && html) {
+            const proto = req.headers['x-forwarded-proto'] || req.protocol;
+            const origin = `${proto}://${req.get('host')}`;
+            const patched = html
+                .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
+                .replace(/<link\s+rel="icon"[^>]*>\s*/i, '')
+                .replace(/<link\s+rel="apple-touch-icon"[^>]*>\s*/i, '')
+                .replace(/<meta\s+name="theme-color"[^>]*>\s*/i, '')
+                .replace(/<meta\s+name="apple-mobile-web-app-title"[^>]*>\s*/i, '')
+                .replace('</head>', `    ${clubHead(club, origin)}\n  </head>`);
+            res.set('Content-Type', 'text/html; charset=utf-8');
+            return res.send(patched);
+        }
+    } catch { /* fall through to the static SPA below */ }
+    res.sendFile(INDEX_PATH);
 });
 
 // Final safety net: any uncaught error never reaches the client as a raw stack trace.
