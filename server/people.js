@@ -95,6 +95,30 @@ export async function registerUser(slug, { role, team, name, email, phone }) {
     return { valid: true, token, role, team: team || '', name };
 }
 
+// Manager roster — NAMES ONLY (never phone/email), grouped by team. Privacy-safe:
+// lets the manager see who registered without exposing contact details.
+export async function listMembers(slug) {
+    const cid = await clubId(slug);
+    const r = await pool.query(
+        `SELECT DISTINCT role, team, name FROM app_users
+         WHERE club_id=$1 AND name IS NOT NULL AND name <> ''
+         ORDER BY team, name`,
+        [cid],
+    );
+    const teams = {};
+    const operators = [];
+    r.rows.forEach((row) => {
+        if (row.role === 'operator') { operators.push(row.name.trim()); return; }
+        const t = (row.team || '').trim() || '—';
+        (teams[t] = teams[t] || []).push(row.name.trim());
+    });
+    return {
+        teams: Object.keys(teams).sort((a, b) => a.localeCompare(b, 'he')).map((t) => ({ team: t, names: teams[t] })),
+        operators,
+        total: r.rows.length,
+    };
+}
+
 export async function authUser(slug, { token }) {
     if (!token) return { valid: false };
     const cid = await clubId(slug);

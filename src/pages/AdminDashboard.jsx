@@ -10,6 +10,7 @@ import SocialPostBroadcast from '../components/SocialPostBroadcast';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
 import TeamManager from '../components/TeamManager';
+import MembersRoster from '../components/MembersRoster';
 import QuickStart from '../components/QuickStart';
 import PublishPanel from '../components/PublishPanel';
 import ApprovalsPanel from '../components/ApprovalsPanel';
@@ -651,6 +652,8 @@ const AdminDashboard = () => {
                 return <QuickStart go={selectTab} />;
             case 'teamsAdmin':
                 return <TeamManager onChanged={loadDraft} />;
+            case 'members':
+                return <MembersRoster />;
             case 'halls':
                 return <HallsConfig clubSlug={getActiveClub().slug} />;
             case 'messages':
@@ -753,6 +756,9 @@ const AdminDashboard = () => {
                         </button>
                         <button style={menuButtonStyle(activeTab === 'invites')} onClick={() => selectTab('invites')}>
                             🔗 לינקי הזמנה
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'members')} onClick={() => selectTab('members')}>
+                            👪 רשומים
                         </button>
                         <button style={menuButtonStyle(activeTab === 'trainersAdmin')} onClick={() => selectTab('trainersAdmin')}>
                             👤 ניהול מאמנים

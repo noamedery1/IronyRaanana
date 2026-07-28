@@ -7,7 +7,7 @@ import webpush from 'web-push';
 import { publishClub, getLiveSchedule, listPublications, teamICS, getPublicationSessions } from './server/publish.js';
 import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
-    registerUser, authUser, listTeams, upsertTeam, deleteTeam,
+    registerUser, authUser, listMembers, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
@@ -197,6 +197,10 @@ app.post('/api/:club/users', async (req, res) => {
 });
 app.post('/api/:club/users/auth', async (req, res) => {
     try { ok(res, await authUser(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+// Manager-only roster — names grouped by team, NO contact details.
+app.get('/api/:club/members', requireManager, async (req, res) => {
+    try { res.json(await listMembers(req.params.club)); } catch (e) { fail(res, e); }
 });
 
 // Manager-app login (per club).

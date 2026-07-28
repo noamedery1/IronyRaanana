@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import BrandMark from '../components/BrandMark';
-import { setIdentity, registerIdentityPush } from '../userIdentity.js';
+import { addMembership, getIdentity, registerIdentityPush } from '../userIdentity.js';
 
 // Invite-based registration. Opened from a manager-generated link:
 //   /<club>/join?r=member&team=<teamLabel>   (parent/trainee of a team)
@@ -11,7 +11,7 @@ export default function Join() {
     const role = params.get('r') === 'operator' ? 'operator' : 'member';
     const team = params.get('team') || '';
 
-    const [name, setName] = useState('');
+    const [name, setName] = useState(getIdentity().name || ''); // prefill for a returning parent adding another team
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
@@ -41,8 +41,8 @@ export default function Join() {
             });
             const data = await res.json();
             if (!data.valid) { setError(data.error || 'הרשמה נכשלה'); return; }
-            setIdentity({ token: data.token, role: data.role, team: data.team, name: data.name });
-            registerIdentityPush(data.role, data.team).catch(() => {}); // best-effort push opt-in
+            addMembership({ token: data.token, role: data.role, team: data.team, name: data.name }); // adds team, keeps existing
+            registerIdentityPush(data.role, data.team).catch(() => {}); // best-effort push opt-in (this team)
             window.location.href = `/${slug}`; // enter the app in the right view
         } catch (err) {
             console.error(err);

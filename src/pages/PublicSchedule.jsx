@@ -13,7 +13,7 @@ import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName } from '../sportLabels.js';
-import { getIdentity } from '../userIdentity.js';
+import { getIdentity, getMemberships, setActiveTeam } from '../userIdentity.js';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
 const parseScheduleContent = parseCellContent;
@@ -27,7 +27,9 @@ function PublicSchedule() {
     // A "member" (parent/trainee via invite) is locked to their own team; an operator/
     // manager sees the full board. memberTeam is empty for non-members.
     const identity = getIdentity();
-    const memberTeam = identity.role === 'member' ? identity.team : '';
+    // A member may belong to several teams (e.g. two kids). memberTeam is the ACTIVE one.
+    const memberships = identity.role === 'member' ? getMemberships() : [];
+    const [memberTeam, setMemberTeam] = useState(identity.role === 'member' ? identity.team : '');
 
     // Who is this device? Members are locked to their team; operators/managers/trainers
     // get the full board. Anyone the system doesn't recognise is "anonymous" — they see
@@ -198,6 +200,14 @@ function PublicSchedule() {
             .then((d) => { if (d.config) localStorage.setItem(`hallcfg:${club.slug}`, JSON.stringify(d.config)); })
             .catch(() => { });
     }, []);
+
+    // When the active member team changes (multi-team parent switching), point the
+    // schedule at that team once the board data is loaded.
+    useEffect(() => {
+        if (!memberTeam || !teams.length) return;
+        const f = teams.find((t) => t.name === memberTeam || t.label === memberTeam);
+        if (f) { setSelectedTeamId(f.value); setViewMode('team'); }
+    }, [memberTeam, teams]);
 
     const getTeamObj = () => {
         if (!selectedTeamId) return null;
@@ -441,6 +451,22 @@ function PublicSchedule() {
                             <button className={`vtab ${viewMode === 'daily' ? 'on' : ''}`} onClick={() => setViewMode('daily')}>📅 {t('tab_daily')}</button>
                         </div>
                     </div>
+                    )}
+
+                    {/* Multi-team parent: switch between only their own teams */}
+                    {memberTeam && memberships.length > 1 && (
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 1rem' }}>
+                            {memberships.map((m) => (
+                                <button
+                                    key={m.team}
+                                    onClick={() => { setActiveTeam(m.team); setMemberTeam(m.team); }}
+                                    className={`vtab ${memberTeam === m.team ? 'on' : ''}`}
+                                    style={{ fontWeight: 700 }}
+                                >
+                                    {m.team}
+                                </button>
+                            ))}
+                        </div>
                     )}
 
                     {viewMode === 'halls' ? (
