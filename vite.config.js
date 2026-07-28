@@ -44,8 +44,13 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // Pull our Web Push handlers into the generated service worker.
         // Bump the ?v when push-sw.js changes to force the SW (and the imported script) to update.
-        importScripts: ['push-sw.js?v=4'],
-        navigateFallbackDenylist: [/^\/calendar\.ics/, /^\/sales-landing/],
+        importScripts: ['push-sw.js?v=5'],
+        // Do NOT serve a precached SPA shell for navigations. The precached index.html
+        // carries the build-time (raanana) manifest link, so serving it for /<club>/*
+        // made Chrome mint the installed WebAPK from raanana (wrong icon/name/start_url).
+        // With this off, navigations hit the network → the server renders the correct
+        // per-club <head> (manifest + icons) → the WebAPK is minted from the right club.
+        navigateFallback: null,
         runtimeCaching: [
           {
             // Live schedule data (Google Sheets CSV) + Apps Script — always try network first

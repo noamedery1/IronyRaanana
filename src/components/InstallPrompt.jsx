@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useI18n } from '../i18n.jsx';
 import { hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall } from '../installState.js';
 import { getActiveClub } from '../clubConfig.js';
+import { sportEmoji } from '../sportLabels.js';
 
 // Install affordances (shown on every screen until the app is installed):
 // - First visit (not dismissed): a prominent centered modal.
@@ -68,7 +69,7 @@ export default function InstallPrompt() {
                         width: 72, height: 72, borderRadius: 18, margin: '0 auto 0.9rem',
                         boxShadow: '0 12px 30px -10px rgba(0,0,0,0.7)',
                     }} />
-                    <div style={{ fontWeight: 800, fontSize: '1.2rem', marginBottom: '0.4rem' }}>{t('install_title')}</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.2rem', marginBottom: '0.4rem' }}>{t('install_title')} {sportEmoji()}</div>
                     <div style={{ fontSize: '0.88rem', color: 'var(--text-dim)', lineHeight: 1.55, marginBottom: '1.2rem' }}>
                         {ios ? t('install_ios') : t('install_desc')}
                     </div>
