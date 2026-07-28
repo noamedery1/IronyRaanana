@@ -1,15 +1,13 @@
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji } from '../sportLabels.js';
 
-// Role-based floating mode switcher:
-// - Manager (admin login)  → הורים / מאמן / ניהול
-// - Trainer (logged in)     → הורים / מאמן
-// - Parent (no login)       → nothing (hidden)
+// Floating mode switcher — MANAGER ONLY. It's a preview tool for the person running the
+// club (jump between הורים / מאמן / ניהול). Parents and trainers never see it: parents get
+// a clean app, and trainers reach the parent board via the "לוח מלא" link in their header.
 export default function AdminSwitcher() {
     if (typeof window === 'undefined') return null;
     const isManager = localStorage.getItem('isAdmin') === 'true';
-    const isTrainer = !!localStorage.getItem('trainerToken');
-    if (!isManager && !isTrainer) return null; // parents see no switcher
+    if (!isManager) return null; // only the manager gets the switcher
 
     const slug = getActiveClub().slug;
     const here = window.location.pathname;
@@ -31,10 +29,10 @@ export default function AdminSwitcher() {
             border: '1px solid rgba(255,255,255,0.16)', borderRadius: '30px', padding: '0.35rem 0.5rem',
             boxShadow: '0 12px 30px -10px rgba(0,0,0,0.7)', direction: 'rtl',
         }}>
-            <span style={{ color: '#22d3ee', fontWeight: 800, fontSize: '0.72rem', padding: '0 0.3rem' }}>{isManager ? 'מנהל' : 'מאמן'}</span>
-            <a href={`/${slug}`} style={link(onParent)}>👨‍👩‍👧 הורים</a>
+            <span style={{ color: '#22d3ee', fontWeight: 800, fontSize: '0.72rem', padding: '0 0.3rem' }}>תצוגה</span>
+            <a href={`/${slug}?view=parent`} style={link(onParent)}>👨‍👩‍👧 הורים</a>
             <a href={`/${slug}/trainer`} style={link(onTrainer)}>{sportEmoji()} מאמן</a>
-            {isManager && <a href={`/${slug}/admin/dashboard`} style={link(onAdmin)}>🗂️ ניהול</a>}
+            <a href={`/${slug}/admin/dashboard`} style={link(onAdmin)}>🗂️ ניהול</a>
         </div>
     );
 }
