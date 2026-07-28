@@ -20,6 +20,10 @@ export default function Join() {
     const slug = getActiveClub().slug;
     const roleLabel = role === 'operator' ? 'מפעיל' : 'חבר קבוצה';
 
+    // Mark how this device entered so the installed app's start page routes correctly
+    // (a member/operator link should NOT bounce to the trainer portal).
+    localStorage.setItem('entryRole', role);
+
     const submit = async (e) => {
         e.preventDefault();
         if (!name.trim() || (!email.trim() && !phone.trim())) {

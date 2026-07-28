@@ -36,13 +36,16 @@ function PublicSchedule() {
     const isTrainer = !!localStorage.getItem('trainerToken');
     const isAnonymous = !memberTeam && identity.role !== 'operator' && !isAdmin && !isTrainer;
 
-    // The installed PWA opens at /<club> (the manifest start_url). A logged-in trainer
-    // should land in THEIR portal, not the parent board — unless they explicitly asked to
-    // view the parent board (the "לוח ההורים" link carries ?view=parent to opt out).
+    // The installed PWA always opens at /<club> (the fixed manifest start_url), so we route
+    // by how the device joined: a trainer (logged in, or installed from the trainer link)
+    // lands in the trainer portal; a registered member stays on their team; everyone else
+    // sees the welcome. The "לוח ההורים" link carries ?view=parent to opt out of the bounce.
     const navigate = useNavigate();
     const viewParent = new URLSearchParams(window.location.search).get('view') === 'parent';
+    const entryRole = localStorage.getItem('entryRole');
     useEffect(() => {
-        if (isTrainer && !viewParent) navigate(`/${club.slug}/trainer`, { replace: true });
+        if (viewParent || memberTeam) return;                 // viewing parents, or a member → stay
+        if (isTrainer || entryRole === 'trainer') navigate(`/${club.slug}/trainer`, { replace: true });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
