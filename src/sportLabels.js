@@ -31,6 +31,16 @@ export function sportEmoji(sport) {
     return EMOJI[s] || '🏆';
 }
 
+// Sport name in Hebrew (for "מחלקת ה<sport>"). Empty string if unknown.
+const SPORT_HE = {
+    football: 'כדורגל', soccer: 'כדורגל', basketball: 'כדורסל', handball: 'כדוריד',
+    volleyball: 'כדורעף', tennis: 'טניס', swimming: 'שחייה', athletics: 'אתלטיקה',
+};
+export function sportName(sport) {
+    const s = String(sport ?? getActiveClub()?.sport ?? '').toLowerCase().trim();
+    return SPORT_HE[s] || '';
+}
+
 // Common sports offered in the superuser club form (value = stored sport key).
 export const SPORTS = [
     { value: 'football', label: 'כדורגל ⚽' },

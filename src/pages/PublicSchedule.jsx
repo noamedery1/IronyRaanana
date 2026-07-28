@@ -12,7 +12,7 @@ import NavButton from '../components/NavButton';
 import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import { getActiveClub } from '../clubConfig.js';
-import { sportEmoji } from '../sportLabels.js';
+import { sportEmoji, sportName } from '../sportLabels.js';
 import { getIdentity } from '../userIdentity.js';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
@@ -390,7 +390,7 @@ function PublicSchedule() {
                     <img src={clubLogo} alt={club.name} className="brand-logo" />
                     <div>
                         <div className="brand-name">{clubBrandName}</div>
-                        <div className="brand-sub">{t('brand_sub')}</div>
+                        <div className="brand-sub">{sportName(club.sport) ? `מחלקת ה${sportName(club.sport)} · לו"ז שבועי` : t('brand_sub')}</div>
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -448,7 +448,12 @@ function PublicSchedule() {
                     ) : viewMode === 'daily' ? (
                         <DailyView data={data} headers={headers} teams={teams} dayStart={dayStart} defaultGender="M" />
                     ) : !selectedTeamId ? (
-                        <div className="empty-state"><h3>{t('pick_team')}</h3></div>
+                        <div className="empty-state">
+                            {memberTeam
+                                ? <><h3>שלום! את/ה רשום/ה לקבוצת {memberTeam} ✅</h3>
+                                    <p style={{ color: 'var(--text-dim)', marginTop: '0.6rem' }}>הלו"ז של הקבוצה עדיין לא פורסם. תקבלו התראה כאן ברגע שהמאמן/המנהל יפרסם אותו.</p></>
+                                : <h3>{t('pick_team')}</h3>}
+                        </div>
                     ) : (
                         <>
                             {/* ===== HERO: next training ===== */}
