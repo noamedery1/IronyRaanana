@@ -486,6 +486,9 @@ app.get(/.*/, async (req, res) => {
                 .replace(/<link\s+rel="apple-touch-icon"[^>]*>\s*/i, '')
                 .replace(/<meta\s+name="theme-color"[^>]*>\s*/i, '')
                 .replace(/<meta\s+name="apple-mobile-web-app-title"[^>]*>\s*/i, '')
+                // Point the PWA manifest at THIS club's manifest (right start_url + icons),
+                // so installing from an invite link gets the club's app — not the raanana build default.
+                .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1/clubs/${club.slug}.webmanifest$2`)
                 .replace('</head>', `    ${clubHead(club, origin)}\n  </head>`);
             res.set('Content-Type', 'text/html; charset=utf-8');
             return res.send(patched);
