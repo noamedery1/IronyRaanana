@@ -362,14 +362,14 @@ function PublicSchedule() {
                     <img src={clubLogo} alt={club.name} className="welcome-logo" />
                     <h1 className="welcome-title">{club.name}</h1>
                     <p className="welcome-lead">
-                        כדי לצפות בלו"ז האימונים של הקבוצה שלך, יש להירשם דרך הקישור
-                        האישי שקיבלת מהמועדון. אחרי ההרשמה הדף נפתח ישירות על הקבוצה שלך.
+                        <b>הורים / שחקנים:</b> היכנסו דרך הקישור האישי שקיבלתם מהמועדון — אחרי הרשמה
+                        חד-פעמית הדף נפתח ישירות על הקבוצה שלכם (ומהאפליקציה תמיד ייפתח שם).
                     </p>
-                    <a className="welcome-cta" href="/sales-landing.html">
-                        מה זה Squadio? גלו עוד ←
-                    </a>
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.6rem' }}>
-                        <Link to={`/${club.slug}/trainer`} className="welcome-admin">מאמן? כניסה 🏃</Link>
+                    <Link to={`/${club.slug}/trainer`} className="welcome-cta">
+                        {sportEmoji()} כניסת מאמן
+                    </Link>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.8rem' }}>
+                        <a className="welcome-admin" href="/sales-landing.html">מה זה Squadio?</a>
                         <Link to={`/${club.slug}/admin`} className="welcome-admin">מנהל מועדון? כניסה ⚙</Link>
                     </div>
                 </div>
