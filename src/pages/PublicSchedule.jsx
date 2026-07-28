@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../App.css';
 import { flattenScheduleData, exportToExcel, parseHeaderDate, parseTime, createICSFile, parseCellContent, sessionsToRows } from '../utils/scheduleUtils';
 import LeagueGamesBanner from '../components/LeagueGamesBanner';
@@ -35,6 +35,16 @@ function PublicSchedule() {
     const isAdmin = localStorage.getItem('isAdmin') === 'true';
     const isTrainer = !!localStorage.getItem('trainerToken');
     const isAnonymous = !memberTeam && identity.role !== 'operator' && !isAdmin && !isTrainer;
+
+    // The installed PWA opens at /<club> (the manifest start_url). A logged-in trainer
+    // should land in THEIR portal, not the parent board — unless they explicitly asked to
+    // view the parent board (the "לוח ההורים" link carries ?view=parent to opt out).
+    const navigate = useNavigate();
+    const viewParent = new URLSearchParams(window.location.search).get('view') === 'parent';
+    useEffect(() => {
+        if (isTrainer && !viewParent) navigate(`/${club.slug}/trainer`, { replace: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Per-club brand logo (falls back to the PWA icon, then the built-in crest).
     const clubLogo = club.logo || club.icon512 || club.icon192 || '/men_logo.png';
@@ -355,7 +365,10 @@ function PublicSchedule() {
                     <a className="welcome-cta" href="/sales-landing.html">
                         מה זה Squadio? גלו עוד ←
                     </a>
-                    <Link to={`/${club.slug}/admin`} className="welcome-admin">מנהל מועדון? כניסה ⚙</Link>
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.6rem' }}>
+                        <Link to={`/${club.slug}/trainer`} className="welcome-admin">מאמן? כניסה 🏃</Link>
+                        <Link to={`/${club.slug}/admin`} className="welcome-admin">מנהל מועדון? כניסה ⚙</Link>
+                    </div>
                 </div>
             </div>
         );

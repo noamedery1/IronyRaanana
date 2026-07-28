@@ -406,7 +406,7 @@ const TrainerPortal = () => {
                     שלום, {trainer.name}
                 </h3>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <a href={`/${getActiveClub().slug}`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', textDecoration: 'none' }}>👁️ לוח מלא / {venues()}</a>
+                    <a href={`/${getActiveClub().slug}?view=parent`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', textDecoration: 'none' }}>👁️ לוח מלא / {venues()}</a>
                     <button onClick={logout} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>יציאה</button>
                 </div>
             </header>
