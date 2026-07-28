@@ -43,9 +43,14 @@ function PublicSchedule() {
     const navigate = useNavigate();
     const viewParent = new URLSearchParams(window.location.search).get('view') === 'parent';
     const entryRole = localStorage.getItem('entryRole');
+    const entryTeam = localStorage.getItem('entryTeam');
     useEffect(() => {
-        if (viewParent || memberTeam) return;                 // viewing parents, or a member → stay
-        if (isTrainer || entryRole === 'trainer') navigate(`/${club.slug}/trainer`, { replace: true });
+        // Already registered (member/operator) or explicitly viewing the parent board → stay put.
+        if (viewParent || memberTeam || identity.role === 'operator') return;
+        if (isTrainer || entryRole === 'trainer') { navigate(`/${club.slug}/trainer`, { replace: true }); return; }
+        // Came in via a parent/operator invite but haven't registered yet → open that registration.
+        if (entryRole === 'member' && entryTeam) { navigate(`/${club.slug}/join?r=member&team=${encodeURIComponent(entryTeam)}`, { replace: true }); return; }
+        if (entryRole === 'operator') { navigate(`/${club.slug}/join?r=operator`, { replace: true }); return; }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

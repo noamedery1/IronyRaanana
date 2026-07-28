@@ -33,6 +33,12 @@ export function hasNativePrompt() {
     return !!deferredPrompt;
 }
 
+// True once the browser fired `appinstalled` this session (installed but still viewing
+// the browser tab, not yet opened as a standalone app).
+export function isInstalled() {
+    return installed;
+}
+
 // Can we offer install at all? (native prompt available, or iOS which needs manual steps)
 export function canInstall() {
     return !installed && !isStandalone() && (!!deferredPrompt || isIOS());

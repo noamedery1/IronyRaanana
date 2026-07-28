@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useI18n } from '../i18n.jsx';
-import { hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall } from '../installState.js';
+import { hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall, isInstalled } from '../installState.js';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji } from '../sportLabels.js';
 
@@ -14,6 +14,7 @@ export default function InstallPrompt() {
     const [, force] = useState(0);
     const [dismissed, setDismissed] = useState(localStorage.getItem('pwaPromptDismissed') === '1');
     const [showTip, setShowTip] = useState(false);
+    const [ackInstalled, setAckInstalled] = useState(false);
 
     // Re-render when the install prompt becomes available / the app gets installed.
     useEffect(() => subscribe(() => force((n) => n + 1)), []);
@@ -24,6 +25,23 @@ export default function InstallPrompt() {
     // floating pill would otherwise overlap the admin sidebar menu.
     const path = typeof window !== 'undefined' ? window.location.pathname : '';
     if (/\/admin(\/|$)/.test(path) || path.startsWith('/superuser')) return null;
+
+    // Just installed (still on the browser tab): replace the install UI with a clear
+    // "open the app from your home screen" confirmation, so the old prompt doesn't linger.
+    if (isInstalled() && !ackInstalled) {
+        return (
+            <div dir="rtl" style={{ position: 'fixed', inset: 0, zIndex: 1600, background: 'rgba(4,8,18,0.72)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', fontFamily: 'Rubik, sans-serif' }}>
+                <div style={{ width: 'min(360px,100%)', background: 'rgba(12,19,36,0.97)', border: '1px solid var(--bd2, rgba(255,255,255,0.12))', borderRadius: '22px', padding: '1.8rem 1.4rem', textAlign: 'center', color: '#e8edf7', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)' }}>
+                    <div style={{ fontSize: '2.6rem', marginBottom: '0.4rem' }}>✅</div>
+                    <div style={{ fontWeight: 800, fontSize: '1.15rem', marginBottom: '0.5rem' }}>האפליקציה הותקנה!</div>
+                    <div style={{ fontSize: '0.9rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '1.2rem' }}>
+                        סגרו את הדפדפן ופתחו את האפליקציה מאייקון <b>{getActiveClub().name}</b> במסך הבית — משם היא תיפתח ישר במסך המתאים לכם.
+                    </div>
+                    <button onClick={() => setAckInstalled(true)} style={{ background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', fontWeight: 800, padding: '0.7rem 1.4rem', borderRadius: '999px', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>הבנתי</button>
+                </div>
+            </div>
+        );
+    }
 
     const ios = isIOS();
     const tipText = ios ? t('install_ios') : t('install_manual');
