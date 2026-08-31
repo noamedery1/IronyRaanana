@@ -31,6 +31,10 @@
   --red: #f4475b;
   --amber: #fbbf24;
 
+  /* conflict cell (schedule board) — light pink on dark */
+  --conflict-bg: #fde2e4;
+  --conflict-text: #b91c1c;
+
   /* glass */
   --glass-bg: rgba(255, 255, 255, 0.055);
   --glass-2: rgba(255, 255, 255, 0.09);
@@ -91,6 +95,17 @@
 /* Plain white background in light mode (no dark gradient). */
 :root[data-theme="light"] html { background: #ffffff; }
 :root[data-theme="light"] body { color: var(--text); background: #ffffff; }
+
+/* Light mode: the pinks/reds were tuned for a dark bg and wash out on white — deepen them. */
+:root[data-theme="light"] {
+  --conflict-bg: #fca5a5;
+  --conflict-text: #7f1d1d;
+}
+:root[data-theme="light"] .cc-alerts { background: rgba(244, 71, 91, 0.12); border-color: rgba(244, 71, 91, 0.55); }
+:root[data-theme="light"] .cc-alerts-head { color: #b91c1c; }
+:root[data-theme="light"] .cc-alert { background: rgba(244, 71, 91, 0.14); border-color: rgba(244, 71, 91, 0.5); color: #7f1d1d; }
+:root[data-theme="light"] .cc-alert b { color: #991b1b; }
+:root[data-theme="light"] .cc-alert-fix { background: #dc2626; color: #fff; }
 
 * {
   box-sizing: border-box;

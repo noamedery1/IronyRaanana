@@ -1232,7 +1232,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                             // marked (red fill + ⚠️) when "show conflicts" is toggled on.
                                             const markConflict = isConflict && (!fullScreen || showConflictsFS);
                                             // Normal view: red fill. Full screen: keep the colour, only the ⚠️ + border remain.
-                                            if (markConflict && !fullScreen) { bgColor = '#fde2e4'; textColor = '#b91c1c'; }
+                                            if (markConflict && !fullScreen) { bgColor = 'var(--conflict-bg)'; textColor = 'var(--conflict-text)'; }
 
                                             const proposalHere = proposalByCell[`${rowIndex}_${colIndex}`];
                                             const showProposal = proposalHere && !cellData; // proposal shown only on an empty cell

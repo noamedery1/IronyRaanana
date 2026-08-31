@@ -46,6 +46,9 @@ const AdminDashboard = () => {
     const [hallConfig, setHallConfig] = useState({});
     const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
     const [pwMsg, setPwMsg] = useState('');
+    const [importMissing, setImportMissing] = useState(null); // team names in the file not yet in ניהול קבוצות
+    const [importCsv, setImportCsv] = useState('');            // the parsed file, held while we create teams
+    const [creatingTeams, setCreatingTeams] = useState(false);
 
     const changePassword = async () => {
         if (!pw.cur || !pw.next) { setPwMsg('מלא סיסמה נוכחית וחדשה'); return; }
@@ -314,11 +317,6 @@ const AdminDashboard = () => {
 
     // POST CSV text → the DB draft, then refresh the preview from the draft.
     const importCsvToDraft = async (csv) => {
-        const { missing, count } = await missingTeamsIn(csv);
-        if (missing.length) {
-            const hint = count === 0 ? 'עדיין לא הוקמו קבוצות. ' : '';
-            throw new Error(`${hint}הקבוצות הבאות אינן קיימות ב"👥 ניהול קבוצות": ${missing.join(' · ')}. הקימו אותן (או תקנו שמות) ואז טענו את הקובץ שוב.`);
-        }
         const r = await fetch(`/api/${club.slug}/draft/import`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
             body: JSON.stringify({ csv }),
@@ -327,6 +325,25 @@ const AdminDashboard = () => {
         if (!r.ok) throw new Error(d.error || 'ייבוא נכשל');
         await loadDraft();
         setActiveTab('preview');
+    };
+
+    // One-click: create every team the file needs (gender inferred from the name) then import.
+    const createMissingTeamsAndImport = async () => {
+        if (!importMissing || !importCsv) return;
+        setCreatingTeams(true); setError('');
+        try {
+            const genderOf = (n) => /נשים|בנות|נערות|ילדות|בוגרות/.test(n) ? 'W' : 'M';
+            for (const name of importMissing) {
+                await fetch(`/api/${club.slug}/teams`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+                    body: JSON.stringify({ name, gender: genderOf(name) }),
+                });
+            }
+            const csv = importCsv;
+            setImportMissing(null); setImportCsv('');
+            await importCsvToDraft(csv);
+        } catch (e) { setError('יצירת הקבוצות נכשלה: ' + e.message); }
+        finally { setCreatingTeams(false); }
     };
 
     // Read an uploaded Excel/CSV file in the browser → CSV text → import to the draft.
@@ -348,6 +365,11 @@ const AdminDashboard = () => {
                 const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
                 csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
             }
+            // Teams must exist first — if any are missing, show the quick-create panel
+            // instead of importing (also catches a bad parse that merged teams).
+            setImportMissing(null); setImportCsv('');
+            const { missing } = await missingTeamsIn(csv);
+            if (missing.length) { setImportCsv(csv); setImportMissing(missing); return; }
             await importCsvToDraft(csv);
         } catch (err) {
             setError('ייבוא נכשל: ' + err.message);
@@ -613,6 +635,34 @@ const AdminDashboard = () => {
                         </div>
 
                         {error && <div style={{ color: '#ef4444', marginTop: '1rem', background: '#fee2e2', padding: '1rem', borderRadius: '4px' }}>{error}</div>}
+
+                        {importMissing && importMissing.length > 0 && (
+                            <div style={{ marginTop: '1rem', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 10, padding: '1rem' }}>
+                                <div style={{ fontWeight: 700, color: '#9a3412', marginBottom: '0.4rem' }}>
+                                    ⚠️ {importMissing.length} קבוצות בקובץ עדיין לא קיימות ב"👥 ניהול קבוצות"
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.8rem' }}>
+                                    {importMissing.map((n) => (
+                                        <span key={n} style={{ background: '#ffedd5', color: '#9a3412', borderRadius: 12, padding: '0.15rem 0.6rem', fontSize: '0.82rem' }}>{n}</span>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                    <button onClick={createMissingTeamsAndImport} disabled={creatingTeams}
+                                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '0.6rem 1.2rem', borderRadius: 8, fontWeight: 700, cursor: creatingTeams ? 'wait' : 'pointer' }}>
+                                        {creatingTeams ? 'יוצר קבוצות…' : `➕ צור את הקבוצות וטען את הלו"ז`}
+                                    </button>
+                                    <button onClick={() => { setImportMissing(null); setImportCsv(''); selectTab('teamsAdmin'); }}
+                                        style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.6rem 1rem', cursor: 'pointer' }}>
+                                        פתח ניהול קבוצות ידנית
+                                    </button>
+                                    <button onClick={() => { setImportMissing(null); setImportCsv(''); }}
+                                        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>ביטול</button>
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: '#9a3412', marginTop: '0.6rem' }}>
+                                    מגדר נקבע אוטומטית לפי השם (נערות/ילדות/בוגרות = בנות) — אפשר לתקן אח"כ ב"ניהול קבוצות".
+                                </div>
+                            </div>
+                        )}
                         <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
                             לעריכה ופרסום — עברו ל<b>תצוגה מקדימה</b> ואז <b>פרסם לוז</b>.
                         </div>
