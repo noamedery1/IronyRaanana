@@ -48,6 +48,10 @@
   --shadow: 0 24px 60px -22px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   --radius: 20px;
 
+  /* app chrome (header / sidebar) — tokenised so light mode can flip them to white */
+  --chrome-bg: rgba(7, 11, 22, 0.62);
+  --chrome-bg-2: rgba(7, 11, 22, 0.45);
+
   /* legacy aliases kept so older inline refs don't break */
   --bg-dark: #070b16;
   --bg-card: #121b30;
@@ -58,14 +62,14 @@
    Overrides only the tokens; the glass surfaces flip from white-alpha to
    dark-alpha so cards stay legible on a light background. */
 :root[data-theme="light"] {
-  --ink: #eef2f8;
-  --ink2: #e6ecf5;
-  --ink3: #dde5f1;
+  --ink: #ffffff;
+  --ink2: #f7f9fc;
+  --ink3: #eef2f8;
   --panel: #ffffff;
-  --panel2: #f1f5fb;
+  --panel2: #f6f8fc;
 
-  --glass-bg: rgba(15, 23, 42, 0.04);
-  --glass-2: rgba(15, 23, 42, 0.07);
+  --glass-bg: rgba(15, 23, 42, 0.035);
+  --glass-2: rgba(15, 23, 42, 0.06);
   --glass-border: rgba(15, 23, 42, 0.12);
   --bd2: rgba(15, 23, 42, 0.16);
 
@@ -74,21 +78,19 @@
   --text-dim: rgba(15, 27, 51, 0.66);
   --text-muted: rgba(15, 27, 51, 0.42);
 
-  --glow-orange: 0 0 30px rgba(59, 130, 246, 0.18);
-  --shadow: 0 20px 44px -24px rgba(15, 23, 42, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --glow-orange: 0 0 30px rgba(59, 130, 246, 0.14);
+  --shadow: 0 18px 40px -26px rgba(15, 23, 42, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 
-  --bg-dark: #eef2f8;
+  --chrome-bg: rgba(255, 255, 255, 0.92);
+  --chrome-bg-2: rgba(255, 255, 255, 0.78);
+
+  --bg-dark: #ffffff;
   --bg-card: #ffffff;
 }
 
-:root[data-theme="light"] html { background: #eef2f8; }
-:root[data-theme="light"] body {
-  color: var(--text);
-  background:
-    radial-gradient(ellipse 70% 55% at 82% -8%, rgba(59, 130, 246, 0.10), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 12% 6%, rgba(34, 211, 238, 0.10), transparent 58%),
-    linear-gradient(165deg, #f4f7fc 0%, #eaf0f8 55%, #f6f1ea 100%);
-}
+/* Plain white background in light mode (no dark gradient). */
+:root[data-theme="light"] html { background: #ffffff; }
+:root[data-theme="light"] body { color: var(--text); background: #ffffff; }
 
 * {
   box-sizing: border-box;

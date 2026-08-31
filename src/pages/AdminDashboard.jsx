@@ -316,7 +316,8 @@ const AdminDashboard = () => {
         try {
             let csv;
             if (/\.pdf$/i.test(file.name)) {
-                throw new Error('קובץ PDF אינו נקרא אוטומטית באופן אמין (במיוחד בעברית). שמרו את הלו"ז כ‑Word (.docx) או Excel והעלו אותו — או שלחו לנו את ה‑PDF ונמיר עבורכם.');
+                const { pdfToCsv } = await import('../utils/fileToCsv.js');
+                csv = await pdfToCsv(file);
             } else if (/\.docx$/i.test(file.name)) {
                 const { docxToCsv } = await import('../utils/fileToCsv.js');
                 csv = await docxToCsv(file);
@@ -564,14 +565,14 @@ const AdminDashboard = () => {
 
                         <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.2rem', flexWrap: 'wrap', alignItems: 'center' }}>
                             <label style={{ background: '#0891b2', color: 'white', padding: '0.7rem 1.2rem', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>
-                                {loading ? 'טוען…' : '⬆ טען קובץ Word / אקסל / CSV'}
-                                <input type="file" accept=".docx,.xlsx,.xls,.csv,.pdf" style={{ display: 'none' }}
+                                {loading ? 'טוען…' : '⬆ טען קובץ PDF / Word / אקסל / CSV'}
+                                <input type="file" accept=".pdf,.docx,.xlsx,.xls,.csv" style={{ display: 'none' }}
                                     onChange={(e) => { handleImportFile(e.target.files[0]); e.target.value = ''; }} />
                             </label>
                             <span style={{ color: '#94a3b8' }}>או</span>
                         </div>
                         <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: '#94a3b8' }}>
-                            נדרשת טבלה עם עמודת קבוצה ועמודות ימים (ראשון–שבת). PDF — עדיף לשמור כ‑Word/Excel ולהעלות.
+                            נדרשת טבלה עם עמודת קבוצה ועמודות ימים (ראשון–שבת). לאחר הטעינה עוברים ל<b>תצוגה מקדימה</b> לעריכה ופרסום.
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
@@ -688,7 +689,7 @@ const AdminDashboard = () => {
     return (
         <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent', fontFamily: 'Rubik, sans-serif', color: 'var(--text)' }}>
             {/* Header */}
-            <header style={{ background: 'rgba(7,11,22,0.62)', backdropFilter: 'blur(20px) saturate(1.4)', padding: isMobile ? '0.6rem 0.8rem' : '0.9rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+            <header style={{ background: 'var(--chrome-bg)', backdropFilter: 'blur(20px) saturate(1.4)', padding: isMobile ? '0.6rem 0.8rem' : '0.9rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.6rem' : '1.2rem', minWidth: 0 }}>
                     <button
                         onClick={() => setSidebarOpen(o => !o)}
@@ -733,7 +734,7 @@ const AdminDashboard = () => {
                 {/* Sidebar — inline column on desktop, fixed drawer on mobile */}
                 {sidebarOpen && <aside style={isMobile
                     ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: '1.2rem 0', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
-                    : { width: '230px', flexShrink: 0, background: 'rgba(7,11,22,0.45)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0', overflowY: 'auto', maxHeight: '100%' }}>
+                    : { width: '230px', flexShrink: 0, background: 'var(--chrome-bg-2)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0', overflowY: 'auto', maxHeight: '100%' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
                         <button style={menuButtonStyle(activeTab === 'quickStart')} onClick={() => selectTab('quickStart')}>
                             🚀 התחלה מהירה

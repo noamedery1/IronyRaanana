@@ -40,3 +40,6 @@ data_test
 /squadio-sales*.png
 /squadio-sales*.jpeg
 /db-*.jpeg
+
+# local promo build artifacts (Chrome profile, renders)
+onboarding/_promo_build/
