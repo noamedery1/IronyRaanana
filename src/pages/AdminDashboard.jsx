@@ -18,7 +18,7 @@ import ApprovalsPanel from '../components/ApprovalsPanel';
 import { getActiveClub } from '../clubConfig.js';
 import { venues } from '../sportLabels.js';
 import { subscribeToPush } from '../push.js';
-import { authHeaders } from '../adminApi.js';
+import { authHeaders, mgrToken } from '../adminApi.js';
 import { sessionsToSheet, sheetToSessions } from '../draftBridge.js';
 
 const AdminDashboard = () => {
@@ -297,8 +297,28 @@ const AdminDashboard = () => {
         }
     };
 
+    // Before importing: every team in the file must already exist in ניהול קבוצות.
+    // This guards against a bad parse (e.g. two teams merged into one row) and forces a
+    // clean team list first. Returns the list of team names in the file that don't exist.
+    const missingTeamsIn = async (csv) => {
+        const DAY_RE = /ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת/;
+        const rows = Papa.parse((csv || '').replace(/^﻿/, ''), { header: false }).data;
+        let hi = rows.findIndex((r) => Array.isArray(r) && r.some((c) => DAY_RE.test((c || '').trim())));
+        if (hi < 0) hi = 0;
+        const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
+        const fileTeams = [...new Set(rows.slice(hi + 1).map((r) => norm(r[0])).filter((n) => n && !DAY_RE.test(n) && !/קבוצות|באנר|banner/i.test(n)))];
+        const existing = await fetch(`/api/${club.slug}/teams`).then((r) => r.json())
+            .then((d) => new Set((d.teams || []).map((t) => norm(t.name)))).catch(() => new Set());
+        return { missing: fileTeams.filter((t) => !existing.has(t)), count: existing.size };
+    };
+
     // POST CSV text → the DB draft, then refresh the preview from the draft.
     const importCsvToDraft = async (csv) => {
+        const { missing, count } = await missingTeamsIn(csv);
+        if (missing.length) {
+            const hint = count === 0 ? 'עדיין לא הוקמו קבוצות. ' : '';
+            throw new Error(`${hint}הקבוצות הבאות אינן קיימות ב"👥 ניהול קבוצות": ${missing.join(' · ')}. הקימו אותן (או תקנו שמות) ואז טענו את הקובץ שוב.`);
+        }
         const r = await fetch(`/api/${club.slug}/draft/import`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
             body: JSON.stringify({ csv }),
@@ -726,6 +746,12 @@ const AdminDashboard = () => {
                 </div>
             </header >
 
+            {!mgrToken(club.slug) && (
+                <div style={{ background: '#7c2d12', color: '#fed7aa', padding: '0.5rem 1rem', fontSize: '0.85rem', textAlign: 'center' }}>
+                    ⚠️ מחוברים במצב תצוגה בלבד (Admin מובנה) — שמירה, פרסום וייבוא לא יעבדו. התחברו עם חשבון מנהל שנוצר ב־<b>/superuser</b>.
+                </div>
+            )}
+
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
                 {/* Mobile drawer backdrop */}
                 {isMobile && sidebarOpen && (
@@ -792,7 +818,7 @@ const AdminDashboard = () => {
 
 const menuButtonStyle = (isActive) => ({
     background: isActive ? 'rgba(255,122,24,0.14)' : 'transparent',
-    color: isActive ? '#ff9d3c' : 'rgba(238,242,251,0.7)',
+    color: isActive ? '#ff9d3c' : 'var(--text-dim)',
     border: 'none',
     borderRight: isActive ? '4px solid #ff7a18' : '4px solid transparent', // Adjusted for RTL
     padding: '1rem 1.5rem',
