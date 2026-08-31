@@ -54,6 +54,42 @@
   --accent: #22d3ee;
 }
 
+/* ---- Light theme: opt-in via <html data-theme="light"> (toggle button) ----
+   Overrides only the tokens; the glass surfaces flip from white-alpha to
+   dark-alpha so cards stay legible on a light background. */
+:root[data-theme="light"] {
+  --ink: #eef2f8;
+  --ink2: #e6ecf5;
+  --ink3: #dde5f1;
+  --panel: #ffffff;
+  --panel2: #f1f5fb;
+
+  --glass-bg: rgba(15, 23, 42, 0.04);
+  --glass-2: rgba(15, 23, 42, 0.07);
+  --glass-border: rgba(15, 23, 42, 0.12);
+  --bd2: rgba(15, 23, 42, 0.16);
+
+  --text-light: #0f1b33;
+  --text: #0f1b33;
+  --text-dim: rgba(15, 27, 51, 0.66);
+  --text-muted: rgba(15, 27, 51, 0.42);
+
+  --glow-orange: 0 0 30px rgba(59, 130, 246, 0.18);
+  --shadow: 0 20px 44px -24px rgba(15, 23, 42, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  --bg-dark: #eef2f8;
+  --bg-card: #ffffff;
+}
+
+:root[data-theme="light"] html { background: #eef2f8; }
+:root[data-theme="light"] body {
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 70% 55% at 82% -8%, rgba(59, 130, 246, 0.10), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 12% 6%, rgba(34, 211, 238, 0.10), transparent 58%),
+    linear-gradient(165deg, #f4f7fc 0%, #eaf0f8 55%, #f6f1ea 100%);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;

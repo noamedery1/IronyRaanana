@@ -11,6 +11,7 @@ import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
 import TeamManager from '../components/TeamManager';
 import MembersRoster from '../components/MembersRoster';
+import ThemeToggle from '../components/ThemeToggle';
 import QuickStart from '../components/QuickStart';
 import PublishPanel from '../components/PublishPanel';
 import ApprovalsPanel from '../components/ApprovalsPanel';
@@ -314,7 +315,12 @@ const AdminDashboard = () => {
         setLoading(true); setError('');
         try {
             let csv;
-            if (/\.csv$/i.test(file.name)) {
+            if (/\.pdf$/i.test(file.name)) {
+                throw new Error('קובץ PDF אינו נקרא אוטומטית באופן אמין (במיוחד בעברית). שמרו את הלו"ז כ‑Word (.docx) או Excel והעלו אותו — או שלחו לנו את ה‑PDF ונמיר עבורכם.');
+            } else if (/\.docx$/i.test(file.name)) {
+                const { docxToCsv } = await import('../utils/fileToCsv.js');
+                csv = await docxToCsv(file);
+            } else if (/\.csv$/i.test(file.name)) {
                 csv = await file.text();
             } else {
                 const XLSX = await import('xlsx');
@@ -552,16 +558,20 @@ const AdminDashboard = () => {
                         <h3 style={{ marginTop: 0 }}>טעינת לוז ראשוני (אופציונלי)</h3>
                         <p style={{ color: '#666', maxWidth: 680 }}>
                             הלוז נשמר ב‑DB. אפשר לבנות אותו מאפס ב<b>תצוגה מקדימה</b>, או לטעון לוז קיים פעם אחת —
-                            מקובץ <b>אקסל/CSV</b> או מקישור Google Sheet. הטעינה ממלאה את <b>טיוטת שבוע הבא</b> (לא את הלוז החי).
+                            מקובץ <b>Word / אקסל / CSV</b> או מקישור Google Sheet. הטעינה ממלאה את <b>טיוטת שבוע הבא</b> (לא את הלוז החי),
+                            ואז אפשר לערוך ב<b>תצוגה מקדימה</b> ולפרסם.
                         </p>
 
                         <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.2rem', flexWrap: 'wrap', alignItems: 'center' }}>
                             <label style={{ background: '#0891b2', color: 'white', padding: '0.7rem 1.2rem', borderRadius: 8, cursor: 'pointer', fontWeight: 'bold' }}>
-                                {loading ? 'טוען…' : '⬆ טען קובץ אקסל / CSV'}
-                                <input type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }}
+                                {loading ? 'טוען…' : '⬆ טען קובץ Word / אקסל / CSV'}
+                                <input type="file" accept=".docx,.xlsx,.xls,.csv,.pdf" style={{ display: 'none' }}
                                     onChange={(e) => { handleImportFile(e.target.files[0]); e.target.value = ''; }} />
                             </label>
                             <span style={{ color: '#94a3b8' }}>או</span>
+                        </div>
+                        <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: '#94a3b8' }}>
+                            נדרשת טבלה עם עמודת קבוצה ועמודות ימים (ראשון–שבת). PDF — עדיף לשמור כ‑Word/Excel ולהעלות.
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
@@ -698,6 +708,7 @@ const AdminDashboard = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.4rem' : '1rem', flexShrink: 0 }}>
                     {!isMobile && <a href="/" target="_blank" style={{ textDecoration: 'none', color: 'var(--sky)', fontSize: '0.9rem', fontWeight: 600 }}>פתח אתר 🔗</a>}
                     {!isMobile && <span style={{ fontSize: '0.9rem', color: 'var(--text-dim)' }}>שלום, Admin</span>}
+                    <ThemeToggle />
                     <button
                         onClick={enableManagerPush}
                         title="קבל התראות על בקשות שינוי ואשר ישירות מההתראה"

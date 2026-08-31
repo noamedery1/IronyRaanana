@@ -11,6 +11,7 @@ import RegisterUpdatesModal from '../components/RegisterUpdatesModal';
 import NavButton from '../components/NavButton';
 import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
+import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName } from '../sportLabels.js';
 import { getIdentity, getMemberships, setActiveTeam } from '../userIdentity.js';
@@ -404,6 +405,7 @@ function PublicSchedule() {
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <ThemeToggle />
                     <LanguageSwitcher />
                     {!memberTeam && <Link to={`/${club.slug}/admin`} className="admin-gear" title={t('admin')}>⚙</Link>}
                 </div>

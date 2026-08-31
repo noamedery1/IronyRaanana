@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ErrorPage from './pages/ErrorPage.jsx'
 import { setupClubPwa } from './clubPwa.js'
 import { loadClubs } from './clubConfig.js'
+import { initTheme } from './theme.js'
 
 // Load the dynamic club registry, then apply the active club's PWA identity, then render.
 // ErrorBoundary catches any crash inside the app; the try/catch covers a failure during
@@ -14,6 +15,7 @@ import { loadClubs } from './clubConfig.js'
 // designed ErrorPage, never a blank white screen.
 async function boot() {
   try {
+    initTheme()
     await loadClubs()
     setupClubPwa()
   } catch (err) {
