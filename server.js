@@ -26,6 +26,32 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ===== Canonical domain (behind Cloudflare) =====================================
+// Cloudflare terminates TLS and proxies to us over HTTP, so trust the proxy — this
+// makes req.protocol / req.hostname / X-Forwarded-* reflect the real client request.
+app.set('trust proxy', true);
+
+const CANONICAL_HOST = process.env.CANONICAL_HOST || 'squadio.techbynoam.com';
+const CANONICAL_BASE = `https://${CANONICAL_HOST}`;
+
+// 301 any non-canonical host (e.g. the legacy *.up.railway.app) to the canonical
+// domain, preserving the FULL path + query string (req.originalUrl). Registered as the
+// very first middleware — BEFORE body parsing, static files, all routes and auth.
+//
+// This is HOST-based only: we deliberately do NOT redirect on req.protocol. Cloudflare
+// already serves HTTPS while the app sees HTTP internally, so a protocol check would
+// loop forever. Localhost/loopback is excluded so local dev is untouched, and an empty
+// Host (internal Railway health checks) is left alone so deploys stay healthy.
+app.use((req, res, next) => {
+    const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+    const host = rawHost.split(':')[0].toLowerCase();
+    if (!host || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return next();
+    if (host !== CANONICAL_HOST) {
+        return res.redirect(301, CANONICAL_BASE + req.originalUrl); // path + query preserved untouched
+    }
+    next();
+});
+
 try {
     await ensureStore();
 } catch (e) {
@@ -446,19 +472,24 @@ const readIndexHtml = () => {
 };
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-function clubHead(club, origin) {
+// Per-club <head>. All URLs are ABSOLUTE on the canonical domain so link previews
+// (WhatsApp/Telegram) and the canonical tag are correct no matter which host served it.
+// `pagePath` is the request's own path (e.g. /fcraanana or /fcraanana/trainer) so each
+// club page gets its own canonical + og:url, not the root.
+function clubHead(club, pagePath) {
     const name = club.name || 'Squadio';
     const short = club.shortName || name;
     const desc = club.description || `לו"ז אימונים, משחקים ועדכונים — ${name}`;
-    const abs = (p) => (!p ? '' : (/^https?:\/\//.test(p) ? p : origin + p));
+    const abs = (p) => (!p ? '' : (/^https?:\/\//.test(p) ? p : CANONICAL_BASE + p));
     const preview = abs(club.logo || club.icon512 || club.icon192 || '/pwa-512x512.png');
     const favicon = club.icon192 || club.logo || '/pwa-192x192.png';
     const apple = club.appleIcon || club.icon192 || '/apple-touch-icon.png';
     const theme = club.themeColor || '#ff7a18';
-    const url = `${origin}/${club.slug}`;
+    const canonical = CANONICAL_BASE + (pagePath || `/${club.slug}`);
     return [
         `<title>${esc(name)}</title>`,
         `<meta name="theme-color" content="${esc(theme)}" />`,
+        `<link rel="canonical" href="${esc(canonical)}" />`,
         `<link rel="icon" type="image/png" href="${esc(favicon)}" />`,
         `<link rel="apple-touch-icon" href="${esc(apple)}" />`,
         `<meta name="apple-mobile-web-app-title" content="${esc(short)}" />`,
@@ -467,7 +498,7 @@ function clubHead(club, origin) {
         `<meta property="og:title" content="${esc(name)}" />`,
         `<meta property="og:description" content="${esc(desc)}" />`,
         preview ? `<meta property="og:image" content="${esc(preview)}" />` : '',
-        `<meta property="og:url" content="${esc(url)}" />`,
+        `<meta property="og:url" content="${esc(canonical)}" />`,
         `<meta name="twitter:card" content="summary" />`,
         `<meta name="twitter:title" content="${esc(name)}" />`,
         `<meta name="twitter:description" content="${esc(desc)}" />`,
@@ -481,19 +512,25 @@ app.get(/.*/, async (req, res) => {
         const seg = req.path.split('/').filter(Boolean)[0];
         const club = seg ? await getClub(seg) : null;
         const html = readIndexHtml();
-        if (club && html) {
-            const proto = req.headers['x-forwarded-proto'] || req.protocol;
-            const origin = `${proto}://${req.get('host')}`;
-            const patched = html
-                .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
-                .replace(/<link\s+rel="icon"[^>]*>\s*/i, '')
-                .replace(/<link\s+rel="apple-touch-icon"[^>]*>\s*/i, '')
-                .replace(/<meta\s+name="theme-color"[^>]*>\s*/i, '')
-                .replace(/<meta\s+name="apple-mobile-web-app-title"[^>]*>\s*/i, '')
-                // Point the PWA manifest at THIS club's manifest (right start_url + icons),
-                // so installing from an invite link gets the club's app — not the raanana build default.
-                .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1/clubs/${club.slug}.webmanifest$2`)
-                .replace('</head>', `    ${clubHead(club, origin)}\n  </head>`);
+        if (html) {
+            let patched;
+            if (club) {
+                patched = html
+                    .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
+                    .replace(/<link\s+rel="icon"[^>]*>\s*/i, '')
+                    .replace(/<link\s+rel="apple-touch-icon"[^>]*>\s*/i, '')
+                    .replace(/<meta\s+name="theme-color"[^>]*>\s*/i, '')
+                    .replace(/<meta\s+name="apple-mobile-web-app-title"[^>]*>\s*/i, '')
+                    // Point the PWA manifest at THIS club's manifest (right start_url + icons),
+                    // so installing from an invite link gets the club's app — not the raanana build default.
+                    .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1/clubs/${club.slug}.webmanifest$2`)
+                    // Per-club head with canonical + OG on the canonical domain, using this page's own path.
+                    .replace('</head>', `    ${clubHead(club, req.path)}\n  </head>`);
+            } else {
+                // Non-club SPA page (unknown slug, legacy routes) — still emit a canonical for this path.
+                const canonical = `${CANONICAL_BASE}${req.path}`;
+                patched = html.replace('</head>', `    <link rel="canonical" href="${esc(canonical)}" />\n  </head>`);
+            }
             res.set('Content-Type', 'text/html; charset=utf-8');
             return res.send(patched);
         }
