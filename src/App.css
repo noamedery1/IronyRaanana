@@ -981,7 +981,9 @@
 }
 .app-container .club-ticker:hover .club-ticker-track{ animation-play-state:paused; }
 .app-container .club-ticker-item{ display:inline-flex; align-items:center; gap:.45rem; font-size:.95rem; }
-@keyframes clubTicker{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+/* Drift RIGHTWARD (‑50% → 0) so Hebrew reads in its natural direction; two identical copies
+   make the loop seamless and nothing is ever clipped at the edges. */
+@keyframes clubTicker{ from{ transform:translateX(-50%); } to{ transform:translateX(0); } }
 
 /* unregistered-visitor welcome gate */
 .app-container .welcome-gate{
