@@ -976,11 +976,14 @@
   font-weight:800; box-shadow:0 6px 18px -10px rgba(34,211,238,.6);
 }
 .app-container .club-ticker-track{
-  display:inline-flex; align-items:center; gap:3.5rem; padding:.55rem 0;
+  display:inline-flex; align-items:center; padding:.55rem 0;
   animation:clubTicker 24s linear infinite; will-change:transform;
 }
 .app-container .club-ticker:hover .club-ticker-track{ animation-play-state:paused; }
-.app-container .club-ticker-item{ display:inline-flex; align-items:center; gap:.45rem; font-size:.95rem; }
+.app-container .club-ticker-group{ display:inline-flex; align-items:center; }
+/* Spacing lives on the item (trailing margin) rather than a flex gap on the track, so the two
+   copies are exactly equal width and translateX(-50%) wraps seamlessly. */
+.app-container .club-ticker-item{ display:inline-flex; align-items:center; gap:.45rem; font-size:.95rem; margin-inline-end:3.5rem; }
 /* Drift RIGHTWARD (‑50% → 0) so Hebrew reads in its natural direction; two identical copies
    make the loop seamless and nothing is ever clipped at the edges. */
 @keyframes clubTicker{ from{ transform:translateX(-50%); } to{ transform:translateX(0); } }

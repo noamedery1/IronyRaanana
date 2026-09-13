@@ -428,12 +428,21 @@ function PublicSchedule() {
 
             {floatingMsg?.enabled && floatingMsg.text && (() => {
                 const msgs = floatingMsg.text.split('\n').map((m) => m.trim()).filter(Boolean);
-                const loop = [...msgs, ...msgs]; // duplicate for a seamless marquee loop
+                // Container is dir=ltr so the strip is anchored to the LEFT and is full of text from
+                // the first frame (a dir=rtl block right-anchors the overflowing track, so at the
+                // animation's start offset it sits off-screen → seconds of blank before any text).
+                // Two grouped copies with the spacing carried as each item's trailing margin (not a
+                // flex gap) make translateX(-50%) land on exactly one copy → a seamless endless loop.
+                // Each message stays dir=rtl for correct Hebrew.
                 return (
-                    <div className="club-ticker" dir="rtl" aria-label="הודעות מהמועדון">
+                    <div className="club-ticker" dir="ltr" aria-label="הודעות מהמועדון">
                         <div className="club-ticker-track">
-                            {loop.map((m, i) => (
-                                <span className="club-ticker-item" key={i}>📣 {m}</span>
+                            {[0, 1].map((copy) => (
+                                <div className="club-ticker-group" key={copy} aria-hidden={copy === 1}>
+                                    {msgs.map((m, i) => (
+                                        <span className="club-ticker-item" dir="rtl" key={i}>📣 {m}</span>
+                                    ))}
+                                </div>
                             ))}
                         </div>
                     </div>
