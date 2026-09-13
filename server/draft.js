@@ -111,16 +111,18 @@ export async function publishDraft(slug, publishedBy = 'manager') {
              VALUES ($1,$2,'publish','schedule_publication',$3,$4)`,
             [draft.clubId, publishedBy, draft.id, JSON.stringify({ weekStart: ws, sessionCount: count, source: 'draft' })],
         );
-        // open next week's draft as a copy of the just-published week (dates +7).
-        const nd = new Date(ws + 'T00:00:00'); nd.setDate(nd.getDate() + 7);
-        const nextWs = `${nd.getFullYear()}-${pad(nd.getMonth() + 1)}-${pad(nd.getDate())}`;
+        // Re-open a fresh draft as an exact copy of what was just published, for the SAME
+        // week. Previously this rolled +7, which made the preview date surprise-jump and made
+        // a second publish the same day silently publish a DIFFERENT (next) week. Keeping the
+        // same week means re-publishing updates the same week (idempotent). To prepare next
+        // week, the manager advances the date in the preview (that re-dates the draft).
         const np = await cx.query(
             `INSERT INTO schedule_publications (club_id, week_start, status, published_by) VALUES ($1,$2,'draft','manager') RETURNING id`,
-            [draft.clubId, nextWs],
+            [draft.clubId, ws],
         );
         await cx.query(
             `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
-             SELECT $1, club_id, team, coach, gender, hall, (date + INTERVAL '7 days')::date, day_of_week, start_time, end_time, type, 'active', note
+             SELECT $1, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, 'active', note
              FROM sessions WHERE publication_id=$2`,
             [np.rows[0].id, draft.id],
         );
