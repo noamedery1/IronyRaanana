@@ -43,8 +43,20 @@ export function parseSheetToSessions(csvText) {
     const dataRows = rows.slice(h + 1);
     const coachIdx = header.findIndex((x) => x && (x.includes('מאמן') || /coach|trainer/i.test(x)));
     const typeIdx = header.findIndex((x) => x && (x.toLowerCase() === 'type' || x.includes('סוג') || x.includes('מגדר')));
-    let dayStart = header.findIndex((x) => x && x.includes('ראשון'));
-    if (dayStart === -1) dayStart = coachIdx !== -1 ? coachIdx + 1 : 1;
+    // Map each DAY column to its weekday by NAME (ראשון=0 … שבת=6), NOT by position — so a
+    // file that omits an empty day (e.g. no Sunday training) still aligns every day correctly
+    // instead of shifting the whole week back one day.
+    const DAY_IDX = { 'ראשון': 0, 'שני': 1, 'שלישי': 2, 'רביעי': 3, 'חמישי': 4, 'שישי': 5, 'שבת': 6 };
+    const dayCols = [];
+    header.forEach((hh, ci) => {
+        const nm = clean(hh);
+        const hit = Object.keys(DAY_IDX).find((dn) => nm.includes(dn));
+        if (hit) dayCols.push({ ci, dow: DAY_IDX[hit], hdr: hh });
+    });
+    if (!dayCols.length) { // no day-name headers → assume days start right after team/coach
+        const start = coachIdx !== -1 ? coachIdx + 1 : 1;
+        for (let i = 0; i < 7; i++) dayCols.push({ ci: start + i, dow: i, hdr: header[start + i] });
+    }
 
     const sessions = [];
     const dates = [];
@@ -55,10 +67,10 @@ export function parseSheetToSessions(csvText) {
         const rawType = typeIdx !== -1 ? (row[typeIdx] || '').trim() : '';
         const gender = /\bw\b|women|female|נשים|בנות|נערות|ילדות/i.test(rawType) ? 'W' : 'M';
 
-        for (let i = 0; i < 7; i++) {
-            const cell = row[dayStart + i];
+        for (const dc of dayCols) {
+            const cell = row[dc.ci];
             if (!cell || !cell.trim() || cell.toLowerCase().includes('xxx')) continue;
-            const date = parseHeaderDate(header[dayStart + i] || '');
+            const date = parseHeaderDate(dc.hdr || '');
             cell.split('\n').forEach((line) => {
                 if (!line.trim()) return;
                 const { time, location, isMatch, status } = parseCellContent(line);
@@ -74,7 +86,7 @@ export function parseSheetToSessions(csvText) {
                     team: name, coach, gender,
                     hall: location || null,
                     date: date ? fmtDate(date) : null,
-                    day_of_week: i,
+                    day_of_week: dc.dow,
                     start_time: time ? hhmm(startMin) : null,
                     end_time: time ? hhmm(endMin) : null,
                     type: classifyType(name, isMatch),
@@ -181,12 +193,13 @@ export async function getLiveSchedule(slug, week) {
 
 // Live, per-club calendar feed (ICS) for one team — built from the DB, not the Sheet.
 export async function teamICS(slug, teamParam) {
-    const data = await getLiveSchedule(slug);
-    if (!data || !data.sessions?.length) return null;
     const t = (teamParam || '').trim();
-    const rows = data.sessions.filter((s) => s.status !== 'cancelled' && s.team
+    const data = await getLiveSchedule(slug);
+    // Always return a VALID calendar (empty until the schedule is published) so a parent can
+    // subscribe to the live/updating feed without hitting an error before there's a schedule.
+    const sessions = (data && data.sessions) || [];
+    const rows = sessions.filter((s) => s.status !== 'cancelled' && s.team
         && (s.team.trim() === t || `${s.team.trim()} - ${(s.coach || '').trim()}` === t));
-    if (!rows.length) return null;
 
     const events = rows.filter((s) => s.date && s.start_time).map((s, i) => {
         const [sh, sm] = s.start_time.split(':').map(Number);
@@ -195,7 +208,7 @@ export async function teamICS(slug, teamParam) {
         if (s.end_time) { const [eh, em] = s.end_time.split(':').map(Number); end.setHours(eh, em, 0, 0); }
         else end.setHours(sh + 1, sm + 30, 0, 0);
         return {
-            title: `${s.type === 'match' ? '🏀 משחק' : 'אימון'} - ${s.team}`,
+            title: `${s.type === 'match' ? 'משחק' : 'אימון'} - ${s.team}`,
             location: s.hall || '',
             details: `קבוצת ${s.team}${s.coach ? ' · מאמן ' + s.coach : ''}`,
             start, end,
