@@ -46,9 +46,9 @@ const AdminDashboard = () => {
     const [hallConfig, setHallConfig] = useState({});
     const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
     const [pwMsg, setPwMsg] = useState('');
-    const [importMissing, setImportMissing] = useState(null); // team names in the file not yet in ניהול קבוצות
-    const [importCsv, setImportCsv] = useState('');            // the parsed file, held while we create teams
-    const [creatingTeams, setCreatingTeams] = useState(false);
+    const [importMapping, setImportMapping] = useState(null); // { fileTeams:[], existing:[], choices:{} } team mapping
+    const [importCsv, setImportCsv] = useState('');            // the parsed file, held during mapping
+    const [mapBusy, setMapBusy] = useState(false);
 
     const changePassword = async () => {
         if (!pw.cur || !pw.next) { setPwMsg('מלא סיסמה נוכחית וחדשה'); return; }
@@ -300,19 +300,28 @@ const AdminDashboard = () => {
         }
     };
 
-    // Before importing: every team in the file must already exist in ניהול קבוצות.
-    // This guards against a bad parse (e.g. two teams merged into one row) and forces a
-    // clean team list first. Returns the list of team names in the file that don't exist.
-    const missingTeamsIn = async (csv) => {
-        const DAY_RE = /ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת/;
+    // ===== File → team MAPPING =====================================================
+    // Each team in an imported file is mapped to an existing team, created as new, or
+    // skipped. Handles files whose names differ slightly (apostrophes/spaces) or lack a
+    // coach column — mapped teams keep the coach already on record.
+    const DAY_RE = /ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת/;
+    const normName = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+    const genderOf = (n) => /נשים|בנות|נערות|ילדות|בוגרות/.test(n) ? 'W' : 'M';
+
+    // Team names found in the file (in order, de-duped), reading the row under the header.
+    const parseFileTeams = (csv) => {
         const rows = Papa.parse((csv || '').replace(/^﻿/, ''), { header: false }).data;
         let hi = rows.findIndex((r) => Array.isArray(r) && r.some((c) => DAY_RE.test((c || '').trim())));
         if (hi < 0) hi = 0;
-        const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
-        const fileTeams = [...new Set(rows.slice(hi + 1).map((r) => norm(r[0])).filter((n) => n && !DAY_RE.test(n) && !/קבוצות|באנר|banner/i.test(n)))];
-        const existing = await fetch(`/api/${club.slug}/teams`).then((r) => r.json())
-            .then((d) => new Set((d.teams || []).map((t) => norm(t.name)))).catch(() => new Set());
-        return { missing: fileTeams.filter((t) => !existing.has(t)), count: existing.size };
+        const seen = new Set(); const list = [];
+        rows.slice(hi + 1).forEach((r) => {
+            const name = (r[0] || '').toString().replace(/\s+/g, ' ').trim();
+            if (!name || DAY_RE.test(name) || /קבוצות|באנר|banner/i.test(name)) return;
+            const key = normName(name);
+            if (seen.has(key)) return; seen.add(key);
+            list.push(name);
+        });
+        return list;
     };
 
     // POST CSV text → the DB draft, then refresh the preview from the draft.
@@ -327,23 +336,67 @@ const AdminDashboard = () => {
         setActiveTab('preview');
     };
 
-    // One-click: create every team the file needs (gender inferred from the name) then import.
-    const createMissingTeamsAndImport = async () => {
-        if (!importMissing || !importCsv) return;
-        setCreatingTeams(true); setError('');
+    // Build the mapping model from the parsed file + existing teams and open the panel.
+    const openMapping = async (csv) => {
+        const fileTeams = parseFileTeams(csv);
+        if (!fileTeams.length) throw new Error('לא נמצאו קבוצות בקובץ.');
+        const existing = await fetch(`/api/${club.slug}/teams`).then((r) => r.json()).then((d) => d.teams || []).catch(() => []);
+        const byNorm = {}; existing.forEach((t) => { byNorm[normName(t.name)] = t; });
+        const choices = {};
+        fileTeams.forEach((name) => {
+            const m = byNorm[normName(name)];
+            choices[normName(name)] = m ? { action: 'map', target: m.name, label: name } : { action: 'new', target: name, label: name };
+        });
+        setImportCsv(csv);
+        setImportMapping({ fileTeams, existing, choices });
+    };
+
+    const updateChoice = (key, val) => {
+        setImportMapping((m) => {
+            if (!m) return m;
+            const label = m.choices[key]?.label || '';
+            const choice = val.startsWith('map:') ? { action: 'map', target: val.slice(4), label }
+                : val === 'skip' ? { action: 'skip', label } : { action: 'new', target: label, label };
+            return { ...m, choices: { ...m.choices, [key]: choice } };
+        });
+    };
+
+    // Create the "new" teams, rewrite the CSV per the mapping (rename + inject coach + drop
+    // skipped), then import into the draft.
+    const confirmMapping = async () => {
+        if (!importMapping || !importCsv) return;
+        setMapBusy(true); setError('');
         try {
-            const genderOf = (n) => /נשים|בנות|נערות|ילדות|בוגרות/.test(n) ? 'W' : 'M';
-            for (const name of importMissing) {
-                await fetch(`/api/${club.slug}/teams`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
-                    body: JSON.stringify({ name, gender: genderOf(name) }),
-                });
+            const { existing, choices } = importMapping;
+            const byName = {}; existing.forEach((t) => { byName[normName(t.name)] = t; });
+            for (const ch of Object.values(choices)) {
+                if (ch.action === 'new') {
+                    await fetch(`/api/${club.slug}/teams`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+                        body: JSON.stringify({ name: ch.target, gender: genderOf(ch.target) }),
+                    });
+                }
             }
-            const csv = importCsv;
-            setImportMissing(null); setImportCsv('');
+            const rows = Papa.parse(importCsv.replace(/^﻿/, ''), { header: false }).data;
+            let hi = rows.findIndex((r) => Array.isArray(r) && r.some((c) => DAY_RE.test((c || '').trim())));
+            if (hi < 0) hi = 0;
+            const header = rows[hi];
+            const esc = (s) => /[",\n]/.test(String(s ?? '')) ? '"' + String(s).replace(/"/g, '""') + '"' : String(s ?? '');
+            const out = [['קבוצות', 'מאמן', ...header.slice(1)].map(esc).join(',')];
+            rows.slice(hi + 1).forEach((r) => {
+                const fileName = (r[0] || '').toString().replace(/\s+/g, ' ').trim();
+                if (!fileName) return;
+                const ch = choices[normName(fileName)];
+                if (!ch || ch.action === 'skip') return;
+                const target = ch.action === 'map' ? ch.target : fileName;
+                const coach = byName[normName(target)]?.coach || '';
+                out.push([target, coach, ...r.slice(1)].map(esc).join(','));
+            });
+            const csv = '﻿' + out.join('\n');
+            setImportMapping(null); setImportCsv('');
             await importCsvToDraft(csv);
-        } catch (e) { setError('יצירת הקבוצות נכשלה: ' + e.message); }
-        finally { setCreatingTeams(false); }
+        } catch (e) { setError('ייבוא נכשל: ' + e.message); }
+        finally { setMapBusy(false); }
     };
 
     // Read an uploaded Excel/CSV file in the browser → CSV text → import to the draft.
@@ -365,12 +418,9 @@ const AdminDashboard = () => {
                 const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
                 csv = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
             }
-            // Teams must exist first — if any are missing, show the quick-create panel
-            // instead of importing (also catches a bad parse that merged teams).
-            setImportMissing(null); setImportCsv('');
-            const { missing } = await missingTeamsIn(csv);
-            if (missing.length) { setImportCsv(csv); setImportMissing(missing); return; }
-            await importCsvToDraft(csv);
+            // Open the mapping step — map each file team to an existing team / create / skip.
+            setImportMapping(null); setImportCsv('');
+            await openMapping(csv);
         } catch (err) {
             setError('ייבוא נכשל: ' + err.message);
         } finally {
@@ -636,36 +686,54 @@ const AdminDashboard = () => {
 
                         {error && <div style={{ color: '#ef4444', marginTop: '1rem', background: '#fee2e2', padding: '1rem', borderRadius: '4px' }}>{error}</div>}
 
-                        {importMissing && importMissing.length > 0 && (
-                            <div style={{ marginTop: '1rem', background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 10, padding: '1rem' }}>
-                                <div style={{ fontWeight: 700, color: '#9a3412', marginBottom: '0.4rem' }}>
-                                    ⚠️ {importMissing.length} קבוצות בקובץ עדיין לא קיימות ב"👥 ניהול קבוצות"
+                        {importMapping && (() => {
+                            const newCount = Object.values(importMapping.choices).filter((c) => c.action === 'new').length;
+                            const mapCount = Object.values(importMapping.choices).filter((c) => c.action === 'map').length;
+                            return (
+                            <div style={{ marginTop: '1rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 12, padding: '1rem' }}>
+                                <div style={{ fontWeight: 800, color: '#0f1b33', marginBottom: '0.2rem' }}>🔗 מיפוי קבוצות מהקובץ ({importMapping.fileTeams.length})</div>
+                                <div style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '0.8rem' }}>
+                                    לכל קבוצה בקובץ בחר: <b>שיוך</b> לקבוצה קיימת, <b>יצירה</b> של חדשה, או <b>דילוג</b>.
+                                    התאמות מדויקות סומנו אוטומטית. שיוך לקבוצה קיימת שומר את שם המאמן שכבר מוגדר לה.
                                 </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.8rem' }}>
-                                    {importMissing.map((n) => (
-                                        <span key={n} style={{ background: '#ffedd5', color: '#9a3412', borderRadius: 12, padding: '0.15rem 0.6rem', fontSize: '0.82rem' }}>{n}</span>
-                                    ))}
+                                <div style={{ display: 'grid', gap: '0.35rem', maxHeight: 320, overflowY: 'auto' }}>
+                                    {importMapping.fileTeams.map((name) => {
+                                        const key = normName(name); const ch = importMapping.choices[key] || { action: 'new' };
+                                        const val = ch.action === 'map' ? 'map:' + ch.target : ch.action;
+                                        const color = ch.action === 'new' ? '#16a34a' : ch.action === 'skip' ? '#94a3b8' : '#2563eb';
+                                        return (
+                                            <div key={key} style={{ display: 'grid', gridTemplateColumns: '1fr auto 2fr', gap: '0.5rem', alignItems: 'center', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.4rem 0.6rem' }}>
+                                                <div style={{ fontWeight: 600, minWidth: 0 }}>{name}</div>
+                                                <div style={{ color, fontSize: '1.1rem' }}>{ch.action === 'new' ? '➕' : ch.action === 'skip' ? '⏭' : '↔'}</div>
+                                                <select value={val} onChange={(e) => updateChoice(key, e.target.value)}
+                                                    style={{ padding: '0.4rem', borderRadius: 6, border: '1px solid #cbd5e1', width: '100%' }}>
+                                                    <option value="new">➕ צור קבוצה חדשה: {name}</option>
+                                                    {importMapping.existing.map((t) => (
+                                                        <option key={t.id || t.name} value={'map:' + t.name}>↔ שייך ל: {t.name}{t.coach ? ` · ${t.coach}` : ''}</option>
+                                                    ))}
+                                                    <option value="skip">⏭ דלג (אל תייבא)</option>
+                                                </select>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                                    <button onClick={createMissingTeamsAndImport} disabled={creatingTeams}
-                                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '0.6rem 1.2rem', borderRadius: 8, fontWeight: 700, cursor: creatingTeams ? 'wait' : 'pointer' }}>
-                                        {creatingTeams ? 'יוצר קבוצות…' : `➕ צור את הקבוצות וטען את הלו"ז`}
+                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.9rem' }}>
+                                    <button onClick={confirmMapping} disabled={mapBusy}
+                                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '0.6rem 1.3rem', borderRadius: 8, fontWeight: 700, cursor: mapBusy ? 'wait' : 'pointer' }}>
+                                        {mapBusy ? 'מייבא…' : '✓ אשר וייבא'}
                                     </button>
-                                    <button onClick={() => { setImportMissing(null); setImportCsv(''); selectTab('teamsAdmin'); }}
-                                        style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.6rem 1rem', cursor: 'pointer' }}>
-                                        פתח ניהול קבוצות ידנית
-                                    </button>
-                                    <button onClick={() => { setImportMissing(null); setImportCsv(''); }}
-                                        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>ביטול</button>
-                                </div>
-                                <div style={{ fontSize: '0.78rem', color: '#9a3412', marginTop: '0.6rem' }}>
-                                    מגדר נקבע אוטומטית לפי השם (נערות/ילדות/בוגרות = בנות) — אפשר לתקן אח"כ ב"ניהול קבוצות".
+                                    <span style={{ color: '#64748b', fontSize: '0.85rem' }}>{mapCount} שיוך · {newCount} חדשות</span>
+                                    <button onClick={() => { setImportMapping(null); setImportCsv(''); }}
+                                        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', marginInlineStart: 'auto' }}>ביטול</button>
                                 </div>
                             </div>
+                            );
+                        })()}
+                        {!importMapping && (
+                            <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
+                                לעריכה ופרסום — עברו ל<b>תצוגה מקדימה</b> ואז <b>פרסם לוז</b>.
+                            </div>
                         )}
-                        <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
-                            לעריכה ופרסום — עברו ל<b>תצוגה מקדימה</b> ואז <b>פרסם לוז</b>.
-                        </div>
 
                         <div style={{ marginTop: '1.5rem', padding: '0.9rem 1rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, color: '#1e3a8a', fontSize: '0.9rem', lineHeight: 1.6 }}>
                             ℹ️ הלו"ז עובד מול מסד הנתונים. ייבוא נדרש רק <b>פעם אחת</b> כשמתחילים — אחר כך

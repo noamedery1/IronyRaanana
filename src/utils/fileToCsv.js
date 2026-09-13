@@ -75,7 +75,15 @@ export async function docxToCsv(file) {
 function pageItemsToGrid(items) {
     const rowC = clusterCenters(items.map((i) => i.y), 4);      // fine rows
     const gaps = rowC.slice(1).map((v, i) => v - rowC[i]);
-    const thresh = (median(gaps.filter((g) => g > 0)) || 12) * 1.7;
+    // Row gaps are bimodal: small (lines within one table row: name-wrap, time, location)
+    // and large (between table rows). Set the band threshold at the split between the two
+    // clusters — a fixed median multiplier fails when a dense section's between-row gap is
+    // close to the within-row gap (that merged the wrapped-name bottom section).
+    const g = gaps.filter((x) => x > 0).sort((a, b) => a - b);
+    let thresh = (g.length ? g[Math.floor(g.length / 2)] : 12) * 1.5;
+    for (let i = Math.floor(g.length / 2); i < g.length - 1; i++) {
+        if (g[i + 1] - g[i] >= Math.max(2, g[i] * 0.25)) { thresh = (g[i] + g[i + 1]) / 2; break; }
+    }
     const bands = [[0]];
     for (let i = 1; i < rowC.length; i++) (rowC[i] - rowC[i - 1] > thresh) ? bands.push([i]) : bands[bands.length - 1].push(i);
     const bandOfFine = (fi) => bands.findIndex((b) => b.includes(fi));
