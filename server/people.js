@@ -119,6 +119,22 @@ export async function listMembers(slug) {
     };
 }
 
+// Manager: remove a registrant (all rows matching this name in this team; a "—" team or
+// empty team means an operator / team-less registrant). Deletes every duplicate row too.
+export async function deleteMember(slug, { name, team }) {
+    const cid = await clubId(slug);
+    const nm = (name || '').trim();
+    if (!nm) throw new Error('חסר שם');
+    const t = (team || '').trim();
+    const teamCond = (!t || t === '—') ? "coalesce(team,'') = ''" : 'team = $3';
+    const params = (!t || t === '—') ? [cid, nm] : [cid, nm, t];
+    const r = await pool.query(
+        `DELETE FROM app_users WHERE club_id=$1 AND lower(name)=lower($2) AND ${teamCond}`,
+        params,
+    );
+    return { ok: true, removed: r.rowCount };
+}
+
 export async function authUser(slug, { token }) {
     if (!token) return { valid: false };
     const cid = await clubId(slug);

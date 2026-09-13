@@ -18,7 +18,23 @@ export default function MembersRoster() {
 
     useEffect(() => { load(); }, [load]);
 
-    const chip = { background: '#eef2ff', color: '#3730a3', borderRadius: 20, padding: '0.2rem 0.7rem', fontSize: '0.85rem' };
+    const remove = async (name, team) => {
+        const where = team && team !== '—' ? ` מ"${team}"` : '';
+        if (!confirm(`להסיר את "${name}"${where}?`)) return;
+        try {
+            const r = await fetch(`/api/${slug}/members`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
+                body: JSON.stringify({ name, team }),
+            });
+            const d = await r.json();
+            if (d.error) { setMsg('שגיאה: ' + d.error); return; }
+            load();
+        } catch { setMsg('שגיאת תקשורת'); }
+    };
+
+    const chip = { background: '#eef2ff', color: '#3730a3', borderRadius: 20, padding: '0.2rem 0.7rem', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' };
+    const xBtn = { border: 'none', background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: '1rem', lineHeight: 1, opacity: 0.6, padding: 0 };
 
     return (
         <div className="report-panel" style={{ marginTop: 0, color: '#0f1b33' }}>
@@ -42,7 +58,12 @@ export default function MembersRoster() {
                     <div key={t.team} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '0.7rem 0.9rem' }}>
                         <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{t.team} <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '0.85rem' }}>· {t.names.length}</span></div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                            {t.names.map((n, i) => <span key={i} style={chip}>{n}</span>)}
+                            {t.names.map((n, i) => (
+                                <span key={i} style={chip}>
+                                    {n}
+                                    <button style={xBtn} title="הסר" onClick={() => remove(n, t.team)}>×</button>
+                                </span>
+                            ))}
                         </div>
                     </div>
                 ))}
@@ -50,7 +71,12 @@ export default function MembersRoster() {
                     <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '0.7rem 0.9rem' }}>
                         <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>מפעילים <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '0.85rem' }}>· {data.operators.length}</span></div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                            {data.operators.map((n, i) => <span key={i} style={{ ...chip, background: '#ffedd5', color: '#9a3412' }}>{n}</span>)}
+                            {data.operators.map((n, i) => (
+                                <span key={i} style={{ ...chip, background: '#ffedd5', color: '#9a3412' }}>
+                                    {n}
+                                    <button style={xBtn} title="הסר" onClick={() => remove(n, '')}>×</button>
+                                </span>
+                            ))}
                         </div>
                     </div>
                 )}
