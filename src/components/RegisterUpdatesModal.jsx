@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { pushSupported, subscribeToPush, unsubscribeFromPush, isStandalone, isIOS } from '../push.js';
+import { canInstallNow, onInstallChange, promptInstall } from '../pwaInstall.js';
 import { getActiveClub } from '../clubConfig.js';
 
 const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
@@ -15,6 +16,43 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
     const [unsubEmail, setUnsubEmail] = useState('');
     const [unsubMsg, setUnsubMsg] = useState('');
     const [showInstall, setShowInstall] = useState(false);
+    const [canInstall, setCanInstall] = useState(canInstallNow());
+    const [installMsg, setInstallMsg] = useState('');
+
+    // The browser's install prompt can arrive slightly after mount — track its availability.
+    useEffect(() => {
+        setCanInstall(canInstallNow());
+        return onInstallChange(() => setCanInstall(canInstallNow()));
+    }, []);
+
+    // One-tap native install (Android/Chromium). iOS never reaches here (no such API).
+    const doInstall = async () => {
+        setInstallMsg('');
+        const r = await promptInstall();
+        if (r.ok) setInstallMsg('✓ מותקן! פתחו את האפליקציה מהאייקון החדש והפעילו התראות.');
+        else if (r.outcome === 'dismissed') setInstallMsg('ההתקנה בוטלה. אפשר לנסות שוב או לפי ההוראות.');
+    };
+
+    // A reusable green one-tap install button (only rendered when the browser offers it).
+    // Called as a function (not <OneTapInstall/>) so it doesn't remount on each render.
+    const oneTapInstall = () => (
+        <div style={{ marginBottom: '0.7rem' }}>
+            <button
+                type="button"
+                onClick={doInstall}
+                style={{
+                    width: '100%', background: '#16a34a', color: '#fff', border: 'none',
+                    padding: '0.7rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                }}
+            >📲 התקנה מהירה — בלחיצה אחת</button>
+            {installMsg && (
+                <div style={{ marginTop: '0.5rem', textAlign: 'center', fontSize: '0.83rem', color: installMsg.startsWith('✓') ? '#047857' : '#b45309' }}>
+                    {installMsg}
+                </div>
+            )}
+        </div>
+    );
 
     if (!isOpen) return null;
 
@@ -161,6 +199,15 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                                 {pushMsg}
                             </div>
                         )}
+                        {/* Not installed yet but the browser can install in one tap — offer it. */}
+                        {canInstall && !isStandalone() && (
+                            <div style={{ marginTop: '0.7rem', paddingTop: '0.7rem', borderTop: '1px dashed #fdba74' }}>
+                                {oneTapInstall()}
+                                <div style={{ color: '#9a3412', opacity: 0.75, fontSize: '0.75rem', textAlign: 'center', marginTop: '-0.3rem' }}>
+                                    מומלץ להתקין — פתיחה מהירה מהמסך והתראות אמינות יותר.
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     /* Push isn't available in this context (typically a browser tab / saved link,
@@ -171,6 +218,9 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                             כדי לקבל התראות פוש צריך קודם <strong>להתקין את האפליקציה למסך הבית</strong> ולפתוח אותה משם.
                             שמירת הלינק בלבד לא מספיקה.
                         </div>
+                        {/* One-tap install when the browser offers it (Android/Chromium) — the fast
+                            path for anyone who isn't comfortable with device menus. */}
+                        {canInstall && oneTapInstall()}
                         <button
                             type="button"
                             onClick={() => setShowInstall((s) => !s)}
@@ -179,7 +229,7 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                                 padding: '0.6rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer',
                             }}
                         >
-                            {showInstall ? 'הסתר הוראות' : '📥 איך מתקינים? לחצו כאן'}
+                            {showInstall ? 'הסתר הוראות' : (canInstall ? '📖 או לפי ההוראות ידנית' : '📥 איך מתקינים? לחצו כאן')}
                         </button>
                         {showInstall && (
                             <ol style={{ margin: '0.7rem 0 0', paddingInlineStart: '1.2rem', color: '#7c2d12', fontSize: '0.83rem', lineHeight: 1.7 }}>

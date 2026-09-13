@@ -8,6 +8,7 @@ import ErrorPage from './pages/ErrorPage.jsx'
 import { setupClubPwa } from './clubPwa.js'
 import { loadClubs } from './clubConfig.js'
 import { initTheme } from './theme.js'
+import './pwaInstall.js' // capture the browser's install prompt as early as possible
 
 // Keep the installed PWA current. `registerType: 'autoUpdate'` only re-checks the service
 // worker on a fresh navigation (or ~daily), so an app that's merely resumed from the
