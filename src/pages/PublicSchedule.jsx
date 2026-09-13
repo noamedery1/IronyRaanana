@@ -386,16 +386,22 @@ function PublicSchedule() {
                 <div className="welcome-gate">
                     <img src={clubLogo} alt={club.name} className="welcome-logo" />
                     <h1 className="welcome-title">{club.name}</h1>
-                    <p className="welcome-lead">
-                        <b>הורים / שחקנים:</b> היכנסו דרך הקישור האישי שקיבלתם מהמועדון — אחרי הרשמה
-                        חד-פעמית הדף נפתח ישירות על הקבוצה שלכם (ומהאפליקציה תמיד ייפתח שם).
-                    </p>
-                    <Link to={`/${club.slug}/trainer`} className="welcome-cta">
-                        {sportEmoji()} כניסת מאמן
-                    </Link>
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.8rem' }}>
-                        <a className="welcome-admin" href="/sales-landing.html">מה זה Squadio?</a>
+                    {/* Parents are the vast majority of visitors — make the gate parent-first: the
+                        primary message guides them to their personal invite link. Trainer/manager
+                        entry are small secondary links below, not the hero. */}
+                    <div className="welcome-parent-card">
+                        <div className="welcome-parent-emoji">👋</div>
+                        <p className="welcome-parent-title">הורים ושחקנים</p>
+                        <p className="welcome-lead">
+                            היכנסו דרך <b>הקישור האישי</b> שקיבלתם מהמועדון (וואטסאפ / הודעה).
+                            אחרי הרשמה חד-פעמית הדף נפתח ישירות על הקבוצה שלכם — וגם מהאפליקציה המותקנת.
+                        </p>
+                        <p className="welcome-parent-note">אין לכם את הקישור? פנו למאמן/ת או למנהל/ת המועדון.</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1.2rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                        <Link to={`/${club.slug}/trainer`} className="welcome-admin">{sportEmoji()} כניסת מאמן</Link>
                         <Link to={`/${club.slug}/admin`} className="welcome-admin">מנהל מועדון? כניסה ⚙</Link>
+                        <a className="welcome-admin" href="/sales-landing.html">מה זה Squadio?</a>
                     </div>
                 </div>
             </div>

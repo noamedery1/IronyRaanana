@@ -1004,3 +1004,17 @@
 .app-container .welcome-cta:hover{ transform:translateY(-2px); box-shadow:0 16px 36px -12px rgba(34,211,238,.85); }
 .app-container .welcome-admin{ margin-top:.4rem; color:var(--text-muted); text-decoration:none; font-size:.9rem; }
 .app-container .welcome-admin:hover{ color:var(--text-dim); }
+/* Parent-first hero card on the club gate — the prominent element (trainer/manager are the
+   small links below). */
+.app-container .welcome-parent-card{
+  display:flex; flex-direction:column; align-items:center; gap:.5rem;
+  padding:1.6rem 1.5rem; border-radius:20px; max-width:44ch;
+  background:linear-gradient(180deg, rgba(34,211,238,.12), rgba(34,211,238,.04));
+  border:1px solid rgba(34,211,238,.28); box-shadow:0 14px 40px -20px rgba(34,211,238,.5);
+}
+.app-container .welcome-parent-emoji{ font-size:2rem; line-height:1; }
+.app-container .welcome-parent-title{
+  margin:0; font-weight:800; font-size:1.25rem;
+  background:var(--grad); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.app-container .welcome-parent-note{ margin:.2rem 0 0; font-size:.85rem; color:var(--text-muted); }
