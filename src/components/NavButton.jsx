@@ -8,19 +8,44 @@ import { googleMapsUrl, wazeUrl, isMobileDevice } from '../utils/hallLocations';
  */
 export default function NavButton({ location, label = 'ניווט במפות ‹', navWith = 'נווט עם:', style, className }) {
     const [open, setOpen] = useState(false);
+    const [pos, setPos] = useState(null); // fixed-position coords for the menu
     const ref = useRef(null);
+
+    // Position the menu relative to the VIEWPORT (position:fixed) so no ancestor with
+    // overflow:hidden (the map/hero cards) can clip it. Opens above the trigger when there's
+    // room, otherwise below; right edge aligned to the trigger (RTL).
+    const place = () => {
+        const el = ref.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const MENU_H = 132;
+        const above = r.top > MENU_H + 12;
+        setPos({
+            right: Math.round(window.innerWidth - r.right),
+            top: above ? undefined : Math.round(r.bottom + 8),
+            bottom: above ? Math.round(window.innerHeight - r.top + 8) : undefined,
+        });
+    };
 
     useEffect(() => {
         if (!open) return;
         const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        const reposition = () => setOpen(false); // close on scroll/resize rather than track a stale anchor
         document.addEventListener('mousedown', onClick);
-        return () => document.removeEventListener('mousedown', onClick);
+        window.addEventListener('scroll', reposition, true);
+        window.addEventListener('resize', reposition);
+        return () => {
+            document.removeEventListener('mousedown', onClick);
+            window.removeEventListener('scroll', reposition, true);
+            window.removeEventListener('resize', reposition);
+        };
     }, [open]);
 
     const handleClick = (e) => {
         e.preventDefault();
         if (!location) return;
         if (isMobileDevice()) {
+            if (!open) place();
             setOpen(o => !o);
         } else {
             window.open(googleMapsUrl(location), '_blank', 'noreferrer');
@@ -34,11 +59,11 @@ export default function NavButton({ location, label = 'ניווט במפות ‹
             <a href="#" onClick={handleClick} className={className} style={{ color: 'var(--sky)', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', ...style }}>
                 {label}
             </a>
-            {open && (
+            {open && pos && (
                 <div style={{
-                    position: 'absolute', bottom: '130%', right: 0, zIndex: 30,
+                    position: 'fixed', right: pos.right, top: pos.top, bottom: pos.bottom, zIndex: 1000,
                     background: 'var(--ink2)', border: '1px solid var(--bd2)', borderRadius: '12px',
-                    padding: '0.5rem', boxShadow: '0 16px 40px -16px rgba(0,0,0,0.8)',
+                    padding: '0.5rem', boxShadow: '0 16px 40px -16px rgba(0,0,0,0.55)',
                     display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: '160px'
                 }}>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', padding: '0 0.3rem 0.2rem' }}>{navWith}</div>

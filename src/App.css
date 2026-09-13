@@ -864,6 +864,16 @@
     radial-gradient(80% 50% at 10% 0%, rgba(59,130,246,.12), transparent 55%),
     #0a0f1b;
 }
+/* Light mode: the app shell painted its own dark background and dark surface tokens, which
+   the token-only light theme didn't touch — so dark text landed on a dark surface and vanished.
+   Flip the shell to white (subtle blue tints) and the surfaces to light here. */
+:root[data-theme="light"] .app-container{
+  --surf:#ffffff; --surf2:#f4f7fc; --hair:rgba(15,23,42,.10);
+  background:
+    radial-gradient(90% 50% at 80% -10%, rgba(34,211,238,.07), transparent 60%),
+    radial-gradient(80% 50% at 10% 0%, rgba(59,130,246,.08), transparent 55%),
+    #ffffff;
+}
 .app-container::before{content:none}
 
 /* topbar */
