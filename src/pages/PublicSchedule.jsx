@@ -13,7 +13,7 @@ import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
-import { sportEmoji, sportName } from '../sportLabels.js';
+import { sportEmoji, sportName, venues } from '../sportLabels.js';
 import { getIdentity, getMemberships, setActiveTeam } from '../userIdentity.js';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
@@ -433,7 +433,7 @@ function PublicSchedule() {
                     <div className="bouncing-ball"></div>
                 </div>
             ) : (
-                <main style={{ marginTop: '1.4rem' }}>
+                <main style={{ marginTop: '1.4rem', paddingBottom: '96px' }}>
                     {/* ===== controls (hidden for members — they only see their team) ===== */}
                     {!memberTeam && (
                     <div className="controls">
@@ -450,7 +450,7 @@ function PublicSchedule() {
 
                         <div className="view-tabs">
                             <button className={`vtab ${viewMode === 'team' ? 'on' : ''}`} onClick={() => setViewMode('team')}>{t('tab_team')}</button>
-                            <button className={`vtab ${viewMode === 'halls' ? 'on' : ''}`} onClick={() => setViewMode('halls')}>📍 {t('tab_halls')}</button>
+                            <button className={`vtab ${viewMode === 'halls' ? 'on' : ''}`} onClick={() => setViewMode('halls')}>📍 {venues()}</button>
                             <button className={`vtab ${viewMode === 'daily' ? 'on' : ''}`} onClick={() => setViewMode('daily')}>📅 {t('tab_daily')}</button>
                         </div>
                     </div>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { flattenScheduleData, exportToExcel } from '../utils/scheduleUtils';
+import { venues, sportEmoji } from '../sportLabels.js';
 
 const HallView = ({ data, headers, teams, dayStart, defaultGender }) => {
     const [selectedHall, setSelectedHall] = useState('all');
@@ -61,7 +62,7 @@ const HallView = ({ data, headers, teams, dayStart, defaultGender }) => {
     return (
         <div className="rv">
             <div className="rv-head">
-                <h3 className="rv-title">לו"ז אולמות מרוכז</h3>
+                <h3 className="rv-title">לו"ז {venues()} מרוכז</h3>
                 <div className="rv-controls">
                     <div className="seg-toggle">
                         <button className={`seg-btn ${filterGender === 'all' ? 'on' : ''}`} onClick={() => setFilterGender('all')}>הכל</button>
@@ -69,7 +70,7 @@ const HallView = ({ data, headers, teams, dayStart, defaultGender }) => {
                         <button className={`seg-btn women ${filterGender === 'W' ? 'on' : ''}`} onClick={() => setFilterGender('W')}>נשים</button>
                     </div>
                     <select className="rv-select" value={selectedHall} onChange={(e) => setSelectedHall(e.target.value)}>
-                        <option value="all">כל האולמות</option>
+                        <option value="all">כל ה{venues()}</option>
                         {uniqueHalls.map(hall => (<option key={hall} value={hall}>{hall}</option>))}
                     </select>
                     <button className="pill-btn accent" onClick={handleExport}>📝 ייצא לאקסל</button>
@@ -96,7 +97,7 @@ const HallView = ({ data, headers, teams, dayStart, defaultGender }) => {
                                                     <div key={sIdx} className={`sess ${cls}`}>
                                                         <div className="sess-main" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                                                             {session.hasConflict && <span className="conflict-flag" title="התנגשות שעות!">⚠️</span>}
-                                                            {session.isMatch && <span title="משחק">🏀</span>}
+                                                            {session.isMatch && <span title="משחק">{sportEmoji()}</span>}
                                                             {isCancelled && <span>❌</span>}
                                                             <span className="sess-time">{session.time}</span>
                                                             <span className="sess-team" style={{ fontWeight: 'normal', color: 'var(--text-dim)' }}>{session.team}</span>

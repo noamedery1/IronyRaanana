@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import { sortTeams, SORT_MODES } from '../teamSort.js';
+import { venues } from '../sportLabels.js';
 
 // Manager tool: generate invite links per team (members) + an operator link.
 // Members open their link once, register, and are then locked to that team's view.
@@ -45,7 +46,7 @@ export default function InviteLinks() {
             <h3 style={{ marginTop: 0 }}>🔗 לינקי הזמנה</h3>
             <p style={{ color: '#666', marginTop: 0 }}>שלחו את הלינק המתאים. מי שנכנס נרשם פעם אחת, ומשם רואה רק את החלק שלו ומקבל עדכונים רלוונטיים.</p>
 
-            <h4 style={{ marginBottom: '0.6rem', color: '#9a3412' }}>מפעיל (לוח מלא — כל הקבוצות והאולמות)</h4>
+            <h4 style={{ marginBottom: '0.6rem', color: '#9a3412' }}>מפעיל (לוח מלא — כל הקבוצות וה{venues()})</h4>
             {row('מפעיל', operatorLink, 'operator')}
 
             <h4 style={{ margin: '1.4rem 0 0.3rem', color: '#166534' }}>מאמנים</h4>

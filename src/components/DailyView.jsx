@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { flattenScheduleData, exportToExcel } from '../utils/scheduleUtils';
+import { venue, sportEmoji } from '../sportLabels.js';
 
 const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
     const [sortBy, setSortBy] = useState('hall'); // 'hall', 'time'
@@ -68,9 +69,9 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
                         <button className={`seg-btn men ${filterGender === 'M' ? 'on' : ''}`} onClick={() => setFilterGender('M')}>גברים</button>
                         <button className={`seg-btn women ${filterGender === 'W' ? 'on' : ''}`} onClick={() => setFilterGender('W')}>נשים</button>
                     </div>
-                    <button className={`pill-btn ${sortBy === 'hall' ? 'on' : ''}`} onClick={() => setSortBy('hall')}>🏢 לפי אולם</button>
+                    <button className={`pill-btn ${sortBy === 'hall' ? 'on' : ''}`} onClick={() => setSortBy('hall')}>🏢 לפי {venue()}</button>
                     <button className={`pill-btn ${sortBy === 'time' ? 'on' : ''}`} onClick={() => setSortBy('time')}>⏰ לפי שעה</button>
-                    <button className={`pill-btn ${showGamesOnly ? 'on' : ''}`} onClick={() => setShowGamesOnly(!showGamesOnly)}>🏀 רק משחקים</button>
+                    <button className={`pill-btn ${showGamesOnly ? 'on' : ''}`} onClick={() => setShowGamesOnly(!showGamesOnly)}>{sportEmoji()} רק משחקים</button>
                     <button className="pill-btn accent" onClick={handleExport}>📊 ייצוא לאקסל</button>
                 </div>
             </div>
@@ -96,7 +97,7 @@ const DailyView = ({ data, headers, teams, dayStart, defaultGender }) => {
                                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                                     {isCancelled && <span>❌</span>}
                                                     <span className="sess-time">{session.time}</span>
-                                                    {session.isMatch && <span className="match-badge">🏀 משחק</span>}
+                                                    {session.isMatch && <span className="match-badge">{sportEmoji()} משחק</span>}
                                                 </div>
                                                 <div className="sess-team">{session.team}</div>
                                                 <div className="sess-sub">

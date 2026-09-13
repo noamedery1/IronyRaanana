@@ -78,7 +78,7 @@ export default function HallsConfig({ clubSlug }) {
                         <div key={hall} className="hc-row">
                             <div className="hc-name" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <input type="color" value={cfg.color || '#3b82f6'} onChange={(e) => update(hall, { color: e.target.value })}
-                                    title="צבע האולם בלוח" style={{ width: 30, height: 30, border: '1px solid var(--bd2)', borderRadius: 8, background: 'transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }} />
+                                    title={`צבע ה${V1} בלוח`} style={{ width: 30, height: 30, border: '1px solid var(--bd2)', borderRadius: 8, background: 'transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }} />
                                 📍 {hall}
                             </div>
                             <div className="hc-types">
