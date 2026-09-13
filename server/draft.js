@@ -10,6 +10,9 @@ const pad = (n) => String(n).padStart(2, '0');
 const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 // The coming Sunday (today if it's Sunday) — the week the manager is preparing.
 const upcomingSunday = () => { const d = new Date(); d.setDate(d.getDate() + ((7 - d.getDay()) % 7)); return fmtDate(d); };
+// Sunday of the CURRENT week (today if Sunday, else the Sunday just passed) — the anchor for a
+// dateless "permanent" schedule so it always publishes for the week the manager is in.
+const currentWeekSunday = () => { const d = new Date(); d.setDate(d.getDate() - d.getDay()); return fmtDate(d); };
 
 async function clubIdOf(slug) {
     const r = await pool.query('SELECT id FROM clubs WHERE slug=$1', [slug]);
@@ -91,7 +94,9 @@ export async function replaceDraftSessions(slug, sessions = [], weekStart) {
 // Seed the draft from an uploaded Excel/CSV (reuses the live-publish parser).
 export async function importCsvToDraft(slug, csvText) {
     const { sessions, weekStart } = parseSheetToSessions(csvText);
-    return replaceDraftSessions(slug, sessions, weekStart || undefined);
+    // A "permanent" file has day columns but no dates → parser returns no weekStart. Anchor it to
+    // the CURRENT week so it never inherits a stale draft week (which shipped a week ahead before).
+    return replaceDraftSessions(slug, sessions, weekStart || currentWeekSunday());
 }
 
 // Promote the draft → live: archive the current live week, flip draft to live,

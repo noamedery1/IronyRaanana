@@ -168,7 +168,13 @@ function PublicSchedule() {
                     if (apiRes.ok) {
                         const payload = await apiRes.json();
                         if (payload && Array.isArray(payload.sessions) && payload.sessions.length) {
-                            processRows(sessionsToRows(payload.sessions, payload.publication?.week_start));
+                            // Recurring weekly schedule: always label the days with the CURRENT week's
+                            // dates (Sunday of this week), keyed by day-of-week — never the stored
+                            // week_start, which can lag/lead a week for a dateless "permanent" file.
+                            const cw = new Date(); cw.setHours(0, 0, 0, 0); cw.setDate(cw.getDate() - cw.getDay());
+                            const pad2 = (n) => String(n).padStart(2, '0');
+                            const currentWeekStart = `${cw.getFullYear()}-${pad2(cw.getMonth() + 1)}-${pad2(cw.getDate())}`;
+                            processRows(sessionsToRows(payload.sessions, currentWeekStart));
                             setLoading(false);
                             return;
                         }

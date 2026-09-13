@@ -201,10 +201,16 @@ export async function teamICS(slug, teamParam) {
     const rows = sessions.filter((s) => s.status !== 'cancelled' && s.team
         && (s.team.trim() === t || `${s.team.trim()} - ${(s.coach || '').trim()}` === t));
 
-    const events = rows.filter((s) => s.date && s.start_time).map((s, i) => {
+    // Anchor every event to the CURRENT week (Sunday of this week) by day-of-week, so the
+    // live-updating feed always reflects the recurring schedule for the week the parent is in
+    // — never a stale/leading stored date.
+    const cw = new Date(); cw.setHours(0, 0, 0, 0); cw.setDate(cw.getDate() - cw.getDay());
+    const dateForDow = (dow) => { const d = new Date(cw); d.setDate(d.getDate() + Number(dow)); return d; };
+    const events = rows.filter((s) => s.start_time && (Number.isInteger(s.day_of_week) || s.date)).map((s, i) => {
         const [sh, sm] = s.start_time.split(':').map(Number);
-        const start = new Date(s.date + 'T00:00:00'); start.setHours(sh, sm, 0, 0);
-        const end = new Date(s.date + 'T00:00:00');
+        const dow = Number.isInteger(s.day_of_week) ? s.day_of_week : new Date(s.date + 'T00:00:00').getDay();
+        const start = dateForDow(dow); start.setHours(sh, sm, 0, 0);
+        const end = dateForDow(dow);
         if (s.end_time) { const [eh, em] = s.end_time.split(':').map(Number); end.setHours(eh, em, 0, 0); }
         else end.setHours(sh + 1, sm + 30, 0, 0);
         return {
