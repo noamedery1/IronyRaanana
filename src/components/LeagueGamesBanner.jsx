@@ -91,13 +91,15 @@ const LeagueGamesBanner = ({ data, headers, targetGender }) => {
             boxShadow: '0 10px 30px -16px rgba(0,0,0,0.7)',
             direction: 'rtl'
         }}>
-            <div className="banner-container" dir="rtl" style={{
+            <div className="banner-container" dir="ltr" style={{
                 width: '100%',
                 overflow: 'hidden',
                 whiteSpace: 'nowrap'
             }}>
-                {/* Seamless marquee: two identical copies scroll as one continuous track and loop at
-                    -50% — so no text is ever clipped at the edges and there's no empty gap. */}
+                {/* Seamless RTL-friendly marquee: two identical copies form one continuous track that
+                    scrolls RIGHTWARD (‑50% → 0, looping seamlessly), so Hebrew text drifts in the
+                    natural reading direction and nothing is ever clipped at the edges. Pauses on
+                    hover/tap so a parent can stop it to read. */}
                 <div className="banner-scroll" style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -105,7 +107,7 @@ const LeagueGamesBanner = ({ data, headers, targetGender }) => {
                     animation: 'lg-scroll 26s linear infinite'
                 }}>
                     {[0, 1].map((copy) => (
-                        <span key={copy} style={{ display: 'inline-flex', alignItems: 'center' }} aria-hidden={copy === 1}>
+                        <span key={copy} dir="rtl" style={{ display: 'inline-flex', alignItems: 'center' }} aria-hidden={copy === 1}>
                             <span style={{ fontSize: '1.15rem', fontWeight: 'bold', paddingInline: '18px' }}>{sportEmoji()} הודעות / משחקים:</span>
                             {games.map((game, idx) => (
                                 <span key={idx} style={{ paddingInline: '18px', fontSize: '1.05rem', borderInlineStart: '1px solid rgba(255,255,255,0.3)' }}>
@@ -120,9 +122,10 @@ const LeagueGamesBanner = ({ data, headers, targetGender }) => {
             <style>
                 {`
                     @keyframes lg-scroll {
-                        0%   { transform: translateX(0); }
-                        100% { transform: translateX(-50%); } /* one full copy width; loops seamlessly */
+                        0%   { transform: translateX(-50%); } /* second copy showing */
+                        100% { transform: translateX(0); }    /* drifts rightward; loops seamlessly */
                     }
+                    .banner-container:hover .banner-scroll { animation-play-state: paused; }
                     @media (max-width: 600px) {
                         .banner-scroll span { font-size: 1rem; }
                     }
