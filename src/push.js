@@ -13,6 +13,23 @@ export function pushSupported() {
     return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
 
+// Is the app running as an INSTALLED PWA (opened from the home-screen icon), rather than a
+// browser tab / saved link? Push works only for the installed app on iOS, so we use this to
+// decide whether to offer "enable notifications" or explain how to install first.
+export function isStandalone() {
+    try {
+        return window.matchMedia?.('(display-mode: standalone)').matches
+            || window.navigator.standalone === true; // iOS Safari home-screen flag
+    } catch { return false; }
+}
+
+// iOS (incl. iPadOS reporting as MacIntel with touch) — install steps differ from Android.
+export function isIOS() {
+    const ua = navigator.userAgent || '';
+    return /iphone|ipad|ipod/i.test(ua)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');

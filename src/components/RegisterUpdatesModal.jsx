@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { pushSupported, subscribeToPush, unsubscribeFromPush } from '../push.js';
+import { pushSupported, subscribeToPush, unsubscribeFromPush, isStandalone, isIOS } from '../push.js';
 import { getActiveClub } from '../clubConfig.js';
 
 const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
@@ -14,8 +14,14 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
     const [showUnsub, setShowUnsub] = useState(false);
     const [unsubEmail, setUnsubEmail] = useState('');
     const [unsubMsg, setUnsubMsg] = useState('');
+    const [showInstall, setShowInstall] = useState(false);
 
     if (!isOpen) return null;
+
+    // Push works only for the INSTALLED app (on iOS strictly so). If the device can't subscribe,
+    // don't just hide the option — explain that they need to install first, and how.
+    const canPush = pushSupported();
+    const ios = isIOS();
 
     const cancelPush = async () => {
         setUnsubMsg('');
@@ -127,7 +133,7 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                     בחרו איך לקבל עדכונים על קבוצת <strong style={{ color: '#0f172a' }}>{teamName}</strong> — פוש, מייל, או שניהם.
                 </p>
 
-                {pushSupported() && (
+                {canPush ? (
                     <div style={{ border: '1px solid #fed7aa', background: '#fff7ed', borderRadius: '10px', padding: '0.9rem', marginBottom: '0.9rem' }}>
                         <div style={{ fontWeight: 'bold', color: '#9a3412', fontSize: '0.95rem', marginBottom: '0.15rem' }}>📱 התראות לטלפון</div>
                         <div style={{ color: '#9a3412', opacity: 0.8, fontSize: '0.8rem', marginBottom: '0.7rem', lineHeight: 1.5 }}>
@@ -154,6 +160,45 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
                             }}>
                                 {pushMsg}
                             </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Push isn't available in this context (typically a browser tab / saved link,
+                       esp. on iOS) — explain that installing the app to the home screen is required. */
+                    <div style={{ border: '1px solid #fed7aa', background: '#fff7ed', borderRadius: '10px', padding: '0.9rem', marginBottom: '0.9rem' }}>
+                        <div style={{ fontWeight: 'bold', color: '#9a3412', fontSize: '0.95rem', marginBottom: '0.15rem' }}>📱 התראות לטלפון</div>
+                        <div style={{ color: '#9a3412', opacity: 0.85, fontSize: '0.8rem', marginBottom: '0.7rem', lineHeight: 1.6 }}>
+                            כדי לקבל התראות פוש צריך קודם <strong>להתקין את האפליקציה למסך הבית</strong> ולפתוח אותה משם.
+                            שמירת הלינק בלבד לא מספיקה.
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowInstall((s) => !s)}
+                            style={{
+                                width: '100%', background: '#fff', color: '#9a3412', border: '1px solid #fdba74',
+                                padding: '0.6rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer',
+                            }}
+                        >
+                            {showInstall ? 'הסתר הוראות' : '📥 איך מתקינים? לחצו כאן'}
+                        </button>
+                        {showInstall && (
+                            <ol style={{ margin: '0.7rem 0 0', paddingInlineStart: '1.2rem', color: '#7c2d12', fontSize: '0.83rem', lineHeight: 1.7 }}>
+                                {ios ? (
+                                    <>
+                                        <li>פתחו את הדף בדפדפן <strong>Safari</strong>.</li>
+                                        <li>הקישו על כפתור <strong>השיתוף</strong> (⬆️ ריבוע עם חץ) בתחתית המסך.</li>
+                                        <li>גללו ובחרו <strong>"הוסף למסך הבית"</strong> (Add to Home Screen).</li>
+                                        <li>פתחו את האפליקציה מהאייקון החדש — ואז חזרו לכאן והפעילו התראות.</li>
+                                    </>
+                                ) : (
+                                    <>
+                                        <li>פתחו את הדף בדפדפן <strong>Chrome</strong>.</li>
+                                        <li>הקישו על תפריט שלוש הנקודות (⋮) בפינה.</li>
+                                        <li>בחרו <strong>"התקן אפליקציה"</strong> או <strong>"הוספה למסך הבית"</strong>.</li>
+                                        <li>פתחו את האפליקציה מהאייקון החדש — ואז חזרו לכאן והפעילו התראות.</li>
+                                    </>
+                                )}
+                            </ol>
                         )}
                     </div>
                 )}
