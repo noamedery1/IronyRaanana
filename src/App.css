@@ -874,6 +874,15 @@
     radial-gradient(80% 50% at 10% 0%, rgba(59,130,246,.08), transparent 55%),
     #ffffff;
 }
+/* Board surfaces that hardcoded dark colours (not the flipped tokens) — flip them for light mode
+   so nothing is dark-on-light or light-on-light. */
+:root[data-theme="light"] .app-container .topbar{ background:rgba(255,255,255,.9); }
+:root[data-theme="light"] .app-container .view-tabs{ background:#eef2f8; }
+:root[data-theme="light"] .app-container .hero-time{ -webkit-text-fill-color:var(--text); color:var(--text); }
+:root[data-theme="light"] .app-container .event-item{ background:rgba(15,23,42,.05); }
+:root[data-theme="light"] .app-container .event-item:hover{ background:rgba(34,211,238,.12); }
+/* timeline dot ring was dark (#0a0f1b) to sit on a dark bg — make it white on light */
+:root[data-theme="light"] .app-container .schedule-card::before{ box-shadow:0 0 0 4px #ffffff, 0 0 14px rgba(34,211,238,.45); }
 .app-container::before{content:none}
 
 /* topbar */
