@@ -50,7 +50,9 @@ function PublicSchedule() {
     useEffect(() => {
         // Already registered (member/operator) or explicitly viewing the parent board → stay put.
         if (viewParent || memberTeam || identity.role === 'operator') return;
-        if (isTrainer || entryRole === 'trainer') { navigate(`/${club.slug}/trainer`, { replace: true }); return; }
+        // Only a REAL trainer login (trainerToken) bounces to the portal — never a stale
+        // breadcrumb, so a parent who once glanced at the trainer page isn't trapped there.
+        if (isTrainer) { navigate(`/${club.slug}/trainer`, { replace: true }); return; }
         // Came in via a parent/operator invite but haven't registered yet → open that registration.
         if (entryRole === 'member' && entryTeam) { navigate(`/${club.slug}/join?r=member&team=${encodeURIComponent(entryTeam)}`, { replace: true }); return; }
         if (entryRole === 'operator') { navigate(`/${club.slug}/join?r=operator`, { replace: true }); return; }

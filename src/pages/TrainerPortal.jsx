@@ -109,9 +109,9 @@ const TrainerPortal = () => {
     // On load: restore instantly from saved info (no login flash on refresh), then
     // re-validate the token in the background.
     useEffect(() => {
-        // Remember this device entered via the trainer link, so the installed app's
-        // start page (/<club>) routes it back to the trainer portal on first launch.
-        localStorage.setItem('entryRole', 'trainer');
+        // NOTE: do NOT mark this device as a trainer here — merely viewing the login page
+        // must not make a parent permanently land on the trainer portal. The device is
+        // recognised as a trainer only by a real login (trainerToken), set on auth success.
         const saved = localStorage.getItem('trainerInfo');
         if (saved) {
             try {

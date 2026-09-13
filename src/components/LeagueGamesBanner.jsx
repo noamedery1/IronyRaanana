@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { sportEmoji } from '../sportLabels.js';
 
 const LeagueGamesBanner = ({ data, headers, targetGender }) => {
     const [games, setGames] = useState([]);
@@ -90,7 +91,7 @@ const LeagueGamesBanner = ({ data, headers, targetGender }) => {
             boxShadow: '0 10px 30px -16px rgba(0,0,0,0.7)',
             direction: 'rtl'
         }}>
-            <div className="banner-container" style={{
+            <div className="banner-container" dir="ltr" style={{
                 width: '100%',
                 overflow: 'hidden',
                 whiteSpace: 'nowrap'
@@ -98,10 +99,10 @@ const LeagueGamesBanner = ({ data, headers, targetGender }) => {
                 <div className="banner-scroll" style={{
                     display: 'inline-block',
                     whiteSpace: 'nowrap',
-                    animation: 'scroll 15s linear infinite',
-                    paddingRight: '100%' // Start off-screen
+                    animation: 'scroll 22s linear infinite',
+                    paddingInlineStart: '100%' // start off-screen; all text then scrolls through
                 }}>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>🏀 הודעות / משחקים: </span>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{sportEmoji()} הודעות / משחקים: </span>
                     {games.map((game, idx) => (
                         <span key={idx} style={{ margin: '0 15px', fontSize: '1.1rem', borderLeft: idx < games.length - 1 ? '1px solid rgba(255,255,255,0.3)' : 'none', paddingLeft: '15px' }}>
                             {game.text}
@@ -113,8 +114,8 @@ const LeagueGamesBanner = ({ data, headers, targetGender }) => {
             <style>
                 {`
                     @keyframes scroll {
-                        0% { transform: translateX(0); }
-                        100% { transform: translateX(100%); } /* RTL Scroll: Move Right */
+                        0%   { transform: translateX(0); }
+                        100% { transform: translateX(-100%); } /* scroll fully across so all text is read */
                     }
                     /* On mobile, make font slightly smaller if needed, but scrolling solves space */
                     @media (max-width: 600px) {
