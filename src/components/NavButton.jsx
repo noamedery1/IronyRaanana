@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { googleMapsUrl, wazeUrl, isMobileDevice } from '../utils/hallLocations';
 
 /**
@@ -10,10 +11,13 @@ export default function NavButton({ location, label = 'ניווט במפות ‹
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState(null); // fixed-position coords for the menu
     const ref = useRef(null);
+    const menuRef = useRef(null);
 
-    // Position the menu relative to the VIEWPORT (position:fixed) so no ancestor with
-    // overflow:hidden (the map/hero cards) can clip it. Opens above the trigger when there's
-    // room, otherwise below; right edge aligned to the trigger (RTL).
+    // Position the menu relative to the VIEWPORT. The menu is rendered through a portal to
+    // <body> (see below) so it escapes the map card's entrance-animation transform — a
+    // transformed ancestor would otherwise make position:fixed resolve against that card
+    // instead of the viewport, so the menu drifted off-screen once the page was scrolled.
+    // Opens above the trigger when there's room, otherwise below; right edge aligned (RTL).
     const place = () => {
         const el = ref.current;
         if (!el) return;
@@ -29,7 +33,11 @@ export default function NavButton({ location, label = 'ניווט במפות ‹
 
     useEffect(() => {
         if (!open) return;
-        const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        const onClick = (e) => {
+            // The menu lives in a portal outside `ref`, so check both the trigger and the menu.
+            if (ref.current?.contains(e.target) || menuRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
         const reposition = () => setOpen(false); // close on scroll/resize rather than track a stale anchor
         document.addEventListener('mousedown', onClick);
         window.addEventListener('scroll', reposition, true);
@@ -59,9 +67,9 @@ export default function NavButton({ location, label = 'ניווט במפות ‹
             <a href="#" onClick={handleClick} className={className} style={{ color: 'var(--sky)', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', ...style }}>
                 {label}
             </a>
-            {open && pos && (
-                <div style={{
-                    position: 'fixed', right: pos.right, top: pos.top, bottom: pos.bottom, zIndex: 1000,
+            {open && pos && createPortal(
+                <div ref={menuRef} style={{
+                    position: 'fixed', right: pos.right, top: pos.top, bottom: pos.bottom, zIndex: 3000,
                     background: 'var(--ink2)', border: '1px solid var(--bd2)', borderRadius: '12px',
                     padding: '0.5rem', boxShadow: '0 16px 40px -16px rgba(0,0,0,0.55)',
                     display: 'flex', flexDirection: 'column', gap: '0.4rem', minWidth: '160px'
@@ -69,7 +77,8 @@ export default function NavButton({ location, label = 'ניווט במפות ‹
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-dim)', padding: '0 0.3rem 0.2rem' }}>{navWith}</div>
                     <button onClick={() => openIn(wazeUrl(location))} style={navItemStyle('#33ccff')}>🧭 Waze</button>
                     <button onClick={() => openIn(googleMapsUrl(location))} style={navItemStyle('#34d058')}>📍 Google Maps</button>
-                </div>
+                </div>,
+                document.body,
             )}
         </span>
     );
