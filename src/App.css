@@ -883,6 +883,13 @@
 :root[data-theme="light"] .app-container .event-item:hover{ background:rgba(34,211,238,.12); }
 /* timeline dot ring was dark (#0a0f1b) to sit on a dark bg — make it white on light */
 :root[data-theme="light"] .app-container .schedule-card::before{ box-shadow:0 0 0 4px #ffffff, 0 0 14px rgba(34,211,238,.45); }
+/* The cyan accent (#22d3ee) reads fine on the dark theme but washes out on white — the schedule
+   TIMES and day names became nearly invisible. Use a deep cyan for these text bits in light mode. */
+:root[data-theme="light"] .app-container .event-time,
+:root[data-theme="light"] .app-container .day-name,
+:root[data-theme="light"] .app-container .hero-label,
+:root[data-theme="light"] .app-container .brand-sub,
+:root[data-theme="light"] .app-container .sess-time{ color:#0e7490; -webkit-text-fill-color:#0e7490; }
 .app-container::before{content:none}
 
 /* topbar */
