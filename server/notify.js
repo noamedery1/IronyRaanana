@@ -3,11 +3,30 @@ import webpush from 'web-push';
 import { pool } from './db.js';
 import { clubId } from './people.js';
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+// IMPORTANT: this fallback MUST match the public key the client subscribes with (src/push.js)
+// and server.js. Previously this had no fallback, so if the env var was unset the manager's
+// broadcast path silently couldn't send (pushReady=false) even though /api/health said push was
+// ready (health reflects server.js, a separate web-push instance).
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY
+    || 'BHRSmWUH9tdilK-Xh31VGoEMGb9jMZayZSk8znHbbPz-1ZdNswqttSUjXWEBrxsgg5KmEqT8xgm5s-QqPG5RCcw';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:noam.edery@tibaparking.com';
 const pushReady = Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
 if (pushReady) webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+
+// Diagnostics for /api/health — confirms the BROADCAST path (this module) can actually send,
+// and lets us compare the effective public key against the client's without exposing secrets.
+export async function pushDiag() {
+    const tail = VAPID_PUBLIC_KEY ? VAPID_PUBLIC_KEY.slice(-10) : null;
+    const out = { broadcastReady: pushReady, publicKeyTail: tail, usingEnvPublicKey: Boolean(process.env.VAPID_PUBLIC_KEY), subscriptions: null, bySegment: null };
+    try {
+        const r = await pool.query('SELECT count(*)::int n FROM push_subscriptions');
+        out.subscriptions = r.rows[0].n;
+        const seg = await pool.query("SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions GROUP BY 1 ORDER BY 2 DESC LIMIT 20");
+        out.bySegment = seg.rows;
+    } catch { /* table may not exist yet */ }
+    return out;
+}
 
 // ===== Push subscriptions =====
 export async function registerPush(slug, { segment, subscription }) {

@@ -10,7 +10,7 @@ import {
     registerUser, authUser, listMembers, deleteMember, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
 } from './server/people.js';
-import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback } from './server/notify.js';
+import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
@@ -91,6 +91,7 @@ app.get('/api/health', async (req, res) => {
         if (out.migrationsRan) out.clubs = (await pool.query('SELECT count(*)::int n FROM clubs')).rows[0].n;
         out.ok = out.db && out.migrationsRan;
     } catch (e) { out.error = e.message; }
+    try { out.push = await pushDiag(); } catch { /* non-fatal */ }
     res.status(out.ok ? 200 : 503).json(out);
 });
 
