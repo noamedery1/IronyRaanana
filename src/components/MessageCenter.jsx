@@ -41,6 +41,7 @@ export default function MessageCenter() {
         if (segs.length === 0) { setMsg('בחר לפחות קבוצה / מאמן אחד'); return; }
         setBusy(true); setMsg('');
         let sent = 0, failed = 0, errs = 0;
+        const codes = {};
         try {
             for (const seg of segs) {
                 const r = await fetch(`/api/${slug}/broadcast`, {
@@ -48,10 +49,11 @@ export default function MessageCenter() {
                     body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, segment: seg }),
                 });
                 const d = await r.json().catch(() => ({ error: 'x' }));
-                if (d.error) errs++; else { sent += d.sent || 0; failed += d.failed || 0; }
+                if (d.error) errs++; else { sent += d.sent || 0; failed += d.failed || 0; Object.entries(d.statusCodes || {}).forEach(([k, v]) => { codes[k] = (codes[k] || 0) + v; }); }
             }
+            const codeStr = Object.keys(codes).length ? ` [${Object.entries(codes).map(([k, v]) => `${k}×${v}`).join(', ')}]` : '';
             if (errs) setMsg(`⚠️ נכשלו ${errs} שליחות`);
-            else { setMsg(`✓ נשלח ל-${segs.length} יעדים (${sent} מכשירים${failed ? `, ${failed} נכשלו` : ''})`); setBody(''); }
+            else { setMsg(`✓ נשלח ל-${segs.length} יעדים (${sent} מכשירים${failed ? `, ${failed} נכשלו${codeStr}` : ''})`); setBody(''); }
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
     };
 
