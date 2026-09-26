@@ -620,6 +620,7 @@ function PublicSchedule() {
                 isOpen={isRegisterModalOpen}
                 onClose={() => setIsRegisterModalOpen(false)}
                 teamName={getSelectedTeamName()}
+                pushSegment={getTeamObj()?.name ? `team:${getTeamObj().name}` : ''}
                 sheetUrl={LIVE_SHEET_API}
             />
         </div>

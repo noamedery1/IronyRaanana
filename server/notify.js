@@ -52,12 +52,25 @@ export async function unregisterPush(slug, { endpoint }) {
 export async function broadcast(slug, { segment = '', title, body, url, icon, tag, data, actions }) {
     const cid = await clubId(slug);
     const seg = (segment || '').toString();
-    // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).
-    const r = await pool.query(
-        `SELECT id, endpoint, subscription FROM push_subscriptions
-         WHERE club_id=$1 AND left(segment, length($2)) = $2`,
-        [cid, seg],
-    );
+    // Match the target's subscriptions. A team target (team:<name>) must also reach rows stored
+    // in the legacy label format ("<name> - <coach>" or bare "<name>") that the notifications
+    // modal used to create — otherwise team sends silently skip those parents.
+    let r;
+    if (seg.startsWith('team:')) {
+        const name = seg.slice(5);
+        r = await pool.query(
+            `SELECT id, endpoint, subscription FROM push_subscriptions
+             WHERE club_id=$1 AND (segment = $2 OR segment = $3 OR segment LIKE $4)`,
+            [cid, seg, name, name.replace(/[%_\\]/g, '\\$&') + ' - %'],
+        );
+    } else {
+        // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).
+        r = await pool.query(
+            `SELECT id, endpoint, subscription FROM push_subscriptions
+             WHERE club_id=$1 AND left(segment, length($2)) = $2`,
+            [cid, seg],
+        );
+    }
     if (!r.rows.length) return { sent: 0, failed: 0, expired: [], note: 'no subscribers' };
     if (!pushReady) return { sent: 0, failed: r.rows.length, expired: [], error: 'push not configured (set VAPID_* env)' };
 
@@ -69,15 +82,18 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
     });
     let sent = 0, failed = 0;
     const expired = [];
+    const statusCodes = {}; // for diagnosis: 403 = VAPID key mismatch, etc.
     await Promise.all(r.rows.map(async (row) => {
         try { await webpush.sendNotification(row.subscription, payload); sent++; }
         catch (e) {
             failed++;
+            const sc = e.statusCode || 'err';
+            statusCodes[sc] = (statusCodes[sc] || 0) + 1;
             if (e.statusCode === 404 || e.statusCode === 410) expired.push(row.endpoint);
         }
     }));
     if (expired.length) await pool.query('DELETE FROM push_subscriptions WHERE endpoint = ANY($1)', [expired]);
-    return { sent, failed, expired };
+    return { sent, failed, expired, statusCodes };
 }
 
 // ===== Email subscribers =====

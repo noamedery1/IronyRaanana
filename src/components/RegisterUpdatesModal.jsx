@@ -3,7 +3,7 @@ import { pushSupported, subscribeToPush, unsubscribeFromPush, isStandalone, isIO
 import { canInstallNow, onInstallChange, promptInstall } from '../pwaInstall.js';
 import { getActiveClub } from '../clubConfig.js';
 
-const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
+const RegisterUpdatesModal = ({ isOpen, onClose, teamName, pushSegment, sheetUrl }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
@@ -88,7 +88,10 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, sheetUrl }) => {
         setPushMsg('');
         setPushErr(false);
         try {
-            const result = await subscribeToPush(teamName, sheetUrl);
+            // Subscribe under the canonical segment (team:<name>) so the manager's team-targeted
+            // broadcasts reach this device — not the display label ("<name> - <coach>"), which the
+            // broadcast query doesn't match by prefix.
+            const result = await subscribeToPush(pushSegment || teamName, sheetUrl);
             if (result.ok) {
                 setPushMsg('✓ התראות הופעלו במכשיר זה!');
                 setPushErr(false);
