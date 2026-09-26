@@ -168,13 +168,12 @@ function PublicSchedule() {
                     if (apiRes.ok) {
                         const payload = await apiRes.json();
                         if (payload && Array.isArray(payload.sessions) && payload.sessions.length) {
-                            // Recurring weekly schedule: always label the days with the CURRENT week's
-                            // dates (Sunday of this week), keyed by day-of-week — never the stored
-                            // week_start, which can lag/lead a week for a dateless "permanent" file.
-                            const cw = new Date(); cw.setHours(0, 0, 0, 0); cw.setDate(cw.getDate() - cw.getDay());
-                            const pad2 = (n) => String(n).padStart(2, '0');
-                            const currentWeekStart = `${cw.getFullYear()}-${pad2(cw.getMonth() + 1)}-${pad2(cw.getDate())}`;
-                            processRows(sessionsToRows(payload.sessions, currentWeekStart));
+                            // Label the days with the dates of the PUBLISHED week (week_start), so
+                            // parents see exactly what the manager published — including a schedule
+                            // published ahead for the coming week. (The source now anchors a dateless
+                            // "permanent" import to the right week, so trusting week_start is correct;
+                            // an earlier current-week override made parents see last week's dates.)
+                            processRows(sessionsToRows(payload.sessions, payload.publication?.week_start));
                             setLoading(false);
                             return;
                         }
