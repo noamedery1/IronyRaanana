@@ -214,7 +214,11 @@ function PublicSchedule() {
     useEffect(() => {
         if (!memberTeam || !teams.length) return;
         const f = teams.find((t) => t.name === memberTeam || t.label === memberTeam);
-        if (f) { setSelectedTeamId(f.value); setViewMode('team'); }
+        setViewMode('team');
+        // If this team isn't in the current published week, clear the selection so the
+        // "not published yet" empty state shows — otherwise the board would keep displaying
+        // the PREVIOUS team's schedule, making two teams look identical.
+        setSelectedTeamId(f ? f.value : '');
     }, [memberTeam, teams]);
 
     const getTeamObj = () => {
