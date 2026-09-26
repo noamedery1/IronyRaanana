@@ -76,7 +76,9 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
 
     const payload = JSON.stringify({
         title: title || 'הודעה מהמועדון', body: body || '',
-        url: url || `/${slug}`, icon: icon || '/pwa-192x192.png',
+        // Default to the CLUB's own icon (football/basketball per club) rather than the built-in
+        // basketball app icon, so a football club's push doesn't show a basketball.
+        url: url || `/${slug}`, icon: icon || `/api/${slug}/icon/192`,
         tag: tag || undefined,
         data: data || {}, actions: actions || [],
     });
