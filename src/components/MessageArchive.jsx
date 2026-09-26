@@ -9,10 +9,16 @@ export default function MessageArchive() {
     const [msg, setMsg] = useState('');
     const [busyId, setBusyId] = useState('');
 
+    const [viewOnly, setViewOnly] = useState(false);
+
     const load = useCallback(() => {
         fetch(`/api/${slug}/messages`, { headers: authHeaders(slug) })
-            .then((r) => r.json())
-            .then((d) => { if (d.error) setMsg('שגיאה: ' + d.error); else { setItems(d.messages || []); setMsg(''); } })
+            .then(async (r) => ({ status: r.status, d: await r.json().catch(() => ({})) }))
+            .then(({ status, d }) => {
+                if (status === 401 || d.error === 'unauthorized') { setViewOnly(true); setItems([]); setMsg(''); }
+                else if (d.error) { setMsg('שגיאה: ' + d.error); }
+                else { setItems(d.messages || []); setViewOnly(false); setMsg(''); }
+            })
             .catch(() => setMsg('שגיאת תקשורת'));
     }, [slug]);
 
@@ -45,8 +51,13 @@ export default function MessageArchive() {
                 {msg && <b style={{ marginInlineStart: '0.5rem', color: msg.startsWith('✓') ? '#10b981' : '#ef4444' }}>{msg}</b>}
             </p>
 
-            {!items && !msg && <div style={{ color: '#94a3b8' }}>טוען…</div>}
-            {items && items.length === 0 && <div style={{ color: '#94a3b8' }}>עדיין לא נשלחו הודעות.</div>}
+            {viewOnly && (
+                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', borderRadius: 10, padding: '0.9rem 1rem' }}>
+                    מחוברים במצב תצוגה בלבד (Admin מובנה). כדי לראות את הארכיון ולשלוח הודעות — התחברו עם חשבון מנהל שנוצר ב־<b>/superuser</b>.
+                </div>
+            )}
+            {!viewOnly && !items && !msg && <div style={{ color: '#94a3b8' }}>טוען…</div>}
+            {!viewOnly && items && items.length === 0 && <div style={{ color: '#94a3b8' }}>עדיין לא נשלחו הודעות.</div>}
 
             <div style={{ display: 'grid', gap: '0.6rem' }}>
                 {items && items.map((e) => (
