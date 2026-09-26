@@ -83,7 +83,7 @@ export default function BannerAdmin({ clubSlug }) {
             {/* Per-team banners */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                 <div className="cc-title" style={{ fontSize: '1rem' }}>👥 באנרים לפי קבוצה {activeCount ? <span style={{ color: '#10b981', fontSize: '0.85rem' }}>· {activeCount} פעילים</span> : null}</div>
-                {teams.length > 6 && (
+                {teams.length > 4 && (
                     <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="🔍 חיפוש קבוצה…"
                         style={{ padding: '0.5rem 0.8rem', borderRadius: 8, border: '1px solid var(--glass-border)', background: 'var(--glass-2)', color: 'var(--text)', minWidth: 180 }} />
                 )}
