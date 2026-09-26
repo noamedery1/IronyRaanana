@@ -10,10 +10,10 @@ import {
     registerUser, authUser, listMembers, deleteMember, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
 } from './server/people.js';
-import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag } from './server/notify.js';
+import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
-import { getSetting, setSetting, listHalls, saveHalls } from './server/settings.js';
+import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
 import {
@@ -266,6 +266,18 @@ app.delete('/api/:club/push', async (req, res) => {
 });
 app.post('/api/:club/broadcast', requireManager, async (req, res) => {
     try { ok(res, await broadcast(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+// Manager message: send to segment(s) AND archive it (for review / resend). Message history.
+app.post('/api/:club/messages', requireManager, async (req, res) => {
+    try { ok(res, await sendMessage(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+app.get('/api/:club/messages', requireManager, async (req, res) => {
+    try { ok(res, await listMessages(req.params.club)); } catch (e) { fail(res, e); }
+});
+
+// Public banners for the ticker: general (club-wide) + per-team (client shows a team's to its members).
+app.get('/api/:club/banners', async (req, res) => {
+    try { ok(res, await getBanners(req.params.club)); } catch (e) { fail(res, e); }
 });
 
 // Email subscribers

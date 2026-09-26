@@ -40,3 +40,12 @@ export async function listHalls(slug) {
 }
 
 export const saveHalls = (slug, config) => setSetting(slug, 'halls', config || {});
+
+// Banners shown in the public ticker: the club-wide "general" banner (floatingMessage) plus
+// per-team banners (teamBanners = { [teamName]: { text, enabled } }). Public — banner text is
+// not sensitive; the client shows the general one to everyone and a team's one to its members.
+export async function getBanners(slug) {
+    const general = (await getSetting(slug, 'floatingMessage')) || {};
+    const teams = (await getSetting(slug, 'teamBanners')) || {};
+    return { general, teams };
+}

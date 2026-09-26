@@ -2,6 +2,7 @@
 import webpush from 'web-push';
 import { pool } from './db.js';
 import { clubId } from './people.js';
+import { getSetting, setSetting } from './settings.js';
 
 // IMPORTANT: this fallback MUST match the public key the client subscribes with (src/push.js)
 // and server.js. Previously this had no fallback, so if the env var was unset the manager's
@@ -96,6 +97,42 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
     }));
     if (expired.length) await pool.query('DELETE FROM push_subscriptions WHERE endpoint = ANY($1)', [expired]);
     return { sent, failed, expired, statusCodes };
+}
+
+// ===== Message archive (manager broadcasts) =====
+// Stored in club_settings (key 'pushLog') as a capped array — no separate table needed. Each
+// entry records what was sent so the manager can review it later or resend it.
+const PUSH_LOG_KEY = 'pushLog';
+const PUSH_LOG_MAX = 100;
+
+// Send one manager message to one or more segments, aggregate the result, and archive it.
+export async function sendMessage(slug, { title, body, target, segments }) {
+    const segs = Array.isArray(segments) && segments.length ? segments : [''];
+    let sent = 0, failed = 0;
+    const statusCodes = {};
+    for (const seg of segs) {
+        const r = await broadcast(slug, { segment: seg, title, body });
+        sent += r.sent || 0;
+        failed += r.failed || 0;
+        Object.entries(r.statusCodes || {}).forEach(([k, v]) => { statusCodes[k] = (statusCodes[k] || 0) + v; });
+    }
+    const entry = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        at: new Date().toISOString(),
+        target: target || '', segments: segs,
+        title: title || '', body: body || '',
+        sent, failed,
+    };
+    const existing = await getSetting(slug, PUSH_LOG_KEY);
+    const arr = Array.isArray(existing) ? existing : [];
+    arr.unshift(entry);
+    await setSetting(slug, PUSH_LOG_KEY, arr.slice(0, PUSH_LOG_MAX));
+    return { sent, failed, statusCodes, entry };
+}
+
+export async function listMessages(slug) {
+    const existing = await getSetting(slug, PUSH_LOG_KEY);
+    return { messages: Array.isArray(existing) ? existing : [] };
 }
 
 // ===== Email subscribers =====

@@ -35,25 +35,34 @@ export default function MessageCenter() {
         return [];
     };
 
+    // Human-readable description of the audience — stored in the archive so the manager can
+    // see later who a message went to.
+    const targetLabel = () => {
+        if (target === 'club') return 'כל המועדון';
+        if (target === 'trainers') return 'כל המאמנים';
+        if (target === 'operators') return 'כל המפעילים';
+        if (target === 'team') return 'קבוצות: ' + chosen(selTeams).join(', ');
+        if (target === 'trainer') return 'מאמנים: ' + chosen(selTrainers).join(', ');
+        return '';
+    };
+
     const send = async () => {
         if (!body.trim()) { setMsg('הקלד הודעה'); return; }
         const segs = segments();
         if (segs.length === 0) { setMsg('בחר לפחות קבוצה / מאמן אחד'); return; }
         setBusy(true); setMsg('');
-        let sent = 0, failed = 0, errs = 0;
-        const codes = {};
         try {
-            for (const seg of segs) {
-                const r = await fetch(`/api/${slug}/broadcast`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
-                    body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, segment: seg }),
-                });
-                const d = await r.json().catch(() => ({ error: 'x' }));
-                if (d.error) errs++; else { sent += d.sent || 0; failed += d.failed || 0; Object.entries(d.statusCodes || {}).forEach(([k, v]) => { codes[k] = (codes[k] || 0) + v; }); }
-            }
+            // One call: the server sends to every segment AND archives the message (for resend).
+            const r = await fetch(`/api/${slug}/messages`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
+                body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, target: targetLabel(), segments: segs }),
+            });
+            const d = await r.json().catch(() => ({ error: 'x' }));
+            if (d.error) { setMsg('⚠️ שגיאה בשליחה'); return; }
+            const codes = d.statusCodes || {};
             const codeStr = Object.keys(codes).length ? ` [${Object.entries(codes).map(([k, v]) => `${k}×${v}`).join(', ')}]` : '';
-            if (errs) setMsg(`⚠️ נכשלו ${errs} שליחות`);
-            else { setMsg(`✓ נשלח ל-${segs.length} יעדים (${sent} מכשירים${failed ? `, ${failed} נכשלו${codeStr}` : ''})`); setBody(''); }
+            setMsg(`✓ נשלח (${d.sent || 0} מכשירים${d.failed ? `, ${d.failed} נכשלו${codeStr}` : ''})`);
+            setBody('');
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
     };
 

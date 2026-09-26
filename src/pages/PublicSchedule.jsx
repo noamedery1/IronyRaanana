@@ -71,7 +71,7 @@ function PublicSchedule() {
     const [dayStart, setDayStart] = useState(1);
 
     const [selectedTeamId, setSelectedTeamId] = useState('');
-    const [floatingMsg, setFloatingMsg] = useState(null);
+    const [banners, setBanners] = useState(null); // { general:{text,enabled}, teams:{name:{text,enabled}} }
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -200,10 +200,10 @@ function PublicSchedule() {
         fetchData();
     }, []);
 
-    // Club settings: floating banner + hall addresses (bridged to localStorage for nav).
+    // Club settings: banners (general + per-team) + hall addresses (bridged to localStorage for nav).
     useEffect(() => {
-        fetch(`/api/${club.slug}/settings/floatingMessage`).then((r) => r.json())
-            .then((d) => setFloatingMsg(d.value || null)).catch(() => { });
+        fetch(`/api/${club.slug}/banners`).then((r) => r.json())
+            .then((d) => setBanners(d || null)).catch(() => { });
         fetch(`/api/${club.slug}/halls`).then((r) => r.json())
             .then((d) => { if (d.config) localStorage.setItem(`hallcfg:${club.slug}`, JSON.stringify(d.config)); })
             .catch(() => { });
@@ -429,8 +429,21 @@ function PublicSchedule() {
                 </div>
             </nav>
 
-            {floatingMsg?.enabled && floatingMsg.text && (() => {
-                const msgs = floatingMsg.text.split('\n').map((m) => m.trim()).filter(Boolean);
+            {(() => {
+                // Build the ticker messages: the general (club-wide) banner for everyone, plus a
+                // banner for each team the viewer belongs to (a multi-team parent sees all of theirs,
+                // one after another). Team banners are prefixed with the team name to disambiguate.
+                if (!banners) return null;
+                const lines = (t) => (t || '').split('\n').map((m) => m.trim()).filter(Boolean);
+                const msgs = [];
+                const g = banners.general || {};
+                if (g.enabled && g.text) lines(g.text).forEach((m) => msgs.push(m));
+                const myTeams = memberTeam ? (memberships.length ? memberships.map((m) => m.team) : [memberTeam]) : [];
+                myTeams.forEach((tn) => {
+                    const tb = (banners.teams || {})[tn];
+                    if (tb && tb.enabled && tb.text) lines(tb.text).forEach((m) => msgs.push(`${tn}: ${m}`));
+                });
+                if (!msgs.length) return null;
                 // Container is dir=ltr so the strip is anchored to the LEFT and is full of text from
                 // the first frame (a dir=rtl block right-anchors the overflowing track, so at the
                 // animation's start offset it sits off-screen → seconds of blank before any text).

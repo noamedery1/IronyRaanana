@@ -43,3 +43,8 @@ data_test
 
 # local promo build artifacts (Chrome profile, renders)
 onboarding/_promo_build/
+
+# Large promo/presentation deliverables — kept local, never committed
+onboarding/Squadio-Presentation-HE.*
+onboarding/Squadio-Promo-HE.*
+onboarding/shots/social-*.png

@@ -4,8 +4,9 @@ import Papa from 'papaparse';
 import WeekBuilder from '../components/WeekBuilder';
 import Preview from '../components/Preview';
 import HallsConfig from '../components/HallsConfig';
-import FloatingMessage from '../components/FloatingMessage';
+import BannerAdmin from '../components/BannerAdmin';
 import MessageCenter from '../components/MessageCenter';
+import MessageArchive from '../components/MessageArchive';
 import SocialPostBroadcast from '../components/SocialPostBroadcast';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
@@ -806,9 +807,11 @@ const AdminDashboard = () => {
             case 'halls':
                 return <HallsConfig clubSlug={getActiveClub().slug} />;
             case 'messages':
-                return <FloatingMessage clubSlug={getActiveClub().slug} />;
+                return <BannerAdmin clubSlug={getActiveClub().slug} />;
             case 'trainerPush':
                 return <MessageCenter />;
+            case 'archive':
+                return <MessageArchive />;
             case 'socialPost':
                 return <SocialPostBroadcast />;
             case 'invites':
@@ -902,10 +905,13 @@ const AdminDashboard = () => {
                             🏟️ {venues()}
                         </button>
                         <button style={menuButtonStyle(activeTab === 'messages')} onClick={() => selectTab('messages')}>
-                            📣 הודעה צפה
+                            📣 באנרים
                         </button>
                         <button style={menuButtonStyle(activeTab === 'trainerPush')} onClick={() => selectTab('trainerPush')}>
                             📢 הודעות
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'archive')} onClick={() => selectTab('archive')}>
+                            🗂️ ארכיון הודעות
                         </button>
                         <button style={menuButtonStyle(activeTab === 'socialPost')} onClick={() => selectTab('socialPost')}>
                             📱 פרסום ברשתות
