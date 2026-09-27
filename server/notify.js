@@ -84,8 +84,16 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
     if (!r.rows.length) return { sent: 0, failed: 0, expired: [], note: 'no subscribers' };
     if (!pushReady) return { sent: 0, failed: r.rows.length, expired: [], error: 'push not configured (set VAPID_* env)' };
 
+    // Prefix the club name so the recipient always knows WHICH club sent it — on a phone with more
+    // than one club installed from this domain, Android may show the other club's app icon/name
+    // (shared origin = shared notification identity), so the club name in the title disambiguates.
+    let clubName = '';
+    try { clubName = (await pool.query('SELECT name FROM clubs WHERE id=$1', [cid])).rows[0]?.name || ''; } catch { /* ignore */ }
+    const baseTitle = title || 'הודעה מהמועדון';
+    const fullTitle = clubName && !baseTitle.includes(clubName) ? `${clubName} · ${baseTitle}` : baseTitle;
+
     const payload = JSON.stringify({
-        title: title || 'הודעה מהמועדון', body: body || '',
+        title: fullTitle, body: body || '',
         // Default to the CLUB's own icon (football/basketball per club) rather than the built-in
         // basketball app icon, so a football club's push doesn't show a basketball.
         url: url || `/${slug}`, icon: icon || `/api/${slug}/icon/192`,
