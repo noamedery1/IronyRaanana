@@ -481,8 +481,18 @@ app.post('/api/push/send', async (req, res) => {
 });
 
 // Bare domain root → the product sales/landing page. Clubs live under /<slug>.
+// BUT on a per-club subdomain (<slug>.squadio.techbynoam.com) the root IS that club, so serve the
+// club's SPA there instead of the sales page.
 // (Registered before express.static, which would otherwise auto-serve the SPA index.html at "/".)
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
+    const subSlug = clubSubFromReq(req);
+    if (subSlug) {
+        try {
+            const club = await getClub(subSlug);
+            const patched = club && renderClubIndex(club, `/${club.slug}`);
+            if (patched) { res.set('Content-Type', 'text/html; charset=utf-8'); return res.send(patched); }
+        } catch { /* fall through to sales page */ }
+    }
     res.sendFile(path.join(__dirname, 'dist', 'sales-landing.html'));
 });
 
@@ -542,6 +552,20 @@ function clubHead(club, pagePath) {
     ].filter(Boolean).join('\n    ');
 }
 
+// Render the SPA index.html with a club's <head> injected (title/icons/manifest/canonical/OG).
+function renderClubIndex(club, canonicalPath) {
+    const html = readIndexHtml();
+    if (!html) return null;
+    return html
+        .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
+        .replace(/<link\s+rel="icon"[^>]*>\s*/i, '')
+        .replace(/<link\s+rel="apple-touch-icon"[^>]*>\s*/i, '')
+        .replace(/<meta\s+name="theme-color"[^>]*>\s*/i, '')
+        .replace(/<meta\s+name="apple-mobile-web-app-title"[^>]*>\s*/i, '')
+        .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1/clubs/${club.slug}.webmanifest$2`)
+        .replace('</head>', `    ${clubHead(club, canonicalPath || `/${club.slug}`)}\n  </head>`);
+}
+
 // Handle React routing, return all requests to React app (with per-club head when applicable).
 app.get(/.*/, async (req, res) => {
     try {
@@ -553,17 +577,7 @@ app.get(/.*/, async (req, res) => {
         if (html) {
             let patched;
             if (club) {
-                patched = html
-                    .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
-                    .replace(/<link\s+rel="icon"[^>]*>\s*/i, '')
-                    .replace(/<link\s+rel="apple-touch-icon"[^>]*>\s*/i, '')
-                    .replace(/<meta\s+name="theme-color"[^>]*>\s*/i, '')
-                    .replace(/<meta\s+name="apple-mobile-web-app-title"[^>]*>\s*/i, '')
-                    // Point the PWA manifest at THIS club's manifest (right start_url + icons),
-                    // so installing from an invite link gets the club's app — not the raanana build default.
-                    .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1/clubs/${club.slug}.webmanifest$2`)
-                    // Per-club head with canonical + OG. On a subdomain the page IS the club root.
-                    .replace('</head>', `    ${clubHead(club, subSlug ? `/${club.slug}` : req.path)}\n  </head>`);
+                patched = renderClubIndex(club, subSlug ? `/${club.slug}` : req.path);
             } else {
                 // Non-club SPA page (unknown slug, legacy routes) — still emit a canonical for this path.
                 const canonical = `${CANONICAL_BASE}${req.path}`;
