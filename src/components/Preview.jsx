@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { authHeaders } from '../adminApi.js';
@@ -39,6 +39,16 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const [showConflictsFS, setShowConflictsFS] = useState(false); // in FS: only show ⚠️ markers when on
     const [editModalOpen, setEditModalOpen] = useState(false);     // FS: edit a cell in a modal
     const [ctxMenu, setCtxMenu] = useState(null);                  // { x, y, rowIndex, colIndex, isConflict }
+
+    // On a phone the inspector stacks below the board (full width) instead of sitting beside it.
+    const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 900px)').matches : false));
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 900px)');
+        const on = () => setIsMobile(mq.matches);
+        mq.addEventListener?.('change', on);
+        return () => mq.removeEventListener?.('change', on);
+    }, []);
+    const inspRef = useRef(null); // so we can scroll the editor into view on mobile after a tap
 
     // Resizable / collapsible inspector (splitter)
     const [inspWidth, setInspWidth] = useState(340);
@@ -800,6 +810,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         else { setInspStart('17:00'); setInspEnd('18:30'); setInspHall(''); setInspType('TRAIN'); setInspCustom(''); setActiveLineIndex(-1); }
         setSelectedCell({ rowIndex, colIndex, teamName, dayLabel });
         setInspOpen(true);
+        // On mobile the editor is below the board — bring it into view so a tap has a visible effect.
+        if (isMobile) setTimeout(() => inspRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
     };
 
     // Pick an existing session in the day to edit it.
@@ -1299,11 +1311,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 )}
 
                 {/* draggable splitter */}
-                {!fullScreen && inspOpen && <div className="cc-splitter" onMouseDown={startResize} title="גרור לשינוי רוחב הפאנל">⋮</div>}
+                {!fullScreen && inspOpen && !isMobile && <div className="cc-splitter" onMouseDown={startResize} title="גרור לשינוי רוחב הפאנל">⋮</div>}
 
                 {/* Inspector side panel (hidden in full screen — editing happens in the modal there) */}
                 {!fullScreen && inspOpen && (
-                <aside className="cc-inspector" style={{ width: inspWidth }}>
+                <aside ref={inspRef} className="cc-inspector" style={{ width: isMobile ? '100%' : inspWidth }}>
                     <button className="cc-insp-collapse" onClick={() => setInspOpen(false)} title="הסתר פאנל (הגדל טבלה)">⟩ הסתר</button>
                     {!selectedCell ? (
                         <div className="cc-insp-empty">

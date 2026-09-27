@@ -538,6 +538,21 @@
   .cc-body { flex-direction: column; }
   .cc-inspector { width: 100%; position: static; }
 }
+/* Phone polish for the .cc manager screens (schedule builder / session edit / banners). */
+@media (max-width: 640px) {
+  .cc-toolbar { gap: 0.5rem; }
+  .cc-title { font-size: 1.05rem; }
+  .cc-actions { width: 100%; }                 /* actions drop to their own full-width row */
+  .cc-btn { min-height: 44px; }                /* comfortable finger targets */
+  .cc-type, .seg-btn, .pill-btn { min-height: 40px; }
+  /* Modals fill the screen comfortably and their save/cancel stack full width. */
+  .cc-modal, .cc-edit-modal { width: 96vw; max-height: 88vh; padding: 1rem 1.05rem; }
+  .cc-insp-actions { flex-direction: column; }
+  .cc-insp-actions .cc-btn.full { width: 100%; }
+  .cc-board { max-height: calc(100vh - 180px); }
+  /* 16px inputs stop iOS Safari from auto-zooming the page when a field gains focus. */
+  .cc input, .cc select, .cc textarea, .cm-textarea, .cc-modal input, .cc-modal select { font-size: 16px; }
+}
 
 /* club messages manager */
 .cm-badge { font-size: 0.78rem; font-weight: 800; padding: 0.25rem 0.8rem; border-radius: 50px; background: var(--glass-2); border: 1px solid var(--bd2); color: var(--text); }
@@ -866,6 +881,9 @@
   .report-panel select { width: 100%; box-sizing: border-box; }
   /* Never let a panel push the page wider than the screen. */
   .report-panel { max-width: 100%; }
+  /* 16px inputs stop iOS Safari from auto-zooming the page when a field gains focus. */
+  .report-panel input:not([type="checkbox"]):not([type="radio"]),
+  .report-panel select, .report-panel textarea { font-size: 16px; }
 }
 
 
