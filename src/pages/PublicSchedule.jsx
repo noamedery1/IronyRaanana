@@ -168,12 +168,16 @@ function PublicSchedule() {
                     if (apiRes.ok) {
                         const payload = await apiRes.json();
                         if (payload && Array.isArray(payload.sessions) && payload.sessions.length) {
-                            // Label the days with the dates of the PUBLISHED week (week_start), so
-                            // parents see exactly what the manager published — including a schedule
-                            // published ahead for the coming week. (The source now anchors a dateless
-                            // "permanent" import to the right week, so trusting week_start is correct;
-                            // an earlier current-week override made parents see last week's dates.)
-                            processRows(sessionsToRows(payload.sessions, payload.publication?.week_start));
+                            // Label the days with the published week (week_start) — EXCEPT when that
+                            // week is already fully in the past: then roll forward to the current week
+                            // so a recurring weekly schedule auto-advances instead of showing last week.
+                            // A current/future week is kept exactly as published (dated-ahead schedules).
+                            const ws = payload.publication?.week_start;
+                            const pad2 = (n) => String(n).padStart(2, '0');
+                            const c = new Date(); c.setHours(0, 0, 0, 0); c.setDate(c.getDate() - c.getDay());
+                            const curWeek = `${c.getFullYear()}-${pad2(c.getMonth() + 1)}-${pad2(c.getDate())}`;
+                            const displayWs = (ws && ws < curWeek) ? curWeek : ws;
+                            processRows(sessionsToRows(payload.sessions, displayWs));
                             setLoading(false);
                             return;
                         }

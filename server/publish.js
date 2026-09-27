@@ -201,12 +201,21 @@ export async function teamICS(slug, teamParam) {
     const rows = sessions.filter((s) => s.status !== 'cancelled' && s.team
         && (s.team.trim() === t || `${s.team.trim()} - ${(s.coach || '').trim()}` === t));
 
-    // Use each session's PUBLISHED date, so the feed matches exactly what the manager published
-    // (including a schedule published ahead for the coming week).
-    const events = rows.filter((s) => s.date && s.start_time).map((s, i) => {
+    // Match the parent board: use the published date, but if the published week is already fully in
+    // the past, roll each event forward to the current week by day-of-week (recurring schedules
+    // auto-advance). A current/future week is kept as published.
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const cur = new Date(); cur.setHours(0, 0, 0, 0); cur.setDate(cur.getDate() - cur.getDay());
+    const ws = data && data.publication && data.publication.week_start;
+    const rollToCurrent = ws && ws < fmt(cur);
+    const dateForDow = (dow) => { const d = new Date(cur); d.setDate(d.getDate() + Number(dow)); return fmt(d); };
+    const events = rows.filter((s) => s.start_time && (s.date || Number.isInteger(s.day_of_week))).map((s, i) => {
         const [sh, sm] = s.start_time.split(':').map(Number);
-        const start = new Date(s.date + 'T00:00:00'); start.setHours(sh, sm, 0, 0);
-        const end = new Date(s.date + 'T00:00:00');
+        const dow = Number.isInteger(s.day_of_week) ? s.day_of_week : new Date(s.date + 'T00:00:00').getDay();
+        const dateStr = rollToCurrent ? dateForDow(dow) : s.date;
+        const start = new Date(dateStr + 'T00:00:00'); start.setHours(sh, sm, 0, 0);
+        const end = new Date(dateStr + 'T00:00:00');
         if (s.end_time) { const [eh, em] = s.end_time.split(':').map(Number); end.setHours(eh, em, 0, 0); }
         else end.setHours(sh + 1, sm + 30, 0, 0);
         return {
@@ -214,7 +223,7 @@ export async function teamICS(slug, teamParam) {
             location: s.hall || '',
             details: `קבוצת ${s.team}${s.coach ? ' · מאמן ' + s.coach : ''}`,
             start, end,
-            uid: `${slug}-${s.team}-${s.date}-${(s.start_time || '').replace(/\D/g, '')}-${i}`.replace(/\s+/g, '_'),
+            uid: `${slug}-${s.team}-${dateStr}-${(s.start_time || '').replace(/\D/g, '')}-${i}`.replace(/\s+/g, '_'),
         };
     });
     return buildICS(events, `לו"ז ${t}`);
