@@ -30,14 +30,17 @@ export async function pushDiag() {
 }
 
 // ===== Push subscriptions =====
-export async function registerPush(slug, { segment, subscription }) {
+// `host` = the origin the device subscribed on (apex vs a club's subdomain). Stored so a club that
+// moved to its own subdomain can deliver only to the subdomain's subscriptions and drop the stale
+// duplicate the same device left on the old apex origin (two origins ⇒ two endpoints ⇒ two pushes).
+export async function registerPush(slug, { segment, subscription, host }) {
     if (!subscription || !subscription.endpoint) throw new Error('Missing subscription');
     const cid = await clubId(slug);
     await pool.query(
-        `INSERT INTO push_subscriptions (club_id, segment, endpoint, subscription)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (endpoint) DO UPDATE SET club_id=excluded.club_id, segment=excluded.segment, subscription=excluded.subscription`,
-        [cid, segment || '', subscription.endpoint, subscription],
+        `INSERT INTO push_subscriptions (club_id, segment, endpoint, subscription, host)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (endpoint) DO UPDATE SET club_id=excluded.club_id, segment=excluded.segment, subscription=excluded.subscription, host=excluded.host`,
+        [cid, segment || '', subscription.endpoint, subscription, host || null],
     );
     return { ok: true };
 }
@@ -50,9 +53,12 @@ export async function unregisterPush(slug, { endpoint }) {
 
 // Deliver to a segment. '' = whole club; 'team:X' / '__TRAINER__:X' / '__OPERATOR__' match
 // exactly or by prefix (so '__TRAINER__' hits every '__TRAINER__:name').
-export async function broadcast(slug, { segment = '', title, body, url, icon, tag, data, actions }) {
+export async function broadcast(slug, { segment = '', title, body, url, icon, tag, data, actions, onlyHost = null }) {
     const cid = await clubId(slug);
     const seg = (segment || '').toString();
+    // When a club has moved to its own subdomain, deliver ONLY to subscriptions registered on that
+    // host — this silently drops the stale duplicate the same device left on the old apex origin.
+    // For a club without a subdomain, onlyHost is null and every subscription is eligible (unchanged).
     // Match the target's subscriptions. A team target (team:<name>) must also reach rows stored
     // in the legacy label format ("<name> - <coach>" or bare "<name>") that the notifications
     // modal used to create — otherwise team sends silently skip those parents.
@@ -64,21 +70,27 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
         // WHOLE line (wrapping the stored segment in newlines) so it hits single- and multi-team
         // devices without false matches on longer names (e.g. "ילדים ג'" ≠ "ילדים ג' צפון").
         const wholeLine = '%\n' + escLike('team:' + name) + '\n%';
+        const params = [cid, wholeLine, name, escLike(name) + ' - %'];
+        let hostClause = '';
+        if (onlyHost) { params.push(onlyHost); hostClause = ` AND host = $${params.length}`; }
         r = await pool.query(
             `SELECT id, endpoint, subscription FROM push_subscriptions
              WHERE club_id=$1 AND (
                  (chr(10) || segment || chr(10)) LIKE $2
                  OR segment = $3
                  OR segment LIKE $4
-             )`,
-            [cid, wholeLine, name, escLike(name) + ' - %'],
+             )${hostClause}`,
+            params,
         );
     } else {
         // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).
+        const params = [cid, seg];
+        let hostClause = '';
+        if (onlyHost) { params.push(onlyHost); hostClause = ` AND host = $${params.length}`; }
         r = await pool.query(
             `SELECT id, endpoint, subscription FROM push_subscriptions
-             WHERE club_id=$1 AND left(segment, length($2)) = $2`,
-            [cid, seg],
+             WHERE club_id=$1 AND left(segment, length($2)) = $2${hostClause}`,
+            params,
         );
     }
     if (!r.rows.length) return { sent: 0, failed: 0, expired: [], note: 'no subscribers' };
@@ -123,12 +135,12 @@ const PUSH_LOG_KEY = 'pushLog';
 const PUSH_LOG_MAX = 100;
 
 // Send one manager message to one or more segments, aggregate the result, and archive it.
-export async function sendMessage(slug, { title, body, target, segments }) {
+export async function sendMessage(slug, { title, body, target, segments, onlyHost = null }) {
     const segs = Array.isArray(segments) && segments.length ? segments : [''];
     let sent = 0, failed = 0;
     const statusCodes = {};
     for (const seg of segs) {
-        const r = await broadcast(slug, { segment: seg, title, body });
+        const r = await broadcast(slug, { segment: seg, title, body, onlyHost });
         sent += r.sent || 0;
         failed += r.failed || 0;
         Object.entries(r.statusCodes || {}).forEach(([k, v]) => { statusCodes[k] = (statusCodes[k] || 0) + v; });
@@ -154,13 +166,55 @@ export async function listMessages(slug) {
 
 // Subscriber counts per segment for a club — so the manager can see, before sending, how many
 // devices will actually receive a message for each target (0 = nobody enabled notifications yet).
-export async function pushStats(slug) {
+export async function pushStats(slug, onlyHost = null) {
     const cid = await clubId(slug);
-    const r = await pool.query("SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions WHERE club_id=$1 GROUP BY 1", [cid]);
+    // Count only the subscriptions a broadcast would actually reach, so the manager's per-target
+    // numbers don't include stale legacy-origin duplicates for a club that moved to a subdomain.
+    const params = [cid];
+    let hostClause = '';
+    if (onlyHost) { params.push(onlyHost); hostClause = ` AND host = $${params.length}`; }
+    const r = await pool.query(`SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions WHERE club_id=$1${hostClause} GROUP BY 1`, params);
     const bySegment = {};
     let total = 0;
     r.rows.forEach((x) => { bySegment[x.seg] = x.n; total += x.n; });
     return { total, bySegment };
+}
+
+// ===== Device subscriptions (manager cleanup) =====
+// List the raw per-device subscriptions for a club so the manager can remove stale/duplicate ones
+// (e.g. an old apex registration left behind after moving to a subdomain). Returns only what
+// identifies a device — segment, host/origin, a short endpoint tail, when it was added — never the
+// push keys. `activeHost` (the club's current origin, if it has a subdomain) flags legacy rows.
+export async function listSubscriptions(slug, activeHost = null) {
+    const cid = await clubId(slug);
+    const r = await pool.query(
+        "SELECT id, coalesce(segment,'') segment, host, endpoint, created_at FROM push_subscriptions WHERE club_id=$1 ORDER BY created_at DESC",
+        [cid],
+    );
+    const subscriptions = r.rows.map((x) => ({
+        id: x.id,
+        segment: x.segment,
+        host: x.host || null,
+        endpointTail: (x.endpoint || '').slice(-14),
+        createdAt: x.created_at,
+        legacy: Boolean(activeHost) && x.host !== activeHost, // not on the club's current origin
+    }));
+    return { subscriptions, activeHost: activeHost || null, total: subscriptions.length };
+}
+
+export async function deleteSubscription(slug, id) {
+    const cid = await clubId(slug);
+    const r = await pool.query('DELETE FROM push_subscriptions WHERE club_id=$1 AND id=$2', [cid, id]);
+    return { ok: true, removed: r.rowCount };
+}
+
+// Remove every subscription for this club that is NOT on its current origin — the stale apex
+// duplicates left behind after moving to a subdomain. No-op for a club without a subdomain.
+export async function purgeLegacySubscriptions(slug, activeHost = null) {
+    if (!activeHost) return { ok: true, removed: 0, note: 'club has no subdomain — nothing to purge' };
+    const cid = await clubId(slug);
+    const r = await pool.query('DELETE FROM push_subscriptions WHERE club_id=$1 AND host IS DISTINCT FROM $2', [cid, activeHost]);
+    return { ok: true, removed: r.rowCount };
 }
 
 // ===== Email subscribers =====

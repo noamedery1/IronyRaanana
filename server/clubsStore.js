@@ -54,6 +54,11 @@ export async function ensureStore() {
         await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS age text');
         await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS grade text');
     } catch { /* teams table not created yet — migration will handle it */ }
+    // Origin a push subscription was created on (apex vs a club's subdomain) — lets a club that
+    // moved to a subdomain deliver only to subdomain subscriptions and drop stale apex duplicates.
+    try {
+        await pool.query('ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS host text');
+    } catch { /* push_subscriptions not created yet — migration will handle it */ }
 }
 
 export async function listClubs() {

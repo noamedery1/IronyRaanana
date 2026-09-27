@@ -7,6 +7,7 @@ import HallsConfig from '../components/HallsConfig';
 import BannerAdmin from '../components/BannerAdmin';
 import MessageCenter from '../components/MessageCenter';
 import MessageArchive from '../components/MessageArchive';
+import PushSubscribers from '../components/PushSubscribers';
 import SocialPostBroadcast from '../components/SocialPostBroadcast';
 import InviteLinks from '../components/InviteLinks';
 import TrainerManager from '../components/TrainerManager';
@@ -819,6 +820,8 @@ const AdminDashboard = () => {
                 return <MessageCenter />;
             case 'archive':
                 return <MessageArchive />;
+            case 'pushSubs':
+                return <PushSubscribers clubSlug={getActiveClub().slug} />;
             case 'socialPost':
                 return <SocialPostBroadcast />;
             case 'invites':
@@ -919,6 +922,9 @@ const AdminDashboard = () => {
                         </button>
                         <button style={menuButtonStyle(activeTab === 'archive')} onClick={() => selectTab('archive')}>
                             🗂️ ארכיון הודעות
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'pushSubs')} onClick={() => selectTab('pushSubs')}>
+                            🔔 מנויי פוש
                         </button>
                         <button style={menuButtonStyle(activeTab === 'socialPost')} onClick={() => selectTab('socialPost')}>
                             📱 פרסום ברשתות

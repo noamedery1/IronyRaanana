@@ -10,7 +10,7 @@ import {
     registerUser, authUser, listMembers, deleteMember, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
 } from './server/people.js';
-import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats } from './server/notify.js';
+import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
@@ -54,6 +54,11 @@ const SUBDOMAIN_CLUBS = new Set(
         .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
 );
 const clubSubOrigin = (slug) => `https://${slug}.${CANONICAL_HOST}`;
+// The host a club's push subscriptions should live on: its subdomain if provisioned, else null (no
+// restriction). Used to dedupe pushes to devices registered on both the old apex and the subdomain.
+const clubActiveHost = (slug) => (SUBDOMAIN_CLUBS.has(slug) ? `${slug}.${CANONICAL_HOST}` : null);
+// The bare host this request came in on (lowercased, no port), or null.
+const reqHost = (req) => ((req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().split(':')[0].toLowerCase() || null);
 
 // The club slug if this request came in on a per-club subdomain (<slug>.squadio.techbynoam.com),
 // else null. Each club can have its own subdomain = its own origin = its own installed app,
@@ -307,24 +312,35 @@ app.delete('/api/:club/teams/:id', requireManager, async (req, res) => {
 
 // Push subscriptions + broadcast (DB-backed)
 app.post('/api/:club/push', async (req, res) => {
-    try { ok(res, await registerPush(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+    try { ok(res, await registerPush(req.params.club, { ...(req.body || {}), host: reqHost(req) })); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 app.delete('/api/:club/push', async (req, res) => {
     try { ok(res, await unregisterPush(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 app.post('/api/:club/broadcast', requireManager, async (req, res) => {
-    try { ok(res, await broadcast(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+    try { ok(res, await broadcast(req.params.club, { ...(req.body || {}), onlyHost: clubActiveHost(req.params.club) })); } catch (e) { fail(res, e); }
 });
 // Manager message: send to segment(s) AND archive it (for review / resend). Message history.
 app.post('/api/:club/messages', requireManager, async (req, res) => {
-    try { ok(res, await sendMessage(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+    try { ok(res, await sendMessage(req.params.club, { ...(req.body || {}), onlyHost: clubActiveHost(req.params.club) })); } catch (e) { fail(res, e); }
 });
 app.get('/api/:club/messages', requireManager, async (req, res) => {
     try { ok(res, await listMessages(req.params.club)); } catch (e) { fail(res, e); }
 });
 // Subscriber counts per segment (so the manager sees how many devices each target reaches).
 app.get('/api/:club/push-stats', requireManager, async (req, res) => {
-    try { ok(res, await pushStats(req.params.club)); } catch (e) { fail(res, e); }
+    try { ok(res, await pushStats(req.params.club, clubActiveHost(req.params.club))); } catch (e) { fail(res, e); }
+});
+// Manager: inspect / clean up raw device subscriptions (remove stale or duplicate registrations,
+// e.g. an old apex subscription still delivering after the club moved to its subdomain).
+app.get('/api/:club/push-subscriptions', requireManager, async (req, res) => {
+    try { ok(res, await listSubscriptions(req.params.club, clubActiveHost(req.params.club))); } catch (e) { fail(res, e); }
+});
+app.delete('/api/:club/push-subscriptions/:id', requireManager, async (req, res) => {
+    try { ok(res, await deleteSubscription(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/push-subscriptions/purge-legacy', requireManager, async (req, res) => {
+    try { ok(res, await purgeLegacySubscriptions(req.params.club, clubActiveHost(req.params.club))); } catch (e) { fail(res, e); }
 });
 
 // Public banners for the ticker: general (club-wide) + per-team (client shows a team's to its members).
