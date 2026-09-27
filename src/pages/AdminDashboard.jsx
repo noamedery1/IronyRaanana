@@ -73,6 +73,8 @@ const AdminDashboard = () => {
     const DRAFT_KEY = `draft:${club.slug}`;        // instant local cache (crash safety only)
     const latestDraft = useRef(null);              // { headers, rows } reported by the Preview on edit
     const saveTimer = useRef(null);                // debounce handle for auto-save to DB
+    const dirtyRef = useRef(false);                // unsaved edits since the last successful DB save
+    const saveDraftRef = useRef(null);             // always points at the latest saveDraftToDB (for the interval)
     const [draftSavedAt, setDraftSavedAt] = useState(null);
     const [draftRestored, setDraftRestored] = useState(false);
     const sheetDataRef = useRef(null);             // mirror of {teams, indices, hallColors, weekStart}
@@ -211,14 +213,25 @@ const AdminDashboard = () => {
                 body: JSON.stringify({ sessions, weekStart: sd.weekStart }),
             });
             if (!r.ok) throw new Error('save failed');
+            dirtyRef.current = false; // in sync with the DB now
             setDraftSavedAt(Date.now());
             return { ok: true };
         } catch (e) { console.error('draft save error', e); return { ok: false }; }
     };
+    saveDraftRef.current = saveDraftToDB; // keep the interval pointing at the latest closure
+
+    // Safety net: auto-save the draft to the DB every 30s if there are unsaved edits, so a crash,
+    // refresh or dropped connection never loses more than ~30s of work (on top of the 2.5s debounce
+    // after each edit and the instant localStorage cache).
+    useEffect(() => {
+        const id = setInterval(() => { if (dirtyRef.current) saveDraftRef.current?.(); }, 30000);
+        return () => clearInterval(id);
+    }, []);
 
     // Preview reports edits → instant local cache (crash safety) + debounced DB save.
     const handlePreviewChange = (payload) => {
         latestDraft.current = payload;
+        dirtyRef.current = true;
         // Adopt the week start chosen in the preview's date picker, so saving/publishing uses the
         // selected week (not the week the file happened to be imported into).
         const wsChanged = payload.weekStart && sheetDataRef.current && sheetDataRef.current.weekStart !== payload.weekStart;
