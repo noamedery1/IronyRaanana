@@ -11,7 +11,11 @@ export default function InviteLinks() {
     const [copied, setCopied] = useState('');
 
     const club = getActiveClub();
-    const base = `${window.location.origin}/${club.slug}`;
+    // For a club with its own subdomain, build invite links on that origin
+    // (fcraanana.squadio.techbynoam.com/…) so recipients land straight on the isolated per-club app.
+    // Falls back to the current origin for clubs still served on the apex. (Old apex links keep
+    // working too — the server 302-forwards them to the subdomain.)
+    const base = `${club.inviteOrigin || window.location.origin}/${club.slug}`;
     const operatorLink = `${base}/join?r=operator`;
     const trainerLink = `${base}/trainer`;
 

@@ -44,6 +44,17 @@ const CANONICAL_BASE = `https://${CANONICAL_HOST}`;
 // Host (internal Railway health checks) is left alone so deploys stay healthy.
 const CANONICAL_SUB_SUFFIX = '.' + CANONICAL_HOST; // e.g. ".squadio.techbynoam.com"
 
+// Clubs that have a PROVISIONED subdomain (<slug>.squadio.techbynoam.com — DNS + TLS cert live).
+// Comma-separated slugs via env, defaulting to the one club provisioned today. This list must stay
+// accurate: only clubs listed here are (a) redirected from the apex to their subdomain and (b) given
+// subdomain invite links. A club NOT listed keeps being served on the apex (/<slug>/…) as before, so
+// clubs without a working subdomain never get bounced to a host that would fail to resolve.
+const SUBDOMAIN_CLUBS = new Set(
+    (process.env.CLUB_SUBDOMAINS || 'fcraanana')
+        .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+);
+const clubSubOrigin = (slug) => `https://${slug}.${CANONICAL_HOST}`;
+
 // The club slug if this request came in on a per-club subdomain (<slug>.squadio.techbynoam.com),
 // else null. Each club can have its own subdomain = its own origin = its own installed app,
 // service worker, push identity and icon (fixes multi-club collisions on one device).
@@ -65,6 +76,22 @@ app.use((req, res, next) => {
     // bounce them to the canonical root (that would defeat the whole point).
     if (host === CANONICAL_HOST || host.endsWith(CANONICAL_SUB_SUFFIX)) return next();
     return res.redirect(301, CANONICAL_BASE + req.originalUrl); // path + query preserved untouched
+});
+
+// Legacy-link bridge: an old apex link (squadio.techbynoam.com/<slug>/…) for a club that now has its
+// own subdomain is forwarded to that subdomain (<slug>.squadio.techbynoam.com/<slug>/…), so managers
+// and parents who open a link sent before the move land on the isolated per-club origin (its own
+// installed app / push / icon). GET & HEAD only (never lose a POST body); full path + query kept.
+// 302, not 301, so browsers never permanently cache it — subdomain provisioning can still change.
+// /api/* is naturally untouched: its first path segment is "api", never a club slug.
+app.use((req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+    const host = rawHost.split(':')[0].toLowerCase();
+    if (host !== CANONICAL_HOST) return next(); // only the bare apex; subdomains + localhost fall through
+    const seg = (req.path.split('/').filter(Boolean)[0] || '').toLowerCase();
+    if (seg && SUBDOMAIN_CLUBS.has(seg)) return res.redirect(302, clubSubOrigin(seg) + req.originalUrl);
+    return next();
 });
 
 try {
@@ -129,13 +156,19 @@ app.post('/api/superuser/login', (req, res) => {
 });
 
 // ===== Clubs (public read) =====
+// Annotate each club with whether it has its own subdomain, plus the origin to build invite links
+// against, so the client generates <slug>.squadio.techbynoam.com links for provisioned clubs and
+// plain apex links for the rest.
+const withSubInfo = (c) => (c && SUBDOMAIN_CLUBS.has(c.slug)
+    ? { ...c, subdomain: true, inviteOrigin: clubSubOrigin(c.slug) }
+    : (c ? { ...c, subdomain: false } : c));
 app.get('/api/clubs', async (req, res) => {
-    try { res.json(await listClubs()); } catch (e) { res.status(500).json({ error: e.message }); }
+    try { res.json((await listClubs()).map(withSubInfo)); } catch (e) { res.status(500).json({ error: e.message }); }
 });
 app.get('/api/clubs/:slug', async (req, res) => {
     const club = await getClub(req.params.slug);
     if (!club) return res.status(404).json({ error: 'not found' });
-    res.json(club);
+    res.json(withSubInfo(club));
 });
 
 // ===== Phase 1: schedule in the DB (publish from the manager's Sheet + live reads) =====
