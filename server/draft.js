@@ -101,12 +101,30 @@ export async function importCsvToDraft(slug, csvText) {
 // Promote the draft → live: archive the current live week, flip draft to live,
 // refresh the teams table, then open NEXT week's draft as a copy of what was just
 // published (dates shifted +7) so the manager tweaks rather than rebuilds.
+// Sunday of the CURRENT week in Israel time (robust to the server's UTC clock near midnight).
+function israelCurrentWeekSunday() {
+    const ymd = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' }); // YYYY-MM-DD
+    const [Y, M, D] = ymd.split('-').map(Number);
+    const d = new Date(Date.UTC(Y, M - 1, D));
+    d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
 export async function publishDraft(slug, publishedBy = 'manager') {
     const draft = await getOrCreateDraft(slug);
     return withTx(async (cx) => {
-        const ws = (await cx.query(`SELECT week_start::text FROM schedule_publications WHERE id=$1`, [draft.id])).rows[0].week_start;
+        let ws = (await cx.query(`SELECT week_start::text FROM schedule_publications WHERE id=$1`, [draft.id])).rows[0].week_start;
         const count = (await cx.query(`SELECT count(*)::int n FROM sessions WHERE publication_id=$1`, [draft.id])).rows[0].n;
         if (!count) throw new Error('הטיוטה ריקה — אין מה לפרסם');
+        // Never publish a week that already ended: if the draft is anchored to a past week, roll it
+        // (and its session dates, by day-of-week) forward to the current week. A current/future week
+        // (e.g. deliberately prepared ahead) is left exactly as chosen.
+        const curWeek = israelCurrentWeekSunday();
+        if (ws && ws < curWeek) {
+            await cx.query(`UPDATE sessions SET date = ($2::date + day_of_week) WHERE publication_id=$1 AND day_of_week IS NOT NULL`, [draft.id, curWeek]);
+            await cx.query(`UPDATE schedule_publications SET week_start=$2 WHERE id=$1`, [draft.id, curWeek]);
+            ws = curWeek;
+        }
         await cx.query(`UPDATE schedule_publications SET status='archived' WHERE club_id=$1 AND week_start=$2 AND status='live'`, [draft.clubId, ws]);
         await cx.query(`UPDATE schedule_publications SET status='live', published_by=$2, published_at=now() WHERE id=$1`, [draft.id, publishedBy]);
         await seedTeamsFromSessions(cx, draft.clubId, draft.id);
