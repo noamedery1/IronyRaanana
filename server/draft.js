@@ -129,6 +129,25 @@ export async function publishDraft(slug, publishedBy = 'manager') {
         // exactly one live schedule after publishing — otherwise an older week can linger as 'live'.
         await cx.query(`UPDATE schedule_publications SET status='archived' WHERE club_id=$1 AND status='live'`, [draft.clubId]);
         await cx.query(`UPDATE schedule_publications SET status='live', published_by=$2, published_at=now() WHERE id=$1`, [draft.id, publishedBy]);
+        // Fill each session's coach from the trainers assignment ("ניהול מאמנים") when the schedule
+        // was imported without a coach column, so parents see the coach on the published board. Match
+        // by normalized team name (strip geresh/quotes, collapse spaces) — trainer team names often
+        // omit the geresh ("טרום א" vs "טרום א׳"). Runs BEFORE seedTeamsFromSessions and the next-draft
+        // copy below, so teams.coach and the reopened draft inherit the coach too. Only fills EMPTY
+        // coaches — a coach already on the session (imported/edited) is never overwritten.
+        const normTeam = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+        const trs = await cx.query('SELECT name, teams FROM trainers WHERE club_id=$1', [draft.clubId]);
+        const coachByTeam = {};
+        trs.rows.forEach((tr) => (tr.teams || '').split(',').map((x) => x.trim()).filter(Boolean).forEach((tm) => {
+            const k = normTeam(tm); if (k && !coachByTeam[k]) coachByTeam[k] = tr.name;
+        }));
+        if (Object.keys(coachByTeam).length) {
+            const need = await cx.query(`SELECT DISTINCT team FROM sessions WHERE publication_id=$1 AND coalesce(coach,'')=''`, [draft.id]);
+            for (const row of need.rows) {
+                const coach = coachByTeam[normTeam(row.team)];
+                if (coach) await cx.query(`UPDATE sessions SET coach=$3 WHERE publication_id=$1 AND team=$2 AND coalesce(coach,'')=''`, [draft.id, row.team, coach]);
+            }
+        }
         await seedTeamsFromSessions(cx, draft.clubId, draft.id);
         await cx.query(
             `INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff)
