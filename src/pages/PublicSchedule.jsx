@@ -216,7 +216,17 @@ function PublicSchedule() {
     // When the active member team changes (multi-team parent switching), point the
     // schedule at that team once the board data is loaded.
     useEffect(() => {
-        if (!memberTeam || !teams.length) return;
+        if (!teams.length) return;
+        const inClub = (name) => teams.some((t) => t.name === name || t.label === name);
+        // Memberships are shared across clubs on the same origin. If the active team belongs to a
+        // DIFFERENT club, switch to a membership that belongs to THIS club (or none) — so one club
+        // never shows another club's teams.
+        if (identity.role === 'member' && memberTeam && !inClub(memberTeam)) {
+            const mine = getMemberships().find((m) => inClub(m.team));
+            setMemberTeam(mine ? mine.team : '');
+            return;
+        }
+        if (!memberTeam) return;
         const f = teams.find((t) => t.name === memberTeam || t.label === memberTeam);
         setViewMode('team');
         // If this team isn't in the current published week, clear the selection so the
@@ -499,21 +509,26 @@ function PublicSchedule() {
                     </div>
                     )}
 
-                    {/* Multi-team parent: switch between only their own teams */}
-                    {memberTeam && memberships.length > 1 && (
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 1rem' }}>
-                            {memberships.map((m) => (
-                                <button
-                                    key={m.team}
-                                    onClick={() => { setActiveTeam(m.team); setMemberTeam(m.team); }}
-                                    className={`vtab ${memberTeam === m.team ? 'on' : ''}`}
-                                    style={{ fontWeight: 700 }}
-                                >
-                                    {m.team}
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    {/* Multi-team parent: switch between only their own teams IN THIS CLUB (memberships
+                        are shared across clubs on the same origin, so filter to this club's teams). */}
+                    {(() => {
+                        const clubMemberships = memberships.filter((m) => teams.some((tt) => tt.name === m.team || tt.label === m.team));
+                        if (!(memberTeam && clubMemberships.length > 1)) return null;
+                        return (
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 1rem' }}>
+                                {clubMemberships.map((m) => (
+                                    <button
+                                        key={m.team}
+                                        onClick={() => { setActiveTeam(m.team); setMemberTeam(m.team); }}
+                                        className={`vtab ${memberTeam === m.team ? 'on' : ''}`}
+                                        style={{ fontWeight: 700 }}
+                                    >
+                                        {m.team}
+                                    </button>
+                                ))}
+                            </div>
+                        );
+                    })()}
 
                     {viewMode === 'halls' ? (
                         <HallView data={data} headers={headers} teams={teams} dayStart={dayStart} defaultGender="M" />
