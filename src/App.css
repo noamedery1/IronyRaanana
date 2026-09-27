@@ -850,6 +850,24 @@
   .hero-ball { display: none; }
 }
 
+/* ---------- admin dashboard: phone polish (applies to every manager tab via .report-panel) ---------- */
+@media (max-width: 640px) {
+  /* Tighter panels reclaim horizontal space on a phone. */
+  .report-panel { padding: 0.8rem 0.8rem 1.1rem; margin-top: 0.6rem; border-radius: 14px; }
+  .report-panel h3 { font-size: 1.05rem; }
+  .report-panel h4 { font-size: 0.95rem; }
+  /* Comfortable finger tap targets for controls inside any management panel. Buttons that opt out
+     with .icon-sm (small icon/close buttons) keep their own size. */
+  .report-panel button:not(.icon-sm),
+  .report-panel input:not([type="checkbox"]):not([type="radio"]),
+  .report-panel select { min-height: 44px; }
+  /* Inputs/selects go full width so forms stack cleanly instead of squeezing side by side. */
+  .report-panel input:not([type="checkbox"]):not([type="radio"]),
+  .report-panel select { width: 100%; box-sizing: border-box; }
+  /* Never let a panel push the page wider than the screen. */
+  .report-panel { max-width: 100%; }
+}
+
 
 /* ============================================================
    REDESIGN v3 — clean · young · dynamic (azure→cyan)
