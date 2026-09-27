@@ -33,8 +33,12 @@ export default function MessageCenter() {
     // How many devices are subscribed for a given target. A team also counts legacy label-format
     // rows ("<name> - <coach>" / bare "<name>"), matching how broadcast delivers.
     const seg = stats.bySegment || {};
-    const teamCount = (name) => (seg['team:' + name] || 0) + (seg[name] || 0)
-        + Object.keys(seg).filter((k) => k.startsWith(name + ' - ')).reduce((a, k) => a + seg[k], 0);
+    // A device can subscribe to several teams (one "team:<name>" per line), so count a team by
+    // whole-line membership, plus the legacy bare/label formats.
+    const teamCount = (name) => Object.keys(seg).reduce((a, k) => {
+        const hit = k.split('\n').includes('team:' + name) || k === name || k.startsWith(name + ' - ');
+        return a + (hit ? seg[k] : 0);
+    }, 0);
     const trainerCount = (name) => seg['__TRAINER__:' + name] || 0;
     const trainersTotal = Object.keys(seg).filter((k) => k.startsWith('__TRAINER')).reduce((a, k) => a + seg[k], 0);
     const operatorsTotal = seg['__OPERATOR__'] || 0;

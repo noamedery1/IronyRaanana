@@ -59,10 +59,19 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
     let r;
     if (seg.startsWith('team:')) {
         const name = seg.slice(5);
+        const escLike = (x) => x.replace(/[%_\\]/g, '\\$&');
+        // A device subscribes to all its teams as one "team:<name>" per line. Match this team as a
+        // WHOLE line (wrapping the stored segment in newlines) so it hits single- and multi-team
+        // devices without false matches on longer names (e.g. "ילדים ג'" ≠ "ילדים ג' צפון").
+        const wholeLine = '%\n' + escLike('team:' + name) + '\n%';
         r = await pool.query(
             `SELECT id, endpoint, subscription FROM push_subscriptions
-             WHERE club_id=$1 AND (segment = $2 OR segment = $3 OR segment LIKE $4)`,
-            [cid, seg, name, name.replace(/[%_\\]/g, '\\$&') + ' - %'],
+             WHERE club_id=$1 AND (
+                 (chr(10) || segment || chr(10)) LIKE $2
+                 OR segment = $3
+                 OR segment LIKE $4
+             )`,
+            [cid, wholeLine, name, escLike(name) + ' - %'],
         );
     } else {
         // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).

@@ -64,9 +64,22 @@ export function pushSegmentFor(role, team) {
     return '';
 }
 
-// Register this device for push according to the identity's role/team. Best-effort.
-export async function registerIdentityPush(role, team) {
-    const seg = pushSegmentFor(role, team);
+// The FULL push segment for this device: a member gets ALL their teams (one "team:<name>" per
+// line) so a single device receives pushes for every team the parent belongs to — and it's tied
+// to their real memberships, not whichever team tab happened to be open when they enabled push.
+export function membershipSegment() {
+    const role = localStorage.getItem('userRole');
+    if (role === 'operator') return '__OPERATOR__';
+    if (role === 'member') {
+        const teams = getMemberships().map((m) => 'team:' + m.team).filter((s) => s !== 'team:');
+        return [...new Set(teams)].join('\n');
+    }
+    return '';
+}
+
+// Register this device for push based on ALL of the identity's memberships. Best-effort.
+export async function registerIdentityPush() {
+    const seg = membershipSegment();
     if (!seg) return { ok: false };
     return subscribeToPush(seg, getActiveClub().sheetApi);
 }

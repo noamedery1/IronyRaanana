@@ -14,7 +14,7 @@ import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName, venues } from '../sportLabels.js';
-import { getIdentity, getMemberships, setActiveTeam } from '../userIdentity.js';
+import { getIdentity, getMemberships, setActiveTeam, membershipSegment } from '../userIdentity.js';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
 const parseScheduleContent = parseCellContent;
@@ -637,7 +637,7 @@ function PublicSchedule() {
                 isOpen={isRegisterModalOpen}
                 onClose={() => setIsRegisterModalOpen(false)}
                 teamName={getSelectedTeamName()}
-                pushSegment={getTeamObj()?.name ? `team:${getTeamObj().name}` : ''}
+                pushSegment={membershipSegment() || (getTeamObj()?.name ? `team:${getTeamObj().name}` : '')}
                 sheetUrl={LIVE_SHEET_API}
             />
         </div>
