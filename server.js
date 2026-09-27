@@ -10,7 +10,7 @@ import {
     registerUser, authUser, listMembers, deleteMember, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
 } from './server/people.js';
-import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages } from './server/notify.js';
+import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats } from './server/notify.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
@@ -273,6 +273,10 @@ app.post('/api/:club/messages', requireManager, async (req, res) => {
 });
 app.get('/api/:club/messages', requireManager, async (req, res) => {
     try { ok(res, await listMessages(req.params.club)); } catch (e) { fail(res, e); }
+});
+// Subscriber counts per segment (so the manager sees how many devices each target reaches).
+app.get('/api/:club/push-stats', requireManager, async (req, res) => {
+    try { ok(res, await pushStats(req.params.club)); } catch (e) { fail(res, e); }
 });
 
 // Public banners for the ticker: general (club-wide) + per-team (client shows a team's to its members).

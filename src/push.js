@@ -30,6 +30,19 @@ export function isIOS() {
         || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+// Does an existing subscription's applicationServerKey match the key we want to use now?
+// (If the browser doesn't expose it, treat as a mismatch → safest to re-subscribe with the right key.)
+function subKeyMatches(sub, wantKeyU8) {
+    try {
+        const cur = sub.options && sub.options.applicationServerKey;
+        if (!cur) return false;
+        const a = new Uint8Array(cur);
+        if (a.length !== wantKeyU8.length) return false;
+        for (let i = 0; i < a.length; i++) if (a[i] !== wantKeyU8[i]) return false;
+        return true;
+    } catch { return false; }
+}
+
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -49,11 +62,19 @@ export async function subscribeToPush(team, sheetUrl) {
 
     const reg = await navigator.serviceWorker.ready;
 
+    const wantKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
     let sub = await reg.pushManager.getSubscription();
+    // If an existing subscription was created with a DIFFERENT VAPID key (e.g. from an older build),
+    // the server can't deliver to it (403). Drop it and re-subscribe with the current key so push
+    // self-heals instead of silently never arriving.
+    if (sub && !subKeyMatches(sub, wantKey)) {
+        await sub.unsubscribe().catch(() => {});
+        sub = null;
+    }
     if (!sub) {
         sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            applicationServerKey: wantKey,
         });
     }
 

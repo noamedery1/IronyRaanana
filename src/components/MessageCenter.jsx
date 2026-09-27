@@ -14,14 +14,31 @@ export default function MessageCenter() {
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
 
+    const [stats, setStats] = useState({ total: 0, bySegment: {} }); // subscriber counts per segment
+
     const slug = getActiveClub().slug;
+
+    const loadStats = () => fetch(`/api/${slug}/push-stats`, { headers: authHeaders(slug) })
+        .then((r) => r.json()).then((d) => { if (d && d.bySegment) setStats(d); }).catch(() => {});
 
     useEffect(() => {
         fetch(`/api/${slug}/teams`).then((r) => r.json())
             .then((d) => { if (d.teams) setTeams(d.teams.map((t) => t.name)); }).catch(() => {});
         fetch(`/api/${slug}/trainers`).then((r) => r.json())
             .then((d) => setTrainers((d.trainers || []).map((t) => t.name))).catch(() => {});
+        loadStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug]);
+
+    // How many devices are subscribed for a given target. A team also counts legacy label-format
+    // rows ("<name> - <coach>" / bare "<name>"), matching how broadcast delivers.
+    const seg = stats.bySegment || {};
+    const teamCount = (name) => (seg['team:' + name] || 0) + (seg[name] || 0)
+        + Object.keys(seg).filter((k) => k.startsWith(name + ' - ')).reduce((a, k) => a + seg[k], 0);
+    const trainerCount = (name) => seg['__TRAINER__:' + name] || 0;
+    const trainersTotal = Object.keys(seg).filter((k) => k.startsWith('__TRAINER')).reduce((a, k) => a + seg[k], 0);
+    const operatorsTotal = seg['__OPERATOR__'] || 0;
+    const badge = (n) => <span style={{ color: n > 0 ? '#059669' : '#b91c1c', fontWeight: 700, fontSize: '0.8rem' }}>👥 {n}</span>;
 
     const chosen = (map) => Object.keys(map).filter((k) => map[k]);
 
@@ -63,18 +80,20 @@ export default function MessageCenter() {
             const codeStr = Object.keys(codes).length ? ` [${Object.entries(codes).map(([k, v]) => `${k}×${v}`).join(', ')}]` : '';
             setMsg(`✓ נשלח (${d.sent || 0} מכשירים${d.failed ? `, ${d.failed} נכשלו${codeStr}` : ''})`);
             setBody('');
+            loadStats(); // refresh counts (a send prunes expired subscriptions)
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
     };
 
     const input = { width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontFamily: 'inherit' };
-    const radio = (val, label) => (
+    const radio = (val, label, count) => (
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontWeight: 600 }}>
             <input type="radio" checked={target === val} onChange={() => setTarget(val)} /> {label}
+            {count !== undefined && <span style={{ marginInlineStart: 'auto' }}>{badge(count)}</span>}
         </label>
     );
 
-    // Multi-select checkbox grid with select-all / clear.
-    const picker = (items, map, setMap, emptyLabel) => (
+    // Multi-select checkbox grid with select-all / clear. `countFn` shows subscribers per item.
+    const picker = (items, map, setMap, emptyLabel, countFn) => (
         <div style={{ marginTop: '0.6rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <button type="button" onClick={() => setMap(Object.fromEntries(items.map((i) => [i, true])))}
@@ -86,7 +105,9 @@ export default function MessageCenter() {
                 {items.length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{emptyLabel}</span>}
                 {items.map((name) => (
                     <label key={name} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                        <input type="checkbox" checked={!!map[name]} onChange={() => setMap((m) => ({ ...m, [name]: !m[name] }))} /> {name}
+                        <input type="checkbox" checked={!!map[name]} onChange={() => setMap((m) => ({ ...m, [name]: !m[name] }))} />
+                        <span style={{ flex: 1 }}>{name}</span>
+                        {countFn && badge(countFn(name))}
                     </label>
                 ))}
             </div>
@@ -100,15 +121,18 @@ export default function MessageCenter() {
 
             <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>למי לשלוח</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.8rem' }}>
-                {radio('club', '🏛️ כל המועדון')}
-                {radio('trainers', '🏀 כל המאמנים')}
-                {radio('operators', '🔑 כל המפעילים')}
+                {radio('club', '🏛️ כל המועדון', stats.total)}
+                {radio('trainers', '🏀 כל המאמנים', trainersTotal)}
+                {radio('operators', '🔑 כל המפעילים', operatorsTotal)}
                 {radio('team', '👥 קבוצות (בחירה מרובה)')}
                 {radio('trainer', '👤 מאמנים (בחירה מרובה)')}
             </div>
+            <p style={{ color: '#94a3b8', fontSize: '0.78rem', margin: '0.4rem 0 0' }}>
+                👥 = כמה מכשירים הפעילו התראות ויקבלו את ההודעה. 0 = אף אחד עדיין לא הפעיל התראות ליעד הזה.
+            </p>
 
-            {target === 'team' && picker(teams, selTeams, setSelTeams, 'אין קבוצות — פרסם לו"ז תחילה')}
-            {target === 'trainer' && picker(trainers, selTrainers, setSelTrainers, 'אין מאמנים')}
+            {target === 'team' && picker(teams, selTeams, setSelTeams, 'אין קבוצות — פרסם לו"ז תחילה', teamCount)}
+            {target === 'trainer' && picker(trainers, selTrainers, setSelTrainers, 'אין מאמנים', trainerCount)}
 
             <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>תוכן ההודעה</label>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} placeholder="לדוגמה: אימון מחר יתקיים כרגיל" style={{ ...input, resize: 'vertical' }} />

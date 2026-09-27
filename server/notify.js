@@ -135,6 +135,17 @@ export async function listMessages(slug) {
     return { messages: Array.isArray(existing) ? existing : [] };
 }
 
+// Subscriber counts per segment for a club — so the manager can see, before sending, how many
+// devices will actually receive a message for each target (0 = nobody enabled notifications yet).
+export async function pushStats(slug) {
+    const cid = await clubId(slug);
+    const r = await pool.query("SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions WHERE club_id=$1 GROUP BY 1", [cid]);
+    const bySegment = {};
+    let total = 0;
+    r.rows.forEach((x) => { bySegment[x.seg] = x.n; total += x.n; });
+    return { total, bySegment };
+}
+
 // ===== Email subscribers =====
 export async function addEmailSubscriber(slug, { team, name, email }) {
     if (!email) throw new Error('Missing email');
