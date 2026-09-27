@@ -318,18 +318,18 @@ app.delete('/api/:club/push', async (req, res) => {
     try { ok(res, await unregisterPush(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 app.post('/api/:club/broadcast', requireManager, async (req, res) => {
-    try { ok(res, await broadcast(req.params.club, { ...(req.body || {}), onlyHost: clubActiveHost(req.params.club) })); } catch (e) { fail(res, e); }
+    try { ok(res, await broadcast(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 // Manager message: send to segment(s) AND archive it (for review / resend). Message history.
 app.post('/api/:club/messages', requireManager, async (req, res) => {
-    try { ok(res, await sendMessage(req.params.club, { ...(req.body || {}), onlyHost: clubActiveHost(req.params.club) })); } catch (e) { fail(res, e); }
+    try { ok(res, await sendMessage(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 app.get('/api/:club/messages', requireManager, async (req, res) => {
     try { ok(res, await listMessages(req.params.club)); } catch (e) { fail(res, e); }
 });
 // Subscriber counts per segment (so the manager sees how many devices each target reaches).
 app.get('/api/:club/push-stats', requireManager, async (req, res) => {
-    try { ok(res, await pushStats(req.params.club, clubActiveHost(req.params.club))); } catch (e) { fail(res, e); }
+    try { ok(res, await pushStats(req.params.club)); } catch (e) { fail(res, e); }
 });
 // Manager: inspect / clean up raw device subscriptions (remove stale or duplicate registrations,
 // e.g. an old apex subscription still delivering after the club moved to its subdomain).

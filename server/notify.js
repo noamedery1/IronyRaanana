@@ -58,12 +58,14 @@ export async function unregisterPush(slug, { endpoint }) {
 
 // Deliver to a segment. '' = whole club; 'team:X' / '__TRAINER__:X' / '__OPERATOR__' match
 // exactly or by prefix (so '__TRAINER__' hits every '__TRAINER__:name').
-export async function broadcast(slug, { segment = '', title, body, url, icon, tag, data, actions, onlyHost = null }) {
+export async function broadcast(slug, { segment = '', title, body, url, icon, tag, data, actions }) {
     const cid = await clubId(slug);
     const seg = (segment || '').toString();
-    // When a club has moved to its own subdomain, deliver ONLY to subscriptions registered on that
-    // host — this silently drops the stale duplicate the same device left on the old apex origin.
-    // For a club without a subdomain, onlyHost is null and every subscription is eligible (unchanged).
+    // Deliver to EVERY matching subscription regardless of which origin (apex vs subdomain) it was
+    // registered on. We deliberately do NOT auto-drop by origin: an active parent who only installed
+    // the old apex app would silently stop getting notifications, and origin can't distinguish a
+    // real second device from a stale duplicate. Duplicates (same person on two origins) are cleaned
+    // up by hand in the manager's "מנויי פוש" screen, which shows each device's name to decide.
     // Match the target's subscriptions. A team target (team:<name>) must also reach rows stored
     // in the legacy label format ("<name> - <coach>" or bare "<name>") that the notifications
     // modal used to create — otherwise team sends silently skip those parents.
@@ -75,27 +77,21 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
         // WHOLE line (wrapping the stored segment in newlines) so it hits single- and multi-team
         // devices without false matches on longer names (e.g. "ילדים ג'" ≠ "ילדים ג' צפון").
         const wholeLine = '%\n' + escLike('team:' + name) + '\n%';
-        const params = [cid, wholeLine, name, escLike(name) + ' - %'];
-        let hostClause = '';
-        if (onlyHost) { params.push(onlyHost); hostClause = ` AND host = $${params.length}`; }
         r = await pool.query(
             `SELECT id, endpoint, subscription FROM push_subscriptions
              WHERE club_id=$1 AND (
                  (chr(10) || segment || chr(10)) LIKE $2
                  OR segment = $3
                  OR segment LIKE $4
-             )${hostClause}`,
-            params,
+             )`,
+            [cid, wholeLine, name, escLike(name) + ' - %'],
         );
     } else {
         // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).
-        const params = [cid, seg];
-        let hostClause = '';
-        if (onlyHost) { params.push(onlyHost); hostClause = ` AND host = $${params.length}`; }
         r = await pool.query(
             `SELECT id, endpoint, subscription FROM push_subscriptions
-             WHERE club_id=$1 AND left(segment, length($2)) = $2${hostClause}`,
-            params,
+             WHERE club_id=$1 AND left(segment, length($2)) = $2`,
+            [cid, seg],
         );
     }
     if (!r.rows.length) return { sent: 0, failed: 0, expired: [], note: 'no subscribers' };
@@ -140,12 +136,12 @@ const PUSH_LOG_KEY = 'pushLog';
 const PUSH_LOG_MAX = 100;
 
 // Send one manager message to one or more segments, aggregate the result, and archive it.
-export async function sendMessage(slug, { title, body, target, segments, onlyHost = null }) {
+export async function sendMessage(slug, { title, body, target, segments }) {
     const segs = Array.isArray(segments) && segments.length ? segments : [''];
     let sent = 0, failed = 0;
     const statusCodes = {};
     for (const seg of segs) {
-        const r = await broadcast(slug, { segment: seg, title, body, onlyHost });
+        const r = await broadcast(slug, { segment: seg, title, body });
         sent += r.sent || 0;
         failed += r.failed || 0;
         Object.entries(r.statusCodes || {}).forEach(([k, v]) => { statusCodes[k] = (statusCodes[k] || 0) + v; });
@@ -171,14 +167,11 @@ export async function listMessages(slug) {
 
 // Subscriber counts per segment for a club — so the manager can see, before sending, how many
 // devices will actually receive a message for each target (0 = nobody enabled notifications yet).
-export async function pushStats(slug, onlyHost = null) {
+export async function pushStats(slug) {
     const cid = await clubId(slug);
-    // Count only the subscriptions a broadcast would actually reach, so the manager's per-target
-    // numbers don't include stale legacy-origin duplicates for a club that moved to a subdomain.
-    const params = [cid];
-    let hostClause = '';
-    if (onlyHost) { params.push(onlyHost); hostClause = ` AND host = $${params.length}`; }
-    const r = await pool.query(`SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions WHERE club_id=$1${hostClause} GROUP BY 1`, params);
+    // Count every subscription that would receive a send (all origins). This can include a device's
+    // duplicate across origins; the manager reconciles those by name in the "מנויי פוש" screen.
+    const r = await pool.query("SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions WHERE club_id=$1 GROUP BY 1", [cid]);
     const bySegment = {};
     let total = 0;
     r.rows.forEach((x) => { bySegment[x.seg] = x.n; total += x.n; });
