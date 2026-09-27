@@ -202,9 +202,16 @@ const AdminDashboard = () => {
     // Preview reports edits → instant local cache (crash safety) + debounced DB save.
     const handlePreviewChange = (payload) => {
         latestDraft.current = payload;
+        // Adopt the week start chosen in the preview's date picker, so saving/publishing uses the
+        // selected week (not the week the file happened to be imported into).
+        const wsChanged = payload.weekStart && sheetDataRef.current && sheetDataRef.current.weekStart !== payload.weekStart;
+        if (payload.weekStart && sheetDataRef.current) sheetDataRef.current.weekStart = payload.weekStart;
         try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...payload, ws: sheetDataRef.current?.weekStart, ts: Date.now() })); } catch { /* quota */ }
         if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => { saveDraftToDB(); }, 2500);
+        // A week change must persist right away (the manager may publish immediately after); content
+        // edits can stay debounced.
+        if (wsChanged) saveDraftToDB();
+        else saveTimer.current = setTimeout(() => { saveDraftToDB(); }, 2500);
     };
 
     const discardDraft = async () => {

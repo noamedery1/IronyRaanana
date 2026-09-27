@@ -288,9 +288,11 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         if (!onChange) return;
         const rows = currentSchedule || rawRows;
         if (!rows || !currentHeaders.length) return;
-        onChange({ headers: currentHeaders, rows });
+        // Include the chosen week start (from the date picker) so the draft is saved/published for
+        // the week the manager selected — not the stale week the file was imported into.
+        onChange({ headers: currentHeaders, rows, weekStart: selectedDate || undefined });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentSchedule, currentHeaders]);
+    }, [currentSchedule, currentHeaders, selectedDate]);
 
     // Pending trainer requests/proposals → shown on the board (special colour) + approve/reject.
     const refreshPending = () => {
