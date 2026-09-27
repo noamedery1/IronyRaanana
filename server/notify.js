@@ -36,7 +36,7 @@ export async function registerPush(slug, { segment, subscription }) {
     await pool.query(
         `INSERT INTO push_subscriptions (club_id, segment, endpoint, subscription)
          VALUES ($1,$2,$3,$4)
-         ON CONFLICT (endpoint) DO UPDATE SET segment=excluded.segment, subscription=excluded.subscription`,
+         ON CONFLICT (endpoint) DO UPDATE SET club_id=excluded.club_id, segment=excluded.segment, subscription=excluded.subscription`,
         [cid, segment || '', subscription.endpoint, subscription],
     );
     return { ok: true };

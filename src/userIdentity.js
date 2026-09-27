@@ -64,22 +64,33 @@ export function pushSegmentFor(role, team) {
     return '';
 }
 
-// The FULL push segment for this device: a member gets ALL their teams (one "team:<name>" per
-// line) so a single device receives pushes for every team the parent belongs to — and it's tied
-// to their real memberships, not whichever team tab happened to be open when they enabled push.
-export function membershipSegment() {
+// The FULL push segment for this device: a member gets all their teams (one "team:<name>" per
+// line) so a single device receives pushes for every team they belong to — tied to their real
+// memberships, not whichever tab was open. `validTeamNames` (the current club's teams) scopes it
+// to this club, since a subscription is stored per club and memberships aren't club-separated.
+export function membershipSegment(validTeamNames) {
     const role = localStorage.getItem('userRole');
     if (role === 'operator') return '__OPERATOR__';
     if (role === 'member') {
-        const teams = getMemberships().map((m) => 'team:' + m.team).filter((s) => s !== 'team:');
-        return [...new Set(teams)].join('\n');
+        let teams = getMemberships().map((m) => m.team).filter(Boolean);
+        if (validTeamNames && validTeamNames.length) {
+            const ok = new Set(validTeamNames);
+            teams = teams.filter((t) => ok.has(t));
+        }
+        return [...new Set(teams)].map((t) => 'team:' + t).join('\n');
     }
     return '';
 }
 
-// Register this device for push based on ALL of the identity's memberships. Best-effort.
+// Register this device for push based on the identity's memberships IN THE CURRENT CLUB. Best-effort.
 export async function registerIdentityPush() {
-    const seg = membershipSegment();
+    const role = localStorage.getItem('userRole');
+    const slug = getActiveClub().slug;
+    if (role === 'operator') return subscribeToPush('__OPERATOR__', getActiveClub().sheetApi);
+    if (role !== 'member') return { ok: false };
+    let valid = null;
+    try { const d = await fetch(`/api/${slug}/teams`).then((r) => r.json()); valid = (d.teams || []).map((t) => t.name); } catch { /* fall back to all */ }
+    const seg = membershipSegment(valid);
     if (!seg) return { ok: false };
     return subscribeToPush(seg, getActiveClub().sheetApi);
 }
