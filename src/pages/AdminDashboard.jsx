@@ -807,6 +807,7 @@ const AdminDashboard = () => {
                         headers={sheetData?.headers || []}
                         rawRows={sheetData?.rawRows || []}
                         teamConfig={teamConfig}
+                        coachOf={coachOf}
                         saveUrl={saveUrl}
                         sheetName={sheetName}
                         sheetId={extractSheetId(sheetUrl)}

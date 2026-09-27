@@ -7,7 +7,7 @@ import { sortTeams, SORT_MODES } from '../teamSort.js';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
-const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {}, onChange, onSaveDraft, onDiscardDraft, draftSavedAt, draftRestored, clubSlug }) => {
+const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, sheetId, indices, currentSchedule, setCurrentSchedule, hallColors, hallConfig = {}, onChange, onSaveDraft, onDiscardDraft, draftSavedAt, draftRestored, clubSlug, coachOf = {} }) => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [sortMode, setSortMode] = useState('name'); // board row order: name / age / gender
@@ -70,6 +70,23 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
     const dayStart = indices?.dayStart || 1;
     const coachIndex = indices?.coach;
 
+    // A team row's effective coach, resolved from three sources in order: the coach cell in the
+    // imported row → the coach it was assigned to in "ניהול מאמנים" (trainers → coachOf, keyed by a
+    // normalized name so "טרום א׳" matches a trainer's "טרום א") → a saved teamConfig rule. This makes
+    // coaches appear even when the file was imported without a coach column.
+    const nrmKey = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+    const coachFromRow = (rowData, teamName) => {
+        const own = (coachIndex != null && coachIndex !== -1 && rowData) ? (rowData[coachIndex] || '').trim() : '';
+        if (own) return own;
+        const nm = teamName || (rowData && rowData[0]) || '';
+        const viaTrainer = coachOf[nrmKey(nm)];
+        if (viaTrainer) return viaTrainer;
+        const cfg = teamConfig.find((tc) => tc.name === nm);
+        return (cfg && cfg.coach) ? cfg.coach.trim() : '';
+    };
+    // Show the מאמן column when there's any coach source: an imported coach column, or trainer assignments.
+    const hasCoachData = (coachIndex != null && coachIndex !== -1) || Object.keys(coachOf || {}).length > 0;
+
     // Helper to get data to show
     const dataToShow = currentSchedule || rawRows;
 
@@ -113,14 +130,9 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         };
 
         data.forEach((row, rIdx) => {
-            let coachName = '';
-            if (coachIndex !== undefined && coachIndex !== -1) {
-                coachName = row[coachIndex];
-            } else {
-                const cfg = teamConfig.find(tc => tc.name === row[0]);
-                if (cfg) coachName = cfg.coach;
-            }
-            if (coachName) coachName = coachName.trim();
+            // Effective coach (row cell → trainer assignment → teamConfig rule) so coach clashes are
+            // detected even when the imported file had no coach column.
+            const coachName = coachFromRow(row);
 
             for (let d = 0; d < 7; d++) {
                 const cIdx = dayStart + d;
@@ -1185,7 +1197,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                         <thead>
                             <tr>
                                 <th className="cc-sticky-col">קבוצה</th>
-                                {coachIndex !== undefined && coachIndex !== -1 && <th>מאמן</th>}
+                                {hasCoachData && <th>מאמן</th>}
                                 {dayHeaders.map((header, i) => (<th key={i}>{header}</th>))}
                             </tr>
                         </thead>
@@ -1206,8 +1218,8 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                                 <span className="cc-gender" style={{ background: teamObj.type === 'W' ? '#be185d' : '#3b82f6' }}>{teamObj.type}</span>
                                             )}
                                         </td>
-                                        {coachIndex !== undefined && coachIndex !== -1 && (
-                                            <td className="cc-coach">{rowData ? rowData[coachIndex] : ''}</td>
+                                        {hasCoachData && (
+                                            <td className="cc-coach">{coachFromRow(rowData, teamName)}</td>
                                         )}
                                         {dayHeaders.map((_, colMapIndex) => {
                                             const colIndex = dayStart + colMapIndex;
