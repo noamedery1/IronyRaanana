@@ -8,7 +8,10 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
     // A team's effective coach: the coach on the team row if present, otherwise the coach it was
     // assigned to in "ניהול מאמנים" (trainers table → coachOf map). This makes coaches show even when
     // the file was imported without a coach column and coaches were assigned separately afterwards.
-    const coachFor = (t) => (t && (t.coach || coachOf[t.name])) || '';
+    // coachOf is keyed by normalized name (geresh/quotes stripped, spaces collapsed) so "טרום א׳"
+    // matches a trainer's "טרום א"; normalize the team name the same way before the lookup.
+    const nrmKey = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+    const coachFor = (t) => (t && (t.coach || coachOf[nrmKey(t.name)])) || '';
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTeamIndex, setSelectedTeamIndex] = useState(null);

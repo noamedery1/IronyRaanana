@@ -134,11 +134,15 @@ const AdminDashboard = () => {
             if (!draftR.ok) return;
             // Reverse-map team name → coach from the trainers table ("ניהול מאמנים"), so the week
             // builder can show a coach even when the schedule was imported without a coach column and
-            // coaches were assigned per-coach afterwards. First trainer listing a team wins.
+            // coaches were assigned per-coach afterwards. Keyed by NORMALIZED name (strip geresh/
+            // gershayim/quotes, collapse spaces) so "טרום א׳" matches a trainer's "טרום א". First
+            // trainer listing a team wins. (A team a trainer typo'd won't match — that's data, not us.)
+            const nrm = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
             const coachByTeam = {};
             (Array.isArray(trainersR.trainers) ? trainersR.trainers : []).forEach((tr) => {
                 (tr.teams || '').split(',').map((s) => s.trim()).filter(Boolean).forEach((tm) => {
-                    if (!coachByTeam[tm]) coachByTeam[tm] = tr.name;
+                    const k = nrm(tm);
+                    if (k && !coachByTeam[k]) coachByTeam[k] = tr.name;
                 });
             });
             setCoachOf(coachByTeam);
