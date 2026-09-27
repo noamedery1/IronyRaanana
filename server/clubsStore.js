@@ -58,6 +58,8 @@ export async function ensureStore() {
     // moved to a subdomain deliver only to subdomain subscriptions and drop stale apex duplicates.
     try {
         await pool.query('ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS host text');
+        // Registrant's name, so the manager can identify a device (not just its team/origin).
+        await pool.query('ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS label text');
     } catch { /* push_subscriptions not created yet — migration will handle it */ }
 }
 

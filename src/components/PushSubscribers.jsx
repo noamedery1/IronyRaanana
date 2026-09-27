@@ -40,11 +40,12 @@ export default function PushSubscribers() {
 
     useEffect(() => { load(); }, [load]);
 
-    const removeOne = async (id) => {
-        if (!confirm('להסיר את המנוי הזה? המכשיר יפסיק לקבל התראות עד שיירשם מחדש.')) return;
-        setBusyId(id); setMsg('');
+    const removeOne = async (s) => {
+        const who = s.name ? `"${s.name}"` : 'מכשיר ללא שם';
+        if (!confirm(`להסיר את המנוי של ${who}? המכשיר יפסיק לקבל התראות עד שיירשם מחדש.`)) return;
+        setBusyId(s.id); setMsg('');
         try {
-            const r = await fetch(`/api/${slug}/push-subscriptions/${encodeURIComponent(id)}`, { method: 'DELETE', headers: authHeaders(slug) });
+            const r = await fetch(`/api/${slug}/push-subscriptions/${encodeURIComponent(s.id)}`, { method: 'DELETE', headers: authHeaders(slug) });
             const d = await r.json().catch(() => ({ error: 'x' }));
             if (d.error) setMsg('⚠️ מחיקה נכשלה');
             else { setMsg('✓ הוסר'); load(); }
@@ -71,13 +72,16 @@ export default function PushSubscribers() {
     const row = (s) => (
         <div key={s.id} style={{ background: s.legacy ? '#fef2f2' : '#f8fafc', border: `1px solid ${s.legacy ? '#fecaca' : '#e2e8f0'}`, borderRadius: 10, padding: '0.7rem 0.85rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: s.name ? '#0f1b33' : '#94a3b8' }}>
+                        {s.name || 'שם לא ידוע'}
+                    </span>
                     {segmentLabels(s.segment).map((l, i) => (
                         <span key={i} style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.72rem', borderRadius: 8, padding: '0.1rem 0.5rem' }}>{l}</span>
                     ))}
                 </div>
                 <button
-                    onClick={() => removeOne(s.id)}
+                    onClick={() => removeOne(s)}
                     disabled={busyId === s.id}
                     style={{ background: 'none', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: busyId === s.id ? 'wait' : 'pointer', fontSize: '0.8rem' }}
                 >{busyId === s.id ? '…' : '🗑️ הסר'}</button>
@@ -97,9 +101,12 @@ export default function PushSubscribers() {
                 <button onClick={load} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 8, padding: '0.4rem 0.9rem', cursor: 'pointer' }}>↻ רענן</button>
             </div>
             <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
-                כל המכשירים הרשומים להתראות. אפשר להסיר מנוי ישן/כפול כדי לעצור התראות כפולות.
+                כל המכשירים הרשומים להתראות, עם שם הנרשם והקבוצה. אפשר להסיר מנוי ישן/כפול כדי לעצור התראות כפולות.
                 {msg && <b style={{ marginInlineStart: '0.5rem', color: msg.startsWith('✓') ? '#10b981' : '#ef4444' }}>{msg}</b>}
             </p>
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', borderRadius: 8, padding: '0.5rem 0.8rem', fontSize: '0.8rem', marginBottom: '0.6rem' }}>
+                ℹ️ השם מוצג למכשירים שנרשמו מהגרסה החדשה. מכשיר ותיק יראה "שם לא ידוע" עד שייכנס שוב לאפליקציה (אז השם יתעדכן אוטומטית).
+            </div>
 
             {viewOnly && (
                 <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', borderRadius: 10, padding: '0.9rem 1rem' }}>

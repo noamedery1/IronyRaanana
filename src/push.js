@@ -78,10 +78,13 @@ export async function subscribeToPush(team, sheetUrl) {
         });
     }
 
+    // Attach the registrant's name (if known) so the manager can see WHO each device is in the
+    // subscriptions screen, not just which team/origin. Best-effort — empty for anonymous devices.
+    const label = (localStorage.getItem('userName') || '').trim();
     const res = await fetch(`/api/${getActiveClub().slug}/push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ segment: team, subscription: sub.toJSON() }),
+        body: JSON.stringify({ segment: team, subscription: sub.toJSON(), label }),
     });
     const data = await res.json().catch(() => ({}));
     if (data.error) return { ok: false, reason: data.error };

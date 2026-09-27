@@ -33,14 +33,19 @@ export async function pushDiag() {
 // `host` = the origin the device subscribed on (apex vs a club's subdomain). Stored so a club that
 // moved to its own subdomain can deliver only to the subdomain's subscriptions and drop the stale
 // duplicate the same device left on the old apex origin (two origins ⇒ two endpoints ⇒ two pushes).
-export async function registerPush(slug, { segment, subscription, host }) {
+export async function registerPush(slug, { segment, subscription, host, label }) {
     if (!subscription || !subscription.endpoint) throw new Error('Missing subscription');
     const cid = await clubId(slug);
+    // label = the registrant's name (so the manager can identify a device). On a re-register that
+    // sends no name, keep the previously stored one rather than blanking it.
     await pool.query(
-        `INSERT INTO push_subscriptions (club_id, segment, endpoint, subscription, host)
-         VALUES ($1,$2,$3,$4,$5)
-         ON CONFLICT (endpoint) DO UPDATE SET club_id=excluded.club_id, segment=excluded.segment, subscription=excluded.subscription, host=excluded.host`,
-        [cid, segment || '', subscription.endpoint, subscription, host || null],
+        `INSERT INTO push_subscriptions (club_id, segment, endpoint, subscription, host, label)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (endpoint) DO UPDATE SET
+           club_id=excluded.club_id, segment=excluded.segment, subscription=excluded.subscription,
+           host=excluded.host,
+           label=COALESCE(NULLIF(excluded.label,''), push_subscriptions.label)`,
+        [cid, segment || '', subscription.endpoint, subscription, host || null, (label || '').trim() || null],
     );
     return { ok: true };
 }
@@ -188,11 +193,12 @@ export async function pushStats(slug, onlyHost = null) {
 export async function listSubscriptions(slug, activeHost = null) {
     const cid = await clubId(slug);
     const r = await pool.query(
-        "SELECT id, coalesce(segment,'') segment, host, endpoint, created_at FROM push_subscriptions WHERE club_id=$1 ORDER BY created_at DESC",
+        "SELECT id, coalesce(segment,'') segment, host, label, endpoint, created_at FROM push_subscriptions WHERE club_id=$1 ORDER BY created_at DESC",
         [cid],
     );
     const subscriptions = r.rows.map((x) => ({
         id: x.id,
+        name: x.label || null, // registrant's name, if we captured it
         segment: x.segment,
         host: x.host || null,
         endpointTail: (x.endpoint || '').slice(-14),
