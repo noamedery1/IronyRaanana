@@ -42,14 +42,29 @@ const CANONICAL_BASE = `https://${CANONICAL_HOST}`;
 // already serves HTTPS while the app sees HTTP internally, so a protocol check would
 // loop forever. Localhost/loopback is excluded so local dev is untouched, and an empty
 // Host (internal Railway health checks) is left alone so deploys stay healthy.
+const CANONICAL_SUB_SUFFIX = '.' + CANONICAL_HOST; // e.g. ".squadio.techbynoam.com"
+
+// The club slug if this request came in on a per-club subdomain (<slug>.squadio.techbynoam.com),
+// else null. Each club can have its own subdomain = its own origin = its own installed app,
+// service worker, push identity and icon (fixes multi-club collisions on one device).
+function clubSubFromReq(req) {
+    const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+    const host = rawHost.split(':')[0].toLowerCase();
+    if (host.endsWith(CANONICAL_SUB_SUFFIX)) {
+        const sub = host.slice(0, -CANONICAL_SUB_SUFFIX.length);
+        if (sub && !sub.includes('.') && sub !== 'www') return sub;
+    }
+    return null;
+}
+
 app.use((req, res, next) => {
     const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
     const host = rawHost.split(':')[0].toLowerCase();
     if (!host || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return next();
-    if (host !== CANONICAL_HOST) {
-        return res.redirect(301, CANONICAL_BASE + req.originalUrl); // path + query preserved untouched
-    }
-    next();
+    // Club subdomains (<slug>.squadio.techbynoam.com) are their own origins — serve them, don't
+    // bounce them to the canonical root (that would defeat the whole point).
+    if (host === CANONICAL_HOST || host.endsWith(CANONICAL_SUB_SUFFIX)) return next();
+    return res.redirect(301, CANONICAL_BASE + req.originalUrl); // path + query preserved untouched
 });
 
 try {
@@ -530,7 +545,9 @@ function clubHead(club, pagePath) {
 // Handle React routing, return all requests to React app (with per-club head when applicable).
 app.get(/.*/, async (req, res) => {
     try {
-        const seg = req.path.split('/').filter(Boolean)[0];
+        // On a club subdomain the club comes from the host; otherwise from the first path segment.
+        const subSlug = clubSubFromReq(req);
+        const seg = subSlug || req.path.split('/').filter(Boolean)[0];
         const club = seg ? await getClub(seg) : null;
         const html = readIndexHtml();
         if (html) {
@@ -545,8 +562,8 @@ app.get(/.*/, async (req, res) => {
                     // Point the PWA manifest at THIS club's manifest (right start_url + icons),
                     // so installing from an invite link gets the club's app — not the raanana build default.
                     .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1/clubs/${club.slug}.webmanifest$2`)
-                    // Per-club head with canonical + OG on the canonical domain, using this page's own path.
-                    .replace('</head>', `    ${clubHead(club, req.path)}\n  </head>`);
+                    // Per-club head with canonical + OG. On a subdomain the page IS the club root.
+                    .replace('</head>', `    ${clubHead(club, subSlug ? `/${club.slug}` : req.path)}\n  </head>`);
             } else {
                 // Non-club SPA page (unknown slug, legacy routes) — still emit a canonical for this path.
                 const canonical = `${CANONICAL_BASE}${req.path}`;
