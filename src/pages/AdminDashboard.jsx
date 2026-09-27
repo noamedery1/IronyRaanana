@@ -44,6 +44,7 @@ const AdminDashboard = () => {
         rawRows: []
     });
     const [teamConfig, setTeamConfig] = useState([]);
+    const [coachOf, setCoachOf] = useState({}); // team name → coach, derived from the trainers table
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
     const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
@@ -124,12 +125,23 @@ const AdminDashboard = () => {
         try {
             // load the draft, the saved scheduling rules, AND the manual teams together
             // (single source → no race)
-            const [draftR, rulesR, teamsR] = await Promise.all([
+            const [draftR, rulesR, teamsR, trainersR] = await Promise.all([
                 fetch(`/api/${club.slug}/draft`, { headers: authHeaders(club.slug) }),
                 fetch(`/api/${club.slug}/settings/teamRules`).then((x) => x.json()).catch(() => ({})),
                 fetch(`/api/${club.slug}/teams`).then((x) => x.json()).catch(() => ({ teams: [] })),
+                fetch(`/api/${club.slug}/trainers`).then((x) => x.json()).catch(() => ({ trainers: [] })),
             ]);
             if (!draftR.ok) return;
+            // Reverse-map team name → coach from the trainers table ("ניהול מאמנים"), so the week
+            // builder can show a coach even when the schedule was imported without a coach column and
+            // coaches were assigned per-coach afterwards. First trainer listing a team wins.
+            const coachByTeam = {};
+            (Array.isArray(trainersR.trainers) ? trainersR.trainers : []).forEach((tr) => {
+                (tr.teams || '').split(',').map((s) => s.trim()).filter(Boolean).forEach((tm) => {
+                    if (!coachByTeam[tm]) coachByTeam[tm] = tr.name;
+                });
+            });
+            setCoachOf(coachByTeam);
             const draft = await draftR.json();
             const sheet = sessionsToSheet(draft);
 
@@ -779,6 +791,7 @@ const AdminDashboard = () => {
                             teamConfig={teamConfig}
                             setTeamConfig={setTeamConfig}
                             onTeamUpdate={handleTeamUpdate}
+                            coachOf={coachOf}
                             hallColors={sheetData?.hallColors || {}}
                         />
                     </div>

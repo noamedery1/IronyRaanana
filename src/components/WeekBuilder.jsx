@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { sortTeams, SORT_MODES } from '../teamSort.js';
 
-const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, hallColors }) => {
+const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, hallColors, coachOf = {} }) => {
     // teamConfig and setTeamConfig are now passed from props for persistence
     const [sortMode, setSortMode] = useState('name');
+
+    // A team's effective coach: the coach on the team row if present, otherwise the coach it was
+    // assigned to in "ניהול מאמנים" (trainers table → coachOf map). This makes coaches show even when
+    // the file was imported without a coach column and coaches were assigned separately afterwards.
+    const coachFor = (t) => (t && (t.coach || coachOf[t.name])) || '';
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTeamIndex, setSelectedTeamIndex] = useState(null);
@@ -158,11 +163,12 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                     const otherEnd = getMinutes(c.endTime);
 
                     if (Math.max(newStart, otherStart) < Math.min(newEnd, otherEnd)) {
-                        // 1. Same Coach
-                        if (teamConfig[selectedTeamIndex].coach && otherTeam.coach &&
-                            teamConfig[selectedTeamIndex].coach === otherTeam.coach) {
+                        // 1. Same Coach (effective coach — team row or trainer assignment)
+                        const myCoach = coachFor(teamConfig[selectedTeamIndex]);
+                        const otherCoach = coachFor(otherTeam);
+                        if (myCoach && otherCoach && myCoach === otherCoach) {
                             isConflict = true;
-                            conflictMsg = `התנגשות מאמן: ${otherTeam.coach} כבר משובץ עם ${otherTeam.name}`;
+                            conflictMsg = `התנגשות מאמן: ${otherCoach} כבר משובץ עם ${otherTeam.name}`;
                         }
 
                         // 2. Same Location (Hall)
@@ -272,7 +278,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                                 {team.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.7rem', borderRadius: 10, padding: '0.05rem 0.45rem', marginInlineStart: '0.4rem' }}>גיל {team.age}</span> : null}
                                 {team.grade ? <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.7rem', borderRadius: 10, padding: '0.05rem 0.45rem', marginInlineStart: '0.3rem' }}>כיתה {team.grade}</span> : null}
                             </div>
-                            {team.coach && <div style={{ fontSize: '0.85rem', color: '#666' }}>{team.coach}</div>}
+                            {coachFor(team) && <div style={{ fontSize: '0.85rem', color: '#666' }}>{coachFor(team)}</div>}
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
