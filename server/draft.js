@@ -125,7 +125,9 @@ export async function publishDraft(slug, publishedBy = 'manager') {
             await cx.query(`UPDATE schedule_publications SET week_start=$2 WHERE id=$1`, [draft.id, curWeek]);
             ws = curWeek;
         }
-        await cx.query(`UPDATE schedule_publications SET status='archived' WHERE club_id=$1 AND week_start=$2 AND status='live'`, [draft.clubId, ws]);
+        // Archive every currently-live publication for the club (not just the same week) so there is
+        // exactly one live schedule after publishing — otherwise an older week can linger as 'live'.
+        await cx.query(`UPDATE schedule_publications SET status='archived' WHERE club_id=$1 AND status='live'`, [draft.clubId]);
         await cx.query(`UPDATE schedule_publications SET status='live', published_by=$2, published_at=now() WHERE id=$1`, [draft.id, publishedBy]);
         await seedTeamsFromSessions(cx, draft.clubId, draft.id);
         await cx.query(
