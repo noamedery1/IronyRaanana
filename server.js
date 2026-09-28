@@ -278,17 +278,6 @@ app.post('/api/:club/users', async (req, res) => {
 app.post('/api/:club/users/auth', async (req, res) => {
     try { ok(res, await authUser(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
-// TEMPORARY diagnostic (no PII): are registrations landing in the DB? role counts + recent timestamps.
-app.get('/api/:club/_diag/app-users', async (req, res) => {
-    try {
-        const cr = await pool.query('SELECT id FROM clubs WHERE slug=$1', [req.params.club]);
-        const cid = cr.rows[0]?.id;
-        if (!cid) return res.json({ error: 'unknown club' });
-        const counts = await pool.query("SELECT role, count(*)::int n FROM app_users WHERE club_id=$1 GROUP BY role", [cid]);
-        const recent = await pool.query("SELECT role, coalesce(team,'') team, right(token,6) tok, to_char(created_at,'MM-DD HH24:MI') at FROM app_users WHERE club_id=$1 ORDER BY created_at DESC LIMIT 15", [cid]);
-        res.json({ counts: counts.rows, recent: recent.rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
 // Manager-only roster — names grouped by team, NO contact details.
 app.get('/api/:club/members', requireManager, async (req, res) => {
     try { res.json(await listMembers(req.params.club)); } catch (e) { fail(res, e); }
