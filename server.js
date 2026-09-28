@@ -608,17 +608,36 @@ function clubHead(club, pagePath) {
     ].filter(Boolean).join('\n    ');
 }
 
+// For an invite page, the PATH-based start_url the installed icon should use, so iOS (which reads the
+// manifest at page load and strips any query from start_url) installs with the role/team preserved.
+// Converts a legacy ?r=…&team=… link to the path form too, so old links also install cleanly.
+function joinManifestStart(club, req) {
+    const parts = req.path.split('/').filter(Boolean); // [slug, 'join', role?, teamEnc?]
+    if (parts[0] !== club.slug || parts[1] !== 'join') return null;
+    if (parts[2]) {
+        const role = parts[2] === 'operator' ? 'operator' : 'member';
+        return `/${club.slug}/join/${role}` + (parts[3] ? `/${parts[3]}` : ''); // parts[3] already URL-encoded
+    }
+    const r = req.query.r === 'operator' ? 'operator' : (req.query.r === 'member' ? 'member' : null);
+    if (!r) return null;
+    return `/${club.slug}/join/${r}` + (req.query.team ? `/${encodeURIComponent(req.query.team)}` : '');
+}
+
 // Render the SPA index.html with a club's <head> injected (title/icons/manifest/canonical/OG).
-function renderClubIndex(club, canonicalPath) {
+// `manifestStart` overrides the installed app's start_url (used for invite pages).
+function renderClubIndex(club, canonicalPath, manifestStart) {
     const html = readIndexHtml();
     if (!html) return null;
+    const manifestHref = manifestStart
+        ? `/clubs/${club.slug}.webmanifest?start=${encodeURIComponent(manifestStart)}`
+        : `/clubs/${club.slug}.webmanifest`;
     return html
         .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
         .replace(/<link\s+rel="icon"[^>]*>\s*/i, '')
         .replace(/<link\s+rel="apple-touch-icon"[^>]*>\s*/i, '')
         .replace(/<meta\s+name="theme-color"[^>]*>\s*/i, '')
         .replace(/<meta\s+name="apple-mobile-web-app-title"[^>]*>\s*/i, '')
-        .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1/clubs/${club.slug}.webmanifest$2`)
+        .replace(/(<link\s+rel="manifest"\s+href=")[^"]*(")/i, `$1${manifestHref}$2`)
         .replace('</head>', `    ${clubHead(club, canonicalPath || `/${club.slug}`)}\n  </head>`);
 }
 
@@ -633,7 +652,7 @@ app.get(/.*/, async (req, res) => {
         if (html) {
             let patched;
             if (club) {
-                patched = renderClubIndex(club, subSlug ? `/${club.slug}` : req.path);
+                patched = renderClubIndex(club, subSlug ? `/${club.slug}` : req.path, joinManifestStart(club, req));
             } else {
                 // Non-club SPA page (unknown slug, legacy routes) — still emit a canonical for this path.
                 const canonical = `${CANONICAL_BASE}${req.path}`;
