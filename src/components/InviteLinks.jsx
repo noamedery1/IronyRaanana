@@ -16,7 +16,9 @@ export default function InviteLinks() {
     // Falls back to the current origin for clubs still served on the apex. (Old apex links keep
     // working too — the server 302-forwards them to the subdomain.)
     const base = `${club.inviteOrigin || window.location.origin}/${club.slug}`;
-    const operatorLink = `${base}/join?r=operator`;
+    // Path-based invite links (role/team in the PATH, not a query) so the installed PWA icon keeps the
+    // context on iOS, which strips the query from a home-screen app's start_url.
+    const operatorLink = `${base}/join/operator`;
     const trainerLink = `${base}/trainer`;
 
     useEffect(() => {
@@ -26,7 +28,7 @@ export default function InviteLinks() {
             .catch(() => { /* server down in dev */ });
     }, [club.slug]);
 
-    const teamLink = (name) => `${base}/join?r=member&team=${encodeURIComponent(name)}`;
+    const teamLink = (name) => `${base}/join/member/${encodeURIComponent(name)}`;
 
     const copy = (text, key) => {
         navigator.clipboard.writeText(text).then(() => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { getActiveClub } from '../clubConfig.js';
 import BrandMark from '../components/BrandMark';
 import { addMembership, getIdentity, getMemberships, registerIdentityPush } from '../userIdentity.js';
@@ -8,9 +9,13 @@ import { isInAppBrowser, isIOS } from '../inAppBrowser.js';
 //   /<club>/join?r=member&team=<teamLabel>   (parent/trainee of a team)
 //   /<club>/join?r=operator                   (operator — full board view)
 export default function Join() {
+    // Role/team come from the PATH first (/:club/join/:role[/:team]) — iOS-safe, survives install —
+    // and fall back to the legacy query (?r=operator&team=…) so links already sent keep working.
+    const { role: pathRole, team: pathTeam } = useParams();
     const params = new URLSearchParams(window.location.search);
-    const role = params.get('r') === 'operator' ? 'operator' : 'member';
-    const team = params.get('team') || '';
+    const role = (pathRole === 'operator' || params.get('r') === 'operator') ? 'operator' : 'member';
+    let team = '';
+    try { team = pathTeam ? decodeURIComponent(pathTeam) : (params.get('team') || ''); } catch { team = params.get('team') || ''; }
 
     const [name, setName] = useState(getIdentity().name || ''); // prefill for a returning parent adding another team
     const [email, setEmail] = useState('');
@@ -35,8 +40,9 @@ export default function Join() {
     localStorage.setItem('entryRole', role);
     if (team) localStorage.setItem('entryTeam', team);
 
-    // The invite path, used both to skip-if-registered and as the installed icon's start_url.
-    const joinPath = `/${slug}/join?r=${role}` + (team ? `&team=${encodeURIComponent(team)}` : '');
+    // The invite path (PATH-only, no query — iOS strips the query from a PWA start_url), used both to
+    // skip-if-registered and as the installed icon's start_url.
+    const joinPath = `/${slug}/join/${role}` + (team ? `/${encodeURIComponent(team)}` : '');
 
     // On iOS, Add-to-Home-Screen uses the manifest start_url (not the current URL), so a plain icon
     // opens "/<club>" and loses the operator/team context — the installed app then can't tell who they

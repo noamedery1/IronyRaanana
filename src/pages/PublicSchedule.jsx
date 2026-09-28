@@ -54,8 +54,8 @@ function PublicSchedule() {
         // breadcrumb, so a parent who once glanced at the trainer page isn't trapped there.
         if (isTrainer) { navigate(`/${club.slug}/trainer`, { replace: true }); return; }
         // Came in via a parent/operator invite but haven't registered yet → open that registration.
-        if (entryRole === 'member' && entryTeam) { navigate(`/${club.slug}/join?r=member&team=${encodeURIComponent(entryTeam)}`, { replace: true }); return; }
-        if (entryRole === 'operator') { navigate(`/${club.slug}/join?r=operator`, { replace: true }); return; }
+        if (entryRole === 'member' && entryTeam) { navigate(`/${club.slug}/join/member/${encodeURIComponent(entryTeam)}`, { replace: true }); return; }
+        if (entryRole === 'operator') { navigate(`/${club.slug}/join/operator`, { replace: true }); return; }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

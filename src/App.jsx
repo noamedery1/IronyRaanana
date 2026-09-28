@@ -52,8 +52,12 @@ function App() {
         {/* Superuser console (system owner) */}
         <Route path="/superuser" element={<SuperUser />} />
 
-        {/* Invite-based registration — only valid inside a real club link */}
+        {/* Invite-based registration — only valid inside a real club link. Path-based variants
+            (/:club/join/:role[/:team]) carry the role/team in the PATH, because iOS strips the query
+            string from a PWA's start_url — so the installed icon must not rely on "?r=operator". */}
         <Route path="/:club/join" element={<RequireClub><Join /></RequireClub>} />
+        <Route path="/:club/join/:role" element={<RequireClub><Join /></RequireClub>} />
+        <Route path="/:club/join/:role/:team" element={<RequireClub><Join /></RequireClub>} />
 
         {/* Per-club manager dashboard — each manager manages only their own club */}
         <Route path="/:club/admin" element={<RequireClub><AdminLogin /></RequireClub>} />
