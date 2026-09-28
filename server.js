@@ -411,8 +411,15 @@ app.get('/api/:club/requests/:id/reject', async (req, res) => {
 app.get(/^\/clubs\/([a-z0-9-]+)\.webmanifest$/, async (req, res) => {
     const club = await getClub(req.params[0]);
     if (!club) return res.status(404).json({ error: 'not found' });
+    // Optional start_url override, restricted to a path within THIS club (so the installed icon can
+    // open e.g. the operator invite). Must be a relative path beginning "/<slug>" — never off-site.
+    let start;
+    const s = req.query.start;
+    if (typeof s === 'string' && s.startsWith(`/${club.slug}`) && !s.startsWith('//') && !/^\/[a-z0-9-]+:/i.test(s)) {
+        start = s;
+    }
     res.set('Content-Type', 'application/manifest+json; charset=utf-8');
-    res.json(manifestFor(club));
+    res.json(manifestFor(club, start));
 });
 
 // Uploaded club icons — legacy volume path (kept for any pre-DB uploads).

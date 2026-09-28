@@ -113,7 +113,10 @@ export async function getAsset(slug, kind) {
     return r.rows[0] || null;
 }
 
-export function manifestFor(club) {
+export function manifestFor(club, startUrl) {
+    // `id` stays constant per club so it's always the same installed app; only start_url varies.
+    // start_url can be overridden (e.g. an invite page) so the installed icon opens with that context
+    // — important on iOS, where Add-to-Home-Screen uses the manifest start_url, not the current URL.
     return {
         id: `/${club.slug}`,
         name: club.name,
@@ -123,7 +126,7 @@ export function manifestFor(club) {
         theme_color: club.themeColor || '#ff7a18',
         background_color: club.backgroundColor || '#070b16',
         display: 'standalone', orientation: 'portrait',
-        start_url: `/${club.slug}`, scope: '/',
+        start_url: startUrl || `/${club.slug}`, scope: '/',
         icons: [
             { src: club.icon192, sizes: '192x192', type: 'image/png' },
             { src: club.icon512, sizes: '512x512', type: 'image/png' },

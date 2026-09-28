@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import BrandMark from '../components/BrandMark';
-import { addMembership, getIdentity, registerIdentityPush } from '../userIdentity.js';
+import { addMembership, getIdentity, getMemberships, registerIdentityPush } from '../userIdentity.js';
 import { isInAppBrowser, isIOS } from '../inAppBrowser.js';
 
 // Invite-based registration. Opened from a manager-generated link:
@@ -34,6 +34,32 @@ export default function Join() {
     // a member/operator link → its own registration (never the trainer portal).
     localStorage.setItem('entryRole', role);
     if (team) localStorage.setItem('entryTeam', team);
+
+    // The invite path, used both to skip-if-registered and as the installed icon's start_url.
+    const joinPath = `/${slug}/join?r=${role}` + (team ? `&team=${encodeURIComponent(team)}` : '');
+
+    // On iOS, Add-to-Home-Screen uses the manifest start_url (not the current URL), so a plain icon
+    // opens "/<club>" and loses the operator/team context — the installed app then can't tell who they
+    // are. Point this page's manifest at the invite URL so the icon opens the registration/enter flow.
+    useEffect(() => {
+        const link = document.querySelector('link[rel="manifest"]');
+        if (!link) return;
+        const prev = link.getAttribute('href');
+        link.setAttribute('href', `/clubs/${slug}.webmanifest?start=${encodeURIComponent(joinPath)}`);
+        return () => { if (prev) link.setAttribute('href', prev); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slug]);
+
+    // Already registered in THIS storage context (e.g. reopening the installed icon) → go to the board,
+    // don't ask again.
+    useEffect(() => {
+        const id = getIdentity();
+        const done = role === 'operator'
+            ? id.role === 'operator'
+            : (!!team && getMemberships().some((m) => m.team === team));
+        if (done) window.location.replace(`/${slug}`);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const submit = async (e) => {
         e.preventDefault();
