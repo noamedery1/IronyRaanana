@@ -45,6 +45,7 @@ const AdminDashboard = () => {
     });
     const [teamConfig, setTeamConfig] = useState([]);
     const [coachOf, setCoachOf] = useState({}); // team name → coach, derived from the trainers table
+    const [pendingCount, setPendingCount] = useState(0); // pending trainer requests → sidebar badge
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
     const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
@@ -231,6 +232,21 @@ const AdminDashboard = () => {
         const id = setInterval(() => { if (dirtyRef.current) saveDraftRef.current?.(); }, 30000);
         return () => clearInterval(id);
     }, []);
+
+    // Pending trainer-request count → the "בקשות לאישור" sidebar badge, so the manager notices a
+    // waiting request without opening the tab. Polls every 60s; ApprovalsPanel also refreshes it on act.
+    const loadPending = () => {
+        fetch(`/api/${club.slug}/requests?status=pending`, { headers: authHeaders(club.slug) })
+            .then((r) => (r.ok ? r.json() : { requests: [] }))
+            .then((d) => setPendingCount(Array.isArray(d.requests) ? d.requests.length : 0))
+            .catch(() => { /* view-only / offline — leave the badge as is */ });
+    };
+    useEffect(() => {
+        loadPending();
+        const id = setInterval(loadPending, 60000);
+        return () => clearInterval(id);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [club.slug]);
 
     // Preview reports edits → instant local cache (crash safety) + debounced DB save.
     const handlePreviewChange = (payload) => {
@@ -866,7 +882,7 @@ const AdminDashboard = () => {
             case 'publish':
                 return <PublishPanel clubSlug={getActiveClub().slug} />;
             case 'approvals':
-                return <ApprovalsPanel clubSlug={getActiveClub().slug} />;
+                return <ApprovalsPanel clubSlug={getActiveClub().slug} onChange={loadPending} />;
             default:
                 return null;
         }
@@ -877,11 +893,18 @@ const AdminDashboard = () => {
             {/* Header */}
             <header style={{ background: 'var(--chrome-bg)', backdropFilter: 'blur(20px) saturate(1.4)', padding: isMobile ? '0.6rem 0.8rem' : '0.9rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.6rem' : '1.2rem', minWidth: 0 }}>
-                    <button
-                        onClick={() => setSidebarOpen(o => !o)}
-                        title={sidebarOpen ? 'הסתר תפריט' : 'הצג תפריט'}
-                        style={{ background: 'var(--glass-2)', color: 'var(--text)', border: '1px solid var(--glass-border)', width: '40px', height: '40px', borderRadius: '11px', cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}
-                    >☰</button>
+                    <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+                        <button
+                            onClick={() => setSidebarOpen(o => !o)}
+                            title={sidebarOpen ? 'הסתר תפריט' : 'הצג תפריט'}
+                            style={{ background: 'var(--glass-2)', color: 'var(--text)', border: '1px solid var(--glass-border)', width: '40px', height: '40px', borderRadius: '11px', cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0 }}
+                        >☰</button>
+                        {pendingCount > 0 && !sidebarOpen && (
+                            <span title={`${pendingCount} בקשות ממתינות`} style={{ position: 'absolute', top: -4, insetInlineEnd: -4, background: '#ef4444', color: '#fff', fontSize: '0.68rem', fontWeight: 800, minWidth: 18, height: 18, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: '2px solid var(--chrome-bg)' }}>
+                                {pendingCount}
+                            </span>
+                        )}
+                    </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0 }}>
                         <img src={club.logo || club.icon512 || club.icon192 || '/men_logo.png'} alt={club.name || 'Logo'} style={{ height: isMobile ? '36px' : '48px', width: 'auto', borderRadius: '12px', background: '#fff', padding: '3px', flexShrink: 0 }} />
                         <div style={{ minWidth: 0 }}>
@@ -942,6 +965,11 @@ const AdminDashboard = () => {
                         </button>
                         <button style={menuButtonStyle(activeTab === 'approvals')} onClick={() => selectTab('approvals')}>
                             ✅ בקשות לאישור
+                            {pendingCount > 0 && (
+                                <span style={{ marginInlineStart: 'auto', background: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 800, minWidth: 20, height: 20, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', boxShadow: '0 0 0 2px rgba(239,68,68,0.25)' }}>
+                                    {pendingCount}
+                                </span>
+                            )}
                         </button>
                         <button style={menuButtonStyle(activeTab === 'weekBuilder')} onClick={() => selectTab('weekBuilder')}>
                             📅 חוקי שיבוץ

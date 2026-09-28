@@ -5,14 +5,16 @@ import { authHeaders } from '../adminApi.js';
 // the live schedule in the DB and pushes the affected team.
 const TYPE_LABEL = { cancel: 'ביטול', change: 'שינוי', move: 'העברת יום', propose: 'הצעת שיבוץ' };
 
-export default function ApprovalsPanel({ clubSlug }) {
+export default function ApprovalsPanel({ clubSlug, onChange }) {
     const [requests, setRequests] = useState([]);
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
 
     const load = useCallback(() => {
         fetch(`/api/${clubSlug}/requests?status=pending`, { headers: authHeaders(clubSlug) }).then((r) => r.json())
-            .then((d) => setRequests(d.requests || [])).catch(() => {});
+            .then((d) => { setRequests(d.requests || []); onChange?.(); }).catch(() => {});
+        // onChange only reports the count upward; keeping it out of deps avoids re-running on each render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clubSlug]);
 
     useEffect(() => { load(); }, [load]);
