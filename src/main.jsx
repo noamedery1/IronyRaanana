@@ -6,7 +6,7 @@ import { I18nProvider } from './i18n.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import ErrorPage from './pages/ErrorPage.jsx'
 import { setupClubPwa } from './clubPwa.js'
-import { loadClubs, isKnownClub } from './clubConfig.js'
+import { loadClubs, isKnownClub, getClub } from './clubConfig.js'
 import { initTheme } from './theme.js'
 import './pwaInstall.js' // capture the browser's install prompt as early as possible
 
@@ -15,6 +15,30 @@ import './pwaInstall.js' // capture the browser's install prompt as early as pos
 // subdomain's club into the path (e.g. subdomain "/" -> "/fcraanana", "/join" -> "/fcraanana/join")
 // so the existing routes + getActiveClub work unchanged. Different origin ⇒ its own installed app,
 // service worker, push subscription and icon — which is what isolates multiple clubs on one device.
+// A club with its own subdomain must be used ONLY on that origin — otherwise a person who registers
+// on the subdomain (invite links point there) but reopens an older apex PWA lands on an origin with
+// none of their identity (localStorage is per-origin) and sees the anonymous welcome. The server
+// 302s apex→subdomain, but a cached PWA shell can bypass it, so converge on the client too: on the
+// bare apex, for a subdomain-club path, send an ANONYMOUS visitor to the subdomain. We deliberately
+// do NOT move someone who already has identity on the apex (they registered here) — only the
+// identity-less, so no one is cut off from an account that lives on this origin.
+function redirectApexToSubdomain() {
+    try {
+        const parts = window.location.hostname.split('.');
+        if (parts.length <= 2) return;            // localhost / bare domain — nothing to do
+        if (isKnownClub(parts[0])) return;        // already on a club subdomain
+        const seg = window.location.pathname.split('/').filter(Boolean)[0];
+        if (!seg) return;                         // apex root = product/sales page
+        const club = getClub(seg);
+        if (!club || !club.subdomain || !club.inviteOrigin) return;
+        const hasLocalIdentity = localStorage.getItem('userToken') || localStorage.getItem('isAdmin')
+            || localStorage.getItem('trainerToken') || localStorage.getItem('mgrToken:' + seg);
+        if (hasLocalIdentity) return;             // registered on THIS origin — don't strand them
+        window.location.replace(club.inviteOrigin + window.location.pathname + window.location.search + window.location.hash);
+        return true; // navigation started; caller should stop booting
+    } catch { return false; }
+}
+
 function applySubdomainClub() {
     try {
         const host = window.location.hostname;
@@ -62,6 +86,7 @@ async function boot() {
   try {
     initTheme()
     await loadClubs()
+    if (redirectApexToSubdomain()) return // converging to the club's own origin — stop; the page is navigating
     applySubdomainClub() // carry a subdomain's club into the path before routing/PWA identity
     setupClubPwa()
   } catch (err) {

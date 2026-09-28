@@ -58,6 +58,11 @@ export function getActiveClub() {
     return REGISTRY[getClubSlug()] || REGISTRY[DEFAULT_CLUB];
 }
 
+// The registered club for an exact slug (no raanana fallback), or null.
+export function getClub(slug) {
+    return (slug && REGISTRY[slug]) || null;
+}
+
 export function getAllClubs() {
     return Object.values(REGISTRY);
 }
