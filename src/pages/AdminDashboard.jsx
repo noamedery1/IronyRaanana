@@ -157,9 +157,12 @@ const AdminDashboard = () => {
             const dbTeams = Array.isArray(teamsR.teams) ? teamsR.teams : [];
             // name(lower) → {age, grade}, so builder/constraints rows can be sorted by them too.
             const metaOf = {}; dbTeams.forEach((t) => { metaOf[(t.name || '').toLowerCase()] = { age: t.age || '', grade: t.grade || '' }; });
-            const present = new Set(sheet.teams.map((t) => `${t.name}|${t.coach || ''}`));
+            // Match by NORMALIZED NAME (not name+coach): a team name is unique, so a team already in
+            // the draft must not be re-added as an empty row just because its coach string now differs
+            // (e.g. draft imported without a coach, while teams.coach was filled by a prior publish).
+            const present = new Set(sheet.teams.map((t) => nrm(t.name)));
             dbTeams.forEach((t) => {
-                const key = `${t.name}|${t.coach || ''}`;
+                const key = nrm(t.name);
                 if (present.has(key)) return;
                 present.add(key);
                 sheet.teams.push({ name: t.name, coach: t.coach || '', type: t.gender || 'M', age: t.age || '', grade: t.grade || '', rowIndex: sheet.teams.length });
@@ -187,10 +190,11 @@ const AdminDashboard = () => {
             });
             const rulesOnly = saved.filter((t) => !draftKeys.has(`${t.name}|${t.coach || ''}`))
                 .map((t) => { const m = metaFor(t); return { ...t, age: t.age || m.age || '', grade: t.grade || m.grade || '' }; });
-            // manual teams with neither a draft session nor saved rules yet
-            const covered = new Set([...fromDraft, ...rulesOnly].map((t) => `${t.name}|${t.coach || ''}`));
+            // manual teams with neither a draft session nor saved rules yet (dedup by normalized name,
+            // so a team already represented isn't added again as an empty rules row).
+            const covered = new Set([...fromDraft, ...rulesOnly].map((t) => nrm(t.name)));
             const teamsOnly = dbTeams
-                .filter((t) => !covered.has(`${t.name}|${t.coach || ''}`))
+                .filter((t) => !covered.has(nrm(t.name)))
                 .map((t) => ({ name: t.name, coach: t.coach || '', type: t.gender || 'M', age: t.age || '', grade: t.grade || '', sessionsPerWeek: 3, constraints: [] }));
             setTeamConfig([...fromDraft, ...rulesOnly, ...teamsOnly]);
 
