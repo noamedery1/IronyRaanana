@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import BrandMark from '../components/BrandMark';
 import { addMembership, getIdentity, registerIdentityPush } from '../userIdentity.js';
+import { isInAppBrowser, isIOS } from '../inAppBrowser.js';
 
 // Invite-based registration. Opened from a manager-generated link:
 //   /<club>/join?r=member&team=<teamLabel>   (parent/trainee of a team)
@@ -19,6 +20,15 @@ export default function Join() {
 
     const slug = getActiveClub().slug;
     const roleLabel = role === 'operator' ? 'מפעיל' : 'חבר קבוצה';
+
+    // In WhatsApp/Instagram/etc. in-app browsers (esp. on iOS) storage is ephemeral — a sign-up there
+    // won't be remembered. Steer the user to real Safari, where it persists.
+    const inApp = isInAppBrowser();
+    const [copied, setCopied] = useState(false);
+    const copyLink = () => {
+        const url = window.location.href;
+        navigator.clipboard?.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+    };
 
     // Mark how this device entered so the installed app's start page routes correctly:
     // a member/operator link → its own registration (never the trainer portal).
@@ -43,7 +53,10 @@ export default function Join() {
             if (!data.valid) { setError(data.error || 'הרשמה נכשלה'); return; }
             addMembership({ token: data.token, role: data.role, team: data.team, name: data.name }); // adds team, keeps existing
             registerIdentityPush(data.role, data.team).catch(() => {}); // best-effort push opt-in (this team)
-            window.location.href = `/${slug}`; // enter the app in the right view
+            // Enter via a personal link so identity also travels in the URL — survives contexts where
+            // localStorage doesn't (iOS in-app browsers / installed-PWA storage isolation).
+            const q = `u=${encodeURIComponent(data.token)}&r=${encodeURIComponent(data.role)}` + (data.team ? `&team=${encodeURIComponent(data.team)}` : '');
+            window.location.href = `/${slug}?${q}`;
         } catch (err) {
             console.error(err);
             setError('שגיאת תקשורת, נסו שוב');
@@ -66,6 +79,21 @@ export default function Join() {
                 <div style={{ display: 'inline-block', background: 'rgba(56,189,248,0.15)', color: '#a5f3fc', borderRadius: 20, padding: '0.25rem 0.9rem', fontSize: '0.82rem', fontWeight: 700, marginBottom: '1.3rem' }}>
                     {roleLabel}{team ? ' · ' + team : ''}
                 </div>
+
+                {inApp && (
+                    <div style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.5)', borderRadius: 14, padding: '0.9rem 1rem', marginBottom: '1.2rem', textAlign: 'right' }}>
+                        <div style={{ color: '#fde68a', fontWeight: 800, marginBottom: '0.4rem' }}>⚠️ פתחו בדפדפן ספארי</div>
+                        <div style={{ color: '#e2e8f0', fontSize: '0.86rem', lineHeight: 1.6 }}>
+                            נכנסתם מתוך וואטסאפ/אפליקציה אחרת — הרשמה כאן <b>לא תישמר</b>.
+                            {isIOS()
+                                ? ' לחצו על כפתור השיתוף / ⋯ למטה ובחרו "פתח בספארי" (Open in Safari), ואז הירשמו.'
+                                : ' לחצו על ⋮ למעלה ובחרו "פתח בדפדפן" (Chrome), ואז הירשמו.'}
+                        </div>
+                        <button type="button" onClick={copyLink} style={{ marginTop: '0.7rem', background: '#f59e0b', color: '#111', border: 'none', borderRadius: 10, padding: '0.5rem 1rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            {copied ? '✓ הועתק — הדביקו בספארי' : '📋 העתק קישור'}
+                        </button>
+                    </div>
+                )}
                 <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם מלא" style={inp} />
                     <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="אימייל" style={{ ...inp, direction: 'ltr', textAlign: 'right' }} />

@@ -15,6 +15,35 @@ import './pwaInstall.js' // capture the browser's install prompt as early as pos
 // subdomain's club into the path (e.g. subdomain "/" -> "/fcraanana", "/join" -> "/fcraanana/join")
 // so the existing routes + getActiveClub work unchanged. Different origin ⇒ its own installed app,
 // service worker, push subscription and icon — which is what isolates multiple clubs on one device.
+// Personal-link sign-in: /<club>?u=<token>&r=<role>&team=<team>. Restores identity from the URL so a
+// saved link works in ANY context — fixes iOS in-app browsers / installed-PWA storage isolation, where
+// localStorage doesn't carry between where you registered and where you reopen. The token is validated
+// server-side on every authenticated call, so trusting it here (then stripping it from the URL) is safe.
+function applyIdentityLink() {
+    try {
+        const p = new URLSearchParams(window.location.search);
+        const u = p.get('u');
+        if (!u) return;
+        const r = p.get('r') === 'operator' ? 'operator' : (p.get('r') === 'member' ? 'member' : '');
+        const team = p.get('team') || '';
+        localStorage.setItem('userToken', u);
+        if (r) localStorage.setItem('userRole', r);
+        if (r) localStorage.setItem('entryRole', r);
+        if (team) {
+            localStorage.setItem('userTeam', team);
+            localStorage.setItem('entryTeam', team);
+            let list = [];
+            try { list = JSON.parse(localStorage.getItem('memberships') || '[]'); } catch { list = []; }
+            if (!Array.isArray(list)) list = [];
+            if (!list.find((m) => m && m.team === team)) list.push({ team, token: u });
+            localStorage.setItem('memberships', JSON.stringify(list));
+        }
+        p.delete('u'); p.delete('r'); p.delete('team');
+        const qs = p.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+    } catch { /* non-fatal */ }
+}
+
 // A club with its own subdomain must be used ONLY on that origin — otherwise a person who registers
 // on the subdomain (invite links point there) but reopens an older apex PWA lands on an origin with
 // none of their identity (localStorage is per-origin) and sees the anonymous welcome. The server
@@ -86,6 +115,7 @@ async function boot() {
   try {
     initTheme()
     await loadClubs()
+    applyIdentityLink() // a personal ?u=<token> link signs the user in before any routing decision
     if (redirectApexToSubdomain()) return // converging to the club's own origin — stop; the page is navigating
     applySubdomainClub() // carry a subdomain's club into the path before routing/PWA identity
     setupClubPwa()
