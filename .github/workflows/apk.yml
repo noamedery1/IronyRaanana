@@ -10,6 +10,7 @@ on:
     branches: [feat/native-app]
     paths:
       - "src/**"
+      - "native-shell/**"
       - "android/**"
       - "capacitor.config.json"
       - "package.json"
