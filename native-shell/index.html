@@ -83,11 +83,22 @@
     }
 
     function getRecent() { try { return JSON.parse(localStorage.getItem('recentClubs') || '[]'); } catch (e) { return []; } }
+    // Mirror the clubs to native storage (Capacitor Preferences → Android SharedPreferences) so the
+    // home-screen widget can read them without the user configuring anything.
+    function syncNative(list) {
+      try {
+        if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Preferences) {
+          Capacitor.Plugins.Preferences.set({ key: 'squadio_clubs', value: JSON.stringify(list || []) });
+        }
+      } catch (e) { /* non-native / plugin missing */ }
+    }
     function saveRecent(slug) {
       if (!slug) return;
       var list = getRecent().filter(function (s) { return s !== slug; });
       list.unshift(slug);
-      try { localStorage.setItem('recentClubs', JSON.stringify(list.slice(0, 6))); } catch (e) {}
+      var trimmed = list.slice(0, 6);
+      try { localStorage.setItem('recentClubs', JSON.stringify(trimmed)); } catch (e) {}
+      syncNative(trimmed);
     }
 
     function go(url, slug) { if (slug) saveRecent(slug); window.location.href = url; }
@@ -140,6 +151,7 @@
     //  - navigating BACK here (same session)  → always show it, so you can switch / add a club.
     (function boot() {
       var list = getRecent();
+      syncNative(list); // keep the widget's club list fresh on every open
       var backHome = false;
       try { backHome = !!sessionStorage.getItem('homeShown'); sessionStorage.setItem('homeShown', '1'); } catch (e) {}
       if (!backHome && list.length === 1) { go(clubUrl(list[0]), list[0]); return; }

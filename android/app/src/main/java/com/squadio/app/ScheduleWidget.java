@@ -26,15 +26,19 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-// Home-screen widget: a live summary of a team's upcoming schedule, pulled from the existing public
-// API (/api/<club>/schedule). Configured per-instance (club + one or more teams); the ⇄ button
-// cycles between the configured teams, ↻ refreshes, and tapping the body opens the app.
+// Home-screen widget: a live weekly summary of a club's schedule, pulled from the existing public API
+// (/api/<club>/schedule) — no new service, no configuration. The club list comes from the app itself
+// (the home screen mirrors it to Capacitor Preferences → "CapacitorStorage"/"squadio_clubs"), so the
+// widget shows whatever clubs you've entered. ⇄ cycles clubs, ↻ refreshes, tapping opens the app.
 public class ScheduleWidget extends AppWidgetProvider {
-    static final String PREFS = "squadio_widget";
+    static final String CAP_PREFS = "CapacitorStorage"; // where @capacitor/preferences stores on Android
+    static final String PREFS = "squadio_widget";        // our per-widget index
+    static final String KEY_CLUBS = "squadio_clubs";
     static final String ACTION_REFRESH = "com.squadio.app.WIDGET_REFRESH";
     static final String ACTION_SWITCH = "com.squadio.app.WIDGET_SWITCH";
     static final String BASE = "https://squadio.techbynoam.com"; // apex serves /api for every club
     static final String[] HEB_DAYS = {"ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"};
+    static final int MAX_LINES = 6;
 
     @Override
     public void onUpdate(Context context, AppWidgetManager mgr, int[] ids) {
@@ -44,7 +48,7 @@ public class ScheduleWidget extends AppWidgetProvider {
     @Override
     public void onDeleted(Context context, int[] ids) {
         SharedPreferences.Editor e = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit();
-        for (int id : ids) { e.remove("sources_" + id); e.remove("idx_" + id); }
+        for (int id : ids) e.remove("idx_" + id);
         e.apply();
     }
 
@@ -56,9 +60,9 @@ public class ScheduleWidget extends AppWidgetProvider {
         if (id == AppWidgetManager.INVALID_APPWIDGET_ID) return;
         AppWidgetManager mgr = AppWidgetManager.getInstance(context);
         if (ACTION_SWITCH.equals(action)) {
-            SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-            int n = sourcesCount(sp, id);
+            int n = clubs(context).size();
             if (n > 1) {
+                SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
                 int idx = sp.getInt("idx_" + id, 0);
                 sp.edit().putInt("idx_" + id, (idx + 1) % n).apply();
             }
@@ -68,8 +72,18 @@ public class ScheduleWidget extends AppWidgetProvider {
         }
     }
 
-    static int sourcesCount(SharedPreferences sp, int id) {
-        try { return new JSONArray(sp.getString("sources_" + id, "[]")).length(); } catch (Exception e) { return 0; }
+    // The clubs the user has entered in the app (mirrored by the home screen into Capacitor Preferences).
+    static List<String> clubs(Context context) {
+        List<String> out = new ArrayList<>();
+        try {
+            String raw = context.getSharedPreferences(CAP_PREFS, Context.MODE_PRIVATE).getString(KEY_CLUBS, "[]");
+            JSONArray a = new JSONArray(raw);
+            for (int i = 0; i < a.length(); i++) {
+                String s = a.optString(i, "").trim();
+                if (!s.isEmpty()) out.add(s);
+            }
+        } catch (Exception ignored) {}
+        return out;
     }
 
     void renderAsync(final Context context, final AppWidgetManager mgr, final int id) {
@@ -94,85 +108,93 @@ public class ScheduleWidget extends AppWidgetProvider {
     }
 
     void renderNow(Context context, AppWidgetManager mgr, int id) throws Exception {
-        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        JSONArray sources = new JSONArray(sp.getString("sources_" + id, "[]"));
         RemoteViews rv = new RemoteViews(context.getPackageName(), R.layout.widget_schedule);
         wireButtons(context, rv, id);
 
-        if (sources.length() == 0) {
-            rv.setTextViewText(R.id.w_title, "לא הוגדר");
+        List<String> clubList = clubs(context);
+        if (clubList.isEmpty()) {
+            rv.setTextViewText(R.id.w_title, "Squadio");
             rv.setViewVisibility(R.id.w_line0, View.VISIBLE);
-            rv.setTextViewText(R.id.w_line0, "הסירו והוסיפו את הווידג׳ט כדי להגדיר קבוצה");
+            rv.setTextViewText(R.id.w_line0, "היכנסו לאפליקציה למועדון כדי לטעון לו\"ז");
+            hideLinesFrom(rv, 1);
             mgr.updateAppWidget(id, rv);
             return;
         }
 
-        int idx = sp.getInt("idx_" + id, 0) % sources.length();
-        JSONObject src = sources.getJSONObject(idx);
-        String club = src.getString("club");
-        String team = src.getString("team");
+        SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        int idx = sp.getInt("idx_" + id, 0) % clubList.size();
+        String club = clubList.get(idx);
 
         String json = httpGet(BASE + "/api/" + club + "/schedule");
         JSONObject data = new JSONObject(json);
         JSONArray sessions = data.optJSONArray("sessions");
 
-        String nt = norm(team);
-        SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
-        Calendar today = Calendar.getInstance();
-        today.set(Calendar.HOUR_OF_DAY, 0); today.set(Calendar.MINUTE, 0);
-        today.set(Calendar.SECOND, 0); today.set(Calendar.MILLISECOND, 0);
-
+        // The published schedule is a weekly template dated to its publication week; treat it as the
+        // CURRENT week by day-of-week and order it starting from today, so nothing is "in the past".
+        int todayDow = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) - 1; // 0 = Sunday
         List<Row> rows = new ArrayList<>();
         if (sessions != null) {
             for (int i = 0; i < sessions.length(); i++) {
                 JSONObject s = sessions.getJSONObject(i);
-                if (!norm(s.optString("team")).equals(nt)) continue;
-                String date = s.optString("date", "");
-                Date d;
-                try { d = f.parse(date); } catch (Exception e) { continue; }
-                if (d == null || d.before(today.getTime())) continue;
+                if ("cancelled".equals(s.optString("status"))) continue;
                 Row r = new Row();
-                r.date = d; r.dateStr = date;
-                r.start = s.optString("start_time", ""); r.end = s.optString("end_time", "");
-                r.hall = s.optString("hall", ""); r.status = s.optString("status", ""); r.type = s.optString("type", "");
+                r.team = s.optString("team", "");
+                r.dow = s.optInt("day_of_week", dowFromDate(s.optString("date", "")));
+                r.start = s.optString("start_time", "");
+                r.end = s.optString("end_time", "");
+                r.hall = s.optString("hall", "");
+                r.type = s.optString("type", "");
+                r.order = ((r.dow - todayDow) % 7 + 7) % 7; // 0 = today, then forward through the week
                 rows.add(r);
             }
         }
         Collections.sort(rows, new Comparator<Row>() {
-            public int compare(Row a, Row b) { int c = a.date.compareTo(b.date); return c != 0 ? c : a.start.compareTo(b.start); }
+            public int compare(Row a, Row b) {
+                if (a.order != b.order) return a.order - b.order;
+                return a.start.compareTo(b.start);
+            }
         });
 
-        rv.setTextViewText(R.id.w_title, team);
-        rv.setTextViewText(R.id.w_sub, club + (sources.length() > 1 ? "   ·   " + (idx + 1) + "/" + sources.length() : ""));
+        rv.setTextViewText(R.id.w_title, club);
+        rv.setTextViewText(R.id.w_sub, "לו\"ז השבוע" + (clubList.size() > 1 ? "   ·   " + (idx + 1) + "/" + clubList.size() : ""));
 
         int[] lineIds = {R.id.w_line0, R.id.w_line1, R.id.w_line2, R.id.w_line3, R.id.w_line4, R.id.w_line5};
+        int shown = Math.min(rows.size(), MAX_LINES);
         for (int i = 0; i < lineIds.length; i++) {
-            if (i < rows.size()) {
+            if (i < shown) {
                 rv.setTextViewText(lineIds[i], formatRow(rows.get(i)));
                 rv.setViewVisibility(lineIds[i], View.VISIBLE);
             } else {
                 rv.setViewVisibility(lineIds[i], View.GONE);
             }
         }
-        if (rows.isEmpty()) {
+        if (shown == 0) {
             rv.setViewVisibility(R.id.w_line0, View.VISIBLE);
-            rv.setTextViewText(R.id.w_line0, "אין אימונים קרובים");
+            rv.setTextViewText(R.id.w_line0, "אין אימונים השבוע");
         }
         rv.setTextViewText(R.id.w_updated, "עודכן " + new SimpleDateFormat("HH:mm", Locale.US).format(new Date()));
         mgr.updateAppWidget(id, rv);
     }
 
+    void hideLinesFrom(RemoteViews rv, int from) {
+        int[] lineIds = {R.id.w_line0, R.id.w_line1, R.id.w_line2, R.id.w_line3, R.id.w_line4, R.id.w_line5};
+        for (int i = from; i < lineIds.length; i++) rv.setViewVisibility(lineIds[i], View.GONE);
+    }
+
+    int dowFromDate(String ymd) {
+        try {
+            Calendar c = Calendar.getInstance();
+            c.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(ymd));
+            return c.get(Calendar.DAY_OF_WEEK) - 1;
+        } catch (Exception e) { return 0; }
+    }
+
     String formatRow(Row r) {
-        Calendar c = Calendar.getInstance();
-        try { c.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(r.dateStr)); } catch (Exception e) { /* keep now */ }
-        int dow = c.get(Calendar.DAY_OF_WEEK) - 1; // 0 = Sunday
-        String day = (dow >= 0 && dow < 7) ? HEB_DAYS[dow] : "";
-        String dm = c.get(Calendar.DAY_OF_MONTH) + "/" + (c.get(Calendar.MONTH) + 1);
+        String day = (r.dow >= 0 && r.dow < 7) ? HEB_DAYS[r.dow] : "";
         String time = r.start + (r.end.isEmpty() ? "" : "–" + r.end);
-        String line = day + " " + dm + "   " + time;
-        if (!r.hall.isEmpty()) line += "   ·   " + r.hall;
-        if ("cancelled".equals(r.status)) line = "✗ " + line;
-        else if ("MATCH".equalsIgnoreCase(r.type) || "match".equals(r.type)) line = "🏆 " + line;
+        String line = (r.team.isEmpty() ? "" : r.team + "  ·  ") + "יום " + day + "  " + time;
+        if (!r.hall.isEmpty()) line += "  ·  " + r.hall;
+        if ("MATCH".equalsIgnoreCase(r.type)) line = "🏆 " + line;
         return line;
     }
 
@@ -195,11 +217,6 @@ public class ScheduleWidget extends AppWidgetProvider {
 
     static int immutable() { return Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_IMMUTABLE : 0; }
 
-    static String norm(String s) {
-        if (s == null) return "";
-        return s.replaceAll("['\"׳״]", "").replaceAll("\\s+", " ").trim();
-    }
-
     static String httpGet(String urlStr) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(urlStr).openConnection();
         c.setConnectTimeout(10000);
@@ -218,7 +235,7 @@ public class ScheduleWidget extends AppWidgetProvider {
     }
 
     static class Row {
-        Date date;
-        String dateStr, start, end, hall, status, type;
+        String team, start, end, hall, type;
+        int dow, order;
     }
 }
