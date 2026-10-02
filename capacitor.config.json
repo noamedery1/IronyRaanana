@@ -1,9 +1,8 @@
 {
   "appId": "com.squadio.app",
   "appName": "Squadio",
-  "webDir": "dist",
+  "webDir": "native-shell",
   "server": {
-    "url": "https://squadio.techbynoam.com",
     "allowNavigation": [
       "squadio.techbynoam.com",
       "*.squadio.techbynoam.com"
