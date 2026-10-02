@@ -1,0 +1,79 @@
+# Build the Android APK in CI (same method as the SportDle project).
+# Why CI, not local: this dev machine has no Android SDK/Gradle. ubuntu-latest ships all three.
+# Output: a downloadable artifact "squadio-apk" (Actions → the run → Artifacts). It is a DEBUG APK
+# signed with the Android debug key — fine for sideloading on your own phone, NOT for the store
+# (the store needs a release-signed AAB, a separate step with keystore secrets).
+name: APK
+
+on:
+  push:
+    branches: [feat/native-app]
+    paths:
+      - "src/**"
+      - "android/**"
+      - "capacitor.config.json"
+      - "package.json"
+      - ".github/workflows/apk.yml"
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Capacitor 8's CLI requires Node >= 22 ("engines"); with 20 `cap sync` fails.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build web (dist)
+        run: npm run build
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # gradlew is committed from Windows; ensure it's executable (cap sync runs it too).
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Capacitor sync (copy dist → android)
+        run: |
+          out=$(npx cap sync android 2>&1) || { echo "$out" | tail -30; echo "::error::cap sync failed"; exit 1; }
+          echo "$out" | tail -6
+
+      - name: Gradle assembleDebug
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          set -o pipefail
+          if ! ./gradlew assembleDebug --no-daemon 2>&1 | tee /tmp/gradle.log; then
+            echo "----- last 60 lines -----"; tail -60 /tmp/gradle.log
+            msg=$(grep -m1 -E "What went wrong|error:|Caused by" /tmp/gradle.log | cut -c1-300)
+            echo "::error::Gradle failed · ${msg:-see output above}"
+            exit 1
+          fi
+
+      - name: Locate APK
+        id: out
+        run: |
+          apk=$(find android -name "*-debug.apk" | head -1)
+          if [ -z "$apk" ]; then echo "::error::no APK produced"; exit 1; fi
+          echo "  $apk · $(du -h "$apk" | cut -f1)"
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+          echo "::notice::APK built · $(du -h "$apk" | cut -f1) · download the 'squadio-apk' artifact"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: squadio-apk
+          path: ${{ steps.out.outputs.path }}
+          if-no-files-found: error
+          retention-days: 30
