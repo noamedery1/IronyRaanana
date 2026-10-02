@@ -60,7 +60,7 @@
       <div id="recent"></div>
     </div>
 
-    <div class="foot">אפליקציה אחת לכל המועדונים. כדי להחליף מועדון או להוסיף קישור אחר — לחצו על <b>כפתור ה״חזור״</b> של הטלפון כדי לחזור למסך הזה.</div>
+    <div class="foot">אפליקציה אחת לכל המועדונים. כדי להחליף מועדון או להוסיף קישור אחר — לחצו על כפתור הבית <b>⌂</b> שבתוך האפליקציה (למטה) כדי לחזור למסך הזה.</div>
   </div>
 
   <script>
@@ -69,8 +69,11 @@
     var inp = document.getElementById('inp');
     var err = document.getElementById('err');
 
-    function clubUrl(slug)  { return 'https://' + slug + SUB + '/' + slug; }
-    function adminUrl(slug) { return 'https://' + slug + SUB + '/' + slug + '/admin'; }
+    // Always use the APEX path — only some clubs have a subdomain. The server serves every club on the
+    // apex and 302-redirects the ones that do have a subdomain (kept in-app by allowNavigation), so this
+    // works for all clubs. Building "<slug>.squadio…" directly fails for clubs without a subdomain.
+    function clubUrl(slug)  { return BASE + '/' + slug; }
+    function adminUrl(slug) { return BASE + '/' + slug + '/admin'; }
 
     function slugFromUrl(u) {
       try {
@@ -143,7 +146,26 @@
       syncMembers(list);
     }
 
-    function go(url, slug) { if (slug) saveRecent(slug); window.location.href = url; }
+    // Write both widget keys from the current localStorage and resolve only when the native write
+    // finishes — otherwise navigating away can unload the page before the widget's data is saved.
+    function nativeSync() {
+      try {
+        if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Preferences) {
+          var P = Capacitor.Plugins.Preferences;
+          return Promise.all([
+            P.set({ key: 'squadio_clubs', value: JSON.stringify(getRecent()) }),
+            P.set({ key: 'squadio_members', value: JSON.stringify(getMembers()) })
+          ]);
+        }
+      } catch (e) {}
+      return Promise.resolve();
+    }
+
+    function go(url, slug) {
+      if (slug) saveRecent(slug);
+      var nav = function () { window.location.href = url; };
+      nativeSync().then(nav, nav);
+    }
 
     function enter() {
       err.textContent = '';
@@ -196,8 +218,7 @@
     //  - navigating BACK here (same session)  → always show it, so you can switch / add a club.
     (function boot() {
       var list = getRecent();
-      syncNative(list); // keep the widget's club list fresh on every open
-      syncMembers(getMembers()); // and the per-team memberships
+      nativeSync(); // mirror existing clubs + memberships to the widget on every open
       var backHome = false;
       try { backHome = !!sessionStorage.getItem('homeShown'); sessionStorage.setItem('homeShown', '1'); } catch (e) {}
       if (!backHome && list.length === 1) { go(clubUrl(list[0]), list[0]); return; }
