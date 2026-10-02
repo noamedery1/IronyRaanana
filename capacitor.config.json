@@ -1,0 +1,9 @@
+{
+  "appId": "com.squadio.app",
+  "appName": "Squadio",
+  "webDir": "dist",
+  "server": {
+    "url": "https://squadio.techbynoam.com",
+    "cleartext": false
+  }
+}
