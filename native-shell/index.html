@@ -82,6 +82,27 @@
       } catch (e) { return ''; }
     }
 
+    // Pull club + role + team out of an invite link, path-form (/<club>/join/<role>/<team>) or the
+    // legacy query (?r=&team=). The team is what lets the widget show just a parent's team.
+    function parseInvite(u) {
+      var out = { club: '', role: '', team: '' };
+      try {
+        var url = new URL(u);
+        var host = url.hostname.toLowerCase();
+        if (host.endsWith(SUB)) { var s = host.slice(0, -SUB.length); if (s && s.indexOf('.') < 0 && s !== 'www') out.club = s; }
+        var segs = url.pathname.split('/').filter(Boolean);
+        if (!out.club && segs.length) out.club = segs[0].toLowerCase();
+        var ji = segs.indexOf('join');
+        if (ji >= 0) {
+          out.role = (segs[ji + 1] || '').toLowerCase();
+          if (segs[ji + 2]) { try { out.team = decodeURIComponent(segs[ji + 2]); } catch (e) { out.team = segs[ji + 2]; } }
+        }
+        if (!out.role && url.searchParams.get('r')) out.role = url.searchParams.get('r').toLowerCase();
+        if (!out.team && url.searchParams.get('team')) out.team = url.searchParams.get('team');
+      } catch (e) {}
+      return out;
+    }
+
     function getRecent() { try { return JSON.parse(localStorage.getItem('recentClubs') || '[]'); } catch (e) { return []; } }
     // Mirror the clubs to native storage (Capacitor Preferences → Android SharedPreferences) so the
     // home-screen widget can read them without the user configuring anything.
@@ -101,6 +122,27 @@
       syncNative(trimmed);
     }
 
+    // Memberships {club, team} drive the widget: a parent's team shows only that team; an operator
+    // (no team) shows the whole club. Mirrored to native storage so the widget reads them.
+    function getMembers() { try { return JSON.parse(localStorage.getItem('members') || '[]'); } catch (e) { return []; } }
+    function syncMembers(list) {
+      try {
+        if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Preferences) {
+          Capacitor.Plugins.Preferences.set({ key: 'squadio_members', value: JSON.stringify(list || []) });
+        }
+      } catch (e) {}
+    }
+    function saveMember(club, role, team) {
+      if (!club) return;
+      var t = (role === 'member' && team) ? team : ''; // operator/manager → whole club
+      var key = club + '|' + t;
+      var list = getMembers().filter(function (m) { return (m.club + '|' + (m.team || '')) !== key; });
+      list.unshift({ club: club, team: t });
+      list = list.slice(0, 10);
+      try { localStorage.setItem('members', JSON.stringify(list)); } catch (e) {}
+      syncMembers(list);
+    }
+
     function go(url, slug) { if (slug) saveRecent(slug); window.location.href = url; }
 
     function enter() {
@@ -108,11 +150,14 @@
       var raw = inp.value.trim();
       if (!raw) { err.textContent = 'הדביקו קישור או הקלידו קוד מועדון'; return; }
       if (/^https?:\/\//i.test(raw)) {
-        // A full invite/admin link — go straight to it (keeps role/team in the path).
-        go(raw, slugFromUrl(raw));
+        // A full invite/admin link — capture club+role+team (for the widget), then go to it.
+        var p = parseInvite(raw);
+        if (p.club) saveMember(p.club, p.role, p.team);
+        go(raw, p.club || slugFromUrl(raw));
       } else {
         var slug = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
         if (!slug) { err.textContent = 'קוד מועדון לא תקין'; return; }
+        saveMember(slug, '', ''); // club code → whole-club view
         go(clubUrl(slug), slug);
       }
     }
@@ -152,6 +197,7 @@
     (function boot() {
       var list = getRecent();
       syncNative(list); // keep the widget's club list fresh on every open
+      syncMembers(getMembers()); // and the per-team memberships
       var backHome = false;
       try { backHome = !!sessionStorage.getItem('homeShown'); sessionStorage.setItem('homeShown', '1'); } catch (e) {}
       if (!backHome && list.length === 1) { go(clubUrl(list[0]), list[0]); return; }
