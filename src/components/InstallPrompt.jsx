@@ -10,6 +10,18 @@ import { resetApp } from '../resetApp.js';
 // - Always: a persistent pill. Native prompt if available, otherwise manual instructions
 //   (⋮ → Add to Home Screen) — so an install option is present even when Chrome won't
 //   auto-prompt (e.g. desktop, in-app browsers).
+// One step row of the iOS install guide. Module-level (not defined during render) so it isn't
+// recreated each render.
+function Step({ n, children, icon }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', textAlign: 'right', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '0.7rem 0.8rem' }}>
+            <div style={{ flex: '0 0 auto', width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem' }}>{n}</div>
+            <div style={{ flex: 1, color: '#e8edf7', fontSize: '0.95rem', lineHeight: 1.5 }}>{children}</div>
+            <div style={{ flex: '0 0 auto', fontSize: '1.5rem' }}>{icon}</div>
+        </div>
+    );
+}
+
 export default function InstallPrompt() {
     const { t } = useI18n();
     const [, force] = useState(0);
@@ -60,13 +72,6 @@ export default function InstallPrompt() {
     // iOS can't be installed programmatically (Apple restriction) — this is a big, friendly
     // step-by-step overlay so non-technical parents can follow Share → Add to Home Screen.
     if (showIosGuide) {
-        const Step = ({ n, children, icon }) => (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', textAlign: 'right', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '0.7rem 0.8rem' }}>
-                <div style={{ flex: '0 0 auto', width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem' }}>{n}</div>
-                <div style={{ flex: 1, color: '#e8edf7', fontSize: '0.95rem', lineHeight: 1.5 }}>{children}</div>
-                <div style={{ flex: '0 0 auto', fontSize: '1.5rem' }}>{icon}</div>
-            </div>
-        );
         return (
             <div dir="rtl" onClick={() => setShowIosGuide(false)} style={{ position: 'fixed', inset: 0, zIndex: 1700, background: 'rgba(4,8,18,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px', fontFamily: 'Rubik, sans-serif' }}>
                 <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(380px,100%)', background: 'rgba(12,19,36,0.98)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '22px', padding: '1.5rem 1.3rem', color: '#e8edf7', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)' }}>
