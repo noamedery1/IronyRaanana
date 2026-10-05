@@ -3,6 +3,7 @@ import { useI18n } from '../i18n.jsx';
 import { hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall, isInstalled } from '../installState.js';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji } from '../sportLabels.js';
+import { resetApp } from '../resetApp.js';
 
 // Install affordances (shown on every screen until the app is installed):
 // - First visit (not dismissed): a prominent centered modal.
@@ -14,6 +15,7 @@ export default function InstallPrompt() {
     const [, force] = useState(0);
     const [dismissed, setDismissed] = useState(localStorage.getItem('pwaPromptDismissed') === '1');
     const [showTip, setShowTip] = useState(false);
+    const [showIosGuide, setShowIosGuide] = useState(false);
     const [ackInstalled, setAckInstalled] = useState(false);
 
     // Re-render when the install prompt becomes available / the app gets installed.
@@ -49,10 +51,41 @@ export default function InstallPrompt() {
     const installIcon = club.icon192 || club.icon512 || club.logo || '/pwa-192x192.png';
 
     const doInstall = async () => {
-        if (hasNativePrompt()) { await promptInstall(); return; }
-        setShowTip(true); // no native prompt → show manual steps
+        if (hasNativePrompt()) { await promptInstall(); return; } // Android/Chrome: real one-tap install
+        if (ios) { setShowIosGuide(true); return; }               // iOS: Apple has no install API → visual guide
+        setShowTip(true);                                         // other: manual steps text
     };
     const dismiss = () => { setDismissed(true); localStorage.setItem('pwaPromptDismissed', '1'); };
+
+    // iOS can't be installed programmatically (Apple restriction) — this is a big, friendly
+    // step-by-step overlay so non-technical parents can follow Share → Add to Home Screen.
+    if (showIosGuide) {
+        const Step = ({ n, children, icon }) => (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', textAlign: 'right', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '0.7rem 0.8rem' }}>
+                <div style={{ flex: '0 0 auto', width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem' }}>{n}</div>
+                <div style={{ flex: 1, color: '#e8edf7', fontSize: '0.95rem', lineHeight: 1.5 }}>{children}</div>
+                <div style={{ flex: '0 0 auto', fontSize: '1.5rem' }}>{icon}</div>
+            </div>
+        );
+        return (
+            <div dir="rtl" onClick={() => setShowIosGuide(false)} style={{ position: 'fixed', inset: 0, zIndex: 1700, background: 'rgba(4,8,18,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px', fontFamily: 'Rubik, sans-serif' }}>
+                <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(380px,100%)', background: 'rgba(12,19,36,0.98)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '22px', padding: '1.5rem 1.3rem', color: '#e8edf7', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)' }}>
+                    <div style={{ textAlign: 'center', fontWeight: 800, fontSize: '1.2rem', marginBottom: '0.3rem' }}>התקנה על אייפון 📲</div>
+                    <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem', marginBottom: '1.1rem' }}>3 צעדים קצרים ב-Safari</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                        <Step n={1} icon={<span style={{ color: '#38bdf8' }}>&#x2BAA;</span>}>הקישו על כפתור <b>השיתוף</b> (הריבוע עם החץ ↑) בתחתית המסך</Step>
+                        <Step n={2} icon="➕">גללו ובחרו <b>&quot;הוספה למסך הבית&quot;</b></Step>
+                        <Step n={3} icon="✅">הקישו <b>&quot;הוסף&quot;</b> למעלה מימין — וסיימתם!</Step>
+                    </div>
+                    <div style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.45)', borderRadius: 12, padding: '0.6rem 0.8rem', marginTop: '0.9rem', color: '#fde68a', fontSize: '0.8rem', lineHeight: 1.5 }}>
+                        ⚠️ חשוב: אם פתחתם מוואטסאפ — הקישו קודם ⋯ ובחרו <b>&quot;פתח בדפדפן&quot; / Safari</b>, אחרת כפתור השיתוף לא יראה את האפשרות.
+                    </div>
+                    <button onClick={() => setShowIosGuide(false)} style={{ width: '100%', marginTop: '1rem', border: 'none', background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', fontWeight: 800, fontFamily: 'inherit', fontSize: '1rem', padding: '0.8rem', borderRadius: '13px', cursor: 'pointer' }}>הבנתי, בוא נתחיל</button>
+                    <button onClick={() => resetApp()} style={{ width: '100%', marginTop: '0.5rem', border: 'none', background: 'transparent', color: '#64748b', fontWeight: 600, fontFamily: 'inherit', fontSize: '0.82rem', padding: '0.4rem', cursor: 'pointer' }}>משהו תקוע? אפסו את האפליקציה ונסו שוב 🔄</button>
+                </div>
+            </div>
+        );
+    }
 
     // ===== First-visit prominent modal =====
     if (!dismissed) {
@@ -89,16 +122,15 @@ export default function InstallPrompt() {
                     }} />
                     <div style={{ fontWeight: 800, fontSize: '1.2rem', marginBottom: '0.4rem' }}>{t('install_title')} {sportEmoji()}</div>
                     <div style={{ fontSize: '0.88rem', color: 'var(--text-dim)', lineHeight: 1.55, marginBottom: '1.2rem' }}>
-                        {ios ? t('install_ios') : t('install_desc')}
+                        {t('install_desc')}
                     </div>
 
-                    {!ios && (
-                        <button onClick={doInstall} style={{
-                            width: '100%', border: 'none', background: 'linear-gradient(135deg,var(--primary),var(--deep))',
-                            color: '#fff', fontWeight: 800, fontFamily: 'inherit', fontSize: '1rem', padding: '0.85rem',
-                            borderRadius: '13px', cursor: 'pointer',
-                        }}>{t('install_btn')}</button>
-                    )}
+                    {/* One button for everyone: Android triggers the native prompt, iOS opens the visual guide. */}
+                    <button onClick={doInstall} style={{
+                        width: '100%', border: 'none', background: 'linear-gradient(135deg,var(--primary),var(--deep))',
+                        color: '#fff', fontWeight: 800, fontFamily: 'inherit', fontSize: '1rem', padding: '0.85rem',
+                        borderRadius: '13px', cursor: 'pointer',
+                    }}>{ios ? '📲 התקנה — הראו לי איך' : t('install_btn')}</button>
                     {showTip && <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', lineHeight: 1.6, marginTop: '0.7rem' }}>{tipText}</div>}
                     <button onClick={dismiss} style={{
                         width: '100%', marginTop: '0.6rem', border: 'none', background: 'transparent',
