@@ -62,7 +62,7 @@ keytool -genkey -v -keystore squadio.keystore -alias squadio -keyalg RSA -keysiz
 ### 4. חנויות — ליסטינג
 - **Google Play Console** (25$ חד-פעמי) + **App Store Connect**.
 - נכסים: אייקון 1024², צילומי מסך, תיאור, מדיניות פרטיות (יש `public/privacy.html`), קטגוריה, דירוג גיל.
-- אייקונים: כרגע `native-shell/icon.png`. כדאי להריץ `npx @capacitor/assets generate` עם לוגו 1024² כדי לייצר את כל גדלי האייקון/splash ל-iOS ול-Android.
+- אייקונים + splash: **כבר נוצרו** ל-iOS ול-Android (`npx @capacitor/assets` מתוך `assets/icon.png` — אייקון המותג בריבוע @1024, מוגדל מ-pwa-512). אם רוצים חד יותר: להחליף את `assets/icon.png` בלוגו 1024²+ מקורי ולהריץ שוב `npx capacitor-assets generate --assetPath assets --ios --android`.
 
 ---
 
