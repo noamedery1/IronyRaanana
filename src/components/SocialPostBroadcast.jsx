@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import { authHeaders } from '../adminApi.js';
+import { sportEmoji } from '../sportLabels.js';
 
 // Manager tool: right after publishing on Facebook / Instagram / TikTok, push the new
 // post to every parent in the club. Reuses the existing broadcast path (segment '' =
@@ -33,7 +34,7 @@ export default function SocialPostBroadcast() {
                 body: JSON.stringify({
                     segment: '',
                     title: titleFor(url),
-                    body: headline.trim() || 'צפו בפוסט החדש שלנו! 🏀',
+                    body: headline.trim() || `צפו בפוסט החדש שלנו! ${sportEmoji()}`,
                     url,
                     icon: '/social-push-192.png',
                     tag: 'club-post',
@@ -58,7 +59,7 @@ export default function SocialPostBroadcast() {
 
             <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>כותרת (לא חובה)</label>
             <input type="text" value={headline} onChange={(e) => setHeadline(e.target.value)}
-                placeholder="לדוגמה: תמונות מהמשחק אתמול! 🏀" style={input} />
+                placeholder={`לדוגמה: תמונות מהמשחק אתמול! ${sportEmoji()}`} style={input} />
 
             <button onClick={send} disabled={busy} style={{ marginTop: '1rem', background: '#ff7a18', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: busy ? 'wait' : 'pointer' }}>
                 {busy ? 'שולח...' : '🔔 שלח לכל ההורים'}

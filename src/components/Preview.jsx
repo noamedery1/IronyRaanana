@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { authHeaders } from '../adminApi.js';
-import { venue, venues, matchEmoji } from '../sportLabels.js';
+import { venue, venues, matchEmoji, sportEmoji } from '../sportLabels.js';
 import { sortTeams, SORT_MODES } from '../teamSort.js';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -1121,7 +1121,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             {/* Full-screen top bar */}
             {fullScreen && (
                 <div className="cc-fsbar">
-                    <div className="cc-fsbar-title">🏀 לו"ז שבועי — {selectedDate ? `שבוע ${selectedDate.split('-').reverse().slice(0, 2).join('/')}` : ''}
+                    <div className="cc-fsbar-title">{sportEmoji()} לו"ז שבועי — {selectedDate ? `שבוע ${selectedDate.split('-').reverse().slice(0, 2).join('/')}` : ''}
                         {draftMsg ? <span className="cc-dirty"> · {draftMsg}</span> : draftSavedAt ? <span className="cc-dirty" style={{ color: '#86efac' }}> · 💾 נשמר {draftTime}</span> : null}</div>
                     <div className="cc-actions">
                         <label className="cc-date">↕ מיון
@@ -1145,7 +1145,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
             {!fullScreen && (
             <div className="cc-toolbar">
                 <div className="cc-title">
-                    🏀 לוח שיבוץ שבועי
+                    {sportEmoji()} לוח שיבוץ שבועי
                     {draftMsg ? <span className="cc-dirty"> · {draftMsg}</span>
                         : draftSavedAt ? <span className="cc-dirty" style={{ color: '#86efac' }}> · 💾 טיוטה נשמרה {draftTime}</span>
                             : currentSchedule ? <span className="cc-dirty"> · טיוטה לא נשמרה — לחץ "שמור טיוטה"</span> : null}

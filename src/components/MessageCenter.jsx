@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import { authHeaders } from '../adminApi.js';
+import { sportEmoji } from '../sportLabels.js';
 
 // Manager messaging hub: send a push to any audience — whole club, all trainers, all
 // operators, OR a multi-selection of specific teams / specific trainers. DB-backed.
@@ -126,7 +127,7 @@ export default function MessageCenter() {
             <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>למי לשלוח</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0.8rem' }}>
                 {radio('club', '🏛️ כל המועדון', stats.total)}
-                {radio('trainers', '🏀 כל המאמנים', trainersTotal)}
+                {radio('trainers', `${sportEmoji()} כל המאמנים`, trainersTotal)}
                 {radio('operators', '🔑 כל המפעילים', operatorsTotal)}
                 {radio('team', '👥 קבוצות (בחירה מרובה)')}
                 {radio('trainer', '👤 מאמנים (בחירה מרובה)')}
