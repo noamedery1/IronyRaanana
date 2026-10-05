@@ -20,7 +20,7 @@ export function cleanHallName(loc) {
         .replace(/בחוץ|חוץ/g, '')
         .replace(/משחק|בית ?ספר|ב-/g, '')
         .replace(/[0-9:.\-–]/g, '')
-        .replace(/🏀|🏃/g, '')
+        .replace(/⚽|🏀|🤾|🏐|🎾|🏊|🏃|🏆/g, '')
         .trim();
 }
 

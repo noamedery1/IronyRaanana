@@ -577,7 +577,7 @@ const AdminDashboard = () => {
                                 const nums = cell.replace(/:/g, '').match(/(\d{4}).*?(\d{4})/);
                                 if (nums) {
                                     let loc = cell.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
-                                    loc = loc.replace(/משחק|ב-|🏀|🏃/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
+                                    loc = loc.replace(/משחק|ב-|⚽|🏀|🤾|🏐|🎾|🏊|🏃|🏆/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
                                     if (loc) locationsSet.add(loc);
                                 }
                             }

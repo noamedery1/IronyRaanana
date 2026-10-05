@@ -11,6 +11,7 @@ import NavButton from '../components/NavButton';
 import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import { getActiveClub } from '../clubConfig.js';
+import { sportEmoji } from '../sportLabels.js';
 
 const parseScheduleContent = parseCellContent;
 
@@ -156,7 +157,7 @@ function PublicScheduleWomen() {
         if (!teamObj) return;
         const schedule = teamObj.row;
         const teamLabel = getSelectedTeamName();
-        const basketball = '🏀';
+        const basketball = sportEmoji();
         const muscle = '💪';
 
         let message = `${basketball} *לו"ז שבועי - ${teamLabel} (נשים)* ${basketball}\n\n`;
@@ -211,7 +212,7 @@ function PublicScheduleWomen() {
             const endDate = new Date(date);
             endDate.setHours(endT.h, endT.m);
             return {
-                title: `${isMatch ? '🏀 משחק' : 'אימון'} - ${teamName}`,
+                title: `${isMatch ? `${sportEmoji()} משחק` : 'אימון'} - ${teamName}`,
                 location: location,
                 details: `אימון קבוצת ${teamName}`,
                 start: startDate,
@@ -327,7 +328,7 @@ function PublicScheduleWomen() {
                                     <div className="hero-time">{next ? (next.time || '—') : t('no_next')}</div>
                                     <div className="hero-meta">
                                         <div className="m"><b>{next ? localizeDay(next.dayName) : '—'}</b><span>{next ? (next.isToday ? t('today') : next.dateText) : ''}</span></div>
-                                        <div className="m"><b>{next?.location ? localizeHall(next.location) : '—'}</b><span>{next?.isMatch ? `🏀 ${t('match')}` : t('training')}</span></div>
+                                        <div className="m"><b>{next?.location ? localizeHall(next.location) : '—'}</b><span>{next?.isMatch ? `${sportEmoji()} ${t('match')}` : t('training')}</span></div>
                                         <div className="m"><b>{teamObj?.coach || '—'}</b><span>{t('coach')}</span></div>
                                     </div>
                                     <div className="hero-actions">
@@ -359,7 +360,7 @@ function PublicScheduleWomen() {
                             {/* ===== full weekly schedule ===== */}
                             <h2 className="section-title">{t('full_week')}</h2>
                             <div className="schedule-grid">
-                                {!hasWeek && <div className="empty-state"><h3>{t('no_week')} 🏀</h3></div>}
+                                {!hasWeek && <div className="empty-state"><h3>{t('no_week')} {sportEmoji()}</h3></div>}
                                 {headers.slice(dayStart, dayStart + 7).map((dayHeader, index) => {
                                     const parts = dayHeader.split(' ');
                                     const dayName = parts[0];
@@ -397,7 +398,7 @@ function PublicScheduleWomen() {
                                                             {isChanged && <span className="status-tag changed">⚠️ {t('changed')}</span>}
                                                             <div className="event-time">{time}</div>
                                                             <div className="event-location">{localizeHall(location)}</div>
-                                                            {isMatch && <div className="match-badge">🏀 {t('match')}</div>}
+                                                            {isMatch && <div className="match-badge">{sportEmoji()} {t('match')}</div>}
                                                         </div>
                                                     );
                                                 })}

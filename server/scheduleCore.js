@@ -114,13 +114,16 @@ export function buildTeamICSFromCsv(csvText, teamParam) {
             if (!line.trim()) return;
             const { time, location, isMatch, status } = parseCellContent(line);
             if (status === 'cancelled') return;
+            // Use whatever sport icon the cell actually carries (⚽ football, 🏀 basketball, …),
+            // so a football club's game isn't labelled with a basketball.
+            const matchIcon = (line.match(/[⚽\u{1F3C0}\u{1F93E}\u{1F3D0}\u{1F3BE}\u{1F3CA}\u{1F3C3}\u{1F3C6}]/u) || [])[0] || '';
             const parts = (time || '').split('-');
             const startT = parseTime(parts[0]);
             const endT = parts[1] ? parseTime(parts[1]) : { h: startT.h + 1, m: startT.m + 30 };
             const start = new Date(date); start.setHours(startT.h, startT.m, 0, 0);
             const end = new Date(date); end.setHours(endT.h, endT.m, 0, 0);
             events.push({
-                title: `${isMatch ? '🏀 משחק' : 'אימון'} - ${teamName}`,
+                title: `${isMatch ? `${matchIcon ? matchIcon + ' ' : ''}משחק` : 'אימון'} - ${teamName}`,
                 location,
                 details: `קבוצת ${teamName}${coach ? ' · מאמן ' + coach : ''}`,
                 start, end,

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { authHeaders } from '../adminApi.js';
-import { venue, venues } from '../sportLabels.js';
+import { venue, venues, matchEmoji } from '../sportLabels.js';
 import { sortTeams, SORT_MODES } from '../teamSort.js';
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -371,7 +371,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         if (!line) return '';
         let location = String(line).replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').trim();
         location = location
-            .replace(/משחק|ב-|🏀|🏃/g, '')
+            .replace(/משחק|ב-|⚽|🏀|🤾|🏐|🎾|🏊|🏃|🏆/g, '')
             .replace('אתלטיקה', '')
             .replace('בית', '')
             .replace('חוץ', '')
@@ -561,7 +561,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                     let content = `${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
                     if (c.type === 'MATCH') {
                         const where = c.subType === 'AWAY' ? 'חוץ' : (c.subType === 'HOME' ? 'בית' : '');
-                        content = `🏀 משחק ${where} ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`.replace('  ', ' ');
+                        content = `${matchEmoji()} משחק ${where} ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`.replace('  ', ' ');
                     } else if (c.type === 'ATHLETICS') {
                         content = `🏃 אתלטיקה ${loc} ${toTimeStr(startMin)}-${toTimeStr(endMin)}`;
                     }
@@ -771,7 +771,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 let content = `${loc} ${s}-${e}`.trim();
                 if (c.type === 'MATCH') {
                     const where = c.subType === 'AWAY' ? 'חוץ' : (c.subType === 'HOME' ? 'בית' : '');
-                    content = `🏀 משחק ${where} ${loc} ${s}-${e}`.replace(/\s+/g, ' ').trim();
+                    content = `${matchEmoji()} משחק ${where} ${loc} ${s}-${e}`.replace(/\s+/g, ' ').trim();
                 } else if (c.type === 'ATHLETICS') {
                     content = `🏃 אתלטיקה ${loc} ${s}-${e}`.trim();
                 }
@@ -839,7 +839,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         }
         const hall = (inspHall || '').trim();
         let content = `${hall} ${s}-${e}`.trim();
-        if (inspType === 'MATCH') content = `🏀 משחק ${content}`.trim();
+        if (inspType === 'MATCH') content = `${matchEmoji()} משחק ${content}`.trim();
         else if (inspType === 'ATHLETICS') content = `🏃 אתלטיקה ${content}`.trim();
         else if (inspType === 'CUSTOM' && inspCustom.trim()) content = `${inspCustom.trim()} ${content}`.trim();
         return content;
@@ -936,7 +936,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
         const s = normalizeTimeToken(startTok);
         const e = normalizeTimeToken(endTok);
         let c = `${hall} ${s}-${e}`.trim();
-        if (orig.includes('משחק')) c = `🏀 משחק ${c}`;
+        if (orig.includes('משחק')) c = `${matchEmoji()} משחק ${c}`;
         else if (orig.includes('אתלטיקה')) c = `🏃 אתלטיקה ${c}`;
         return c;
     };
@@ -1067,7 +1067,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                 <label>{editingExisting ? `עריכת אימון ${activeLineIndex + 1}` : (dayLines.length ? 'אימון חדש' : 'פרטי האימון')} · סוג פעילות</label>
                 <div className="cc-types">
                     <button className={`cc-type ${inspType === 'TRAIN' ? 'on' : ''}`} onClick={() => setInspType('TRAIN')}>אימון</button>
-                    <button className={`cc-type match ${inspType === 'MATCH' ? 'on' : ''}`} onClick={() => setInspType('MATCH')}>🏀 משחק</button>
+                    <button className={`cc-type match ${inspType === 'MATCH' ? 'on' : ''}`} onClick={() => setInspType('MATCH')}>{matchEmoji()} משחק</button>
                     <button className={`cc-type ath ${inspType === 'ATHLETICS' ? 'on' : ''}`} onClick={() => setInspType('ATHLETICS')}>🏃 אתלטיקה</button>
                     <button className={`cc-type ${inspType === 'CUSTOM' ? 'on' : ''}`} onClick={() => setInspType('CUSTOM')}>✏️ אחר</button>
                 </div>
@@ -1242,7 +1242,7 @@ const Preview = ({ teams, headers, rawRows, teamConfig, saveUrl, sheetName, shee
                                             let bgColor = 'rgba(255,255,255,0.03)';
                                             let textColor = 'var(--text)';
                                             if (cellData) {
-                                                const cleanLoc = cellData.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').replace(/משחק|ב-|🏀|🏃/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
+                                                const cleanLoc = cellData.replace(/\d{2}:?\d{2}.*?\d{2}:?\d{2}|\d{4}.*?\d{4}/g, '').replace(/משחק|ב-|⚽|🏀|🤾|🏐|🎾|🏊|🏃|🏆/g, '').replace('אתלטיקה', '').replace('בית', '').replace('חוץ', '').trim();
                                                 const matchedLoc = hallColors && Object.keys(hallColors).find(l => (l === 'משחק' && cellData.includes('משחק')) || cleanLoc.includes(l));
                                                 if (matchedLoc) bgColor = hallColors[matchedLoc];
                                                 else if (cellData.includes('משחק')) bgColor = '#ffedd5';

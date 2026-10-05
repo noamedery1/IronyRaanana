@@ -31,6 +31,14 @@ export function sportEmoji(sport) {
     return EMOJI[s] || '🏆';
 }
 
+// The match (משחק) icon for the active (or given) sport — ⚽ for a football club,
+// 🏀 for basketball, etc. Use this instead of a hardcoded 🏀 when writing a match cell.
+export const matchEmoji = (sport) => sportEmoji(sport);
+
+// Every sport icon, as a regex char-class, for stripping a leading sport emoji out of
+// free-text cell content (location parsing) regardless of which sport wrote the cell.
+export const SPORT_EMOJI_RE = /[⚽🏀🤾🏐🎾🏊🏃🏆]/gu;
+
 // Sport name in Hebrew (for "מחלקת ה<sport>"). Empty string if unknown.
 const SPORT_HE = {
     football: 'כדורגל', soccer: 'כדורגל', basketball: 'כדורסל', handball: 'כדוריד',

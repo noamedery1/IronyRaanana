@@ -1,5 +1,6 @@
 
 import { saveAs } from 'file-saver';
+import { matchEmoji } from '../sportLabels.js';
 
 // Helper to parse the raw structure into a flat list of sessions
 export const flattenScheduleData = (teams, headers, dayStart, indices) => {
@@ -270,7 +271,7 @@ export const exportToExcel = async (flatData, fileName = 'schedule.xlsx') => {
             time: item.time,
             team: item.team,
             coach: item.coach,
-            type: item.isMatch ? '🏀 משחק' : (item.status === 'cancelled' ? '❌ בוטל' : (item.status === 'changed' ? '⚠️ שינוי' : 'אימון'))
+            type: item.isMatch ? `${matchEmoji()} משחק` : (item.status === 'cancelled' ? '❌ בוטל' : (item.status === 'changed' ? '⚠️ שינוי' : 'אימון'))
         });
 
         // Row Styling
