@@ -124,6 +124,26 @@ if (pushReady) {
 
 app.use(express.json({ limit: '6mb' })); // larger to allow base64 icon uploads
 
+// CORS for the bundled native app only. When Squadio is packaged (Capacitor, webDir=dist) the app
+// runs on its OWN origin (capacitor://localhost / https://localhost) and calls this server's /api
+// cross-origin. Allow exactly those native origins; the browser/PWA is same-origin and unaffected.
+// Identity is a bearer token in the body/headers (not cookies), so no Allow-Credentials is needed.
+const NATIVE_ORIGINS = new Set([
+    'capacitor://localhost', 'ionic://localhost', 'https://localhost', 'http://localhost',
+]);
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && NATIVE_ORIGINS.has(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Vary', 'Origin');
+        res.set('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Push-Secret');
+        res.set('Access-Control-Max-Age', '86400');
+        if (req.method === 'OPTIONS') return res.sendStatus(204);
+    }
+    next();
+});
+
 // Diagnostics: confirms the server is connected to Postgres and that migrations ran.
 // Open <APP_BASE_URL>/api/health — no secrets are exposed (host only, no credentials).
 app.get('/api/health', async (req, res) => {
