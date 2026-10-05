@@ -1,0 +1,129 @@
+# ============================================================
+# Signed AAB for Google Play — modeled on the SportDle project.
+# ------------------------------------------------------------
+# Google Play accepts an **AAB** (Android App Bundle), not an APK,
+# and it must be signed with a RELEASE key. The APK from apk.yml is
+# signed with the debug key — sideload only.
+#
+# Manual run only. **With no secrets the run succeeds and skips**
+# (instead of failing on every push — a daily red that gets ignored).
+#
+# ============================================================
+# The secrets, and how to make them — once
+# ============================================================
+# 1. Create a keystore. **Project owner only.** It is the app's
+#    signing identity: whoever holds it can publish updates in its
+#    name, and losing it means you can never update the app again.
+#
+#      keytool -genkey -v -keystore squadio.keystore \
+#        -alias squadio -keyalg RSA -keysize 2048 -validity 10000
+#
+#    Back it up OUTSIDE the repo. **Never commit it.**
+#
+# 2. Base64-encode it (a GitHub secret is text):
+#      Windows:  certutil -encode squadio.keystore ks.b64
+#      other:    base64 -w0 squadio.keystore > ks.b64
+#
+# 3. Repo → Settings → Secrets and variables → Actions:
+#      KEYSTORE_BASE64      contents of ks.b64
+#      KEYSTORE_PASSWORD    the keystore password
+#      KEY_ALIAS            squadio
+#      KEY_PASSWORD         the key password (usually the same)
+# ============================================================
+name: AAB
+
+on:
+  workflow_dispatch:
+
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Signing secrets present?
+        id: secrets
+        env:
+          KS: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS" ]; then
+            echo "::notice::KEYSTORE_BASE64 not set — skipping. See the instructions at the top of this file."
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'yes'
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install deps
+        if: steps.secrets.outputs.ready == 'yes'
+        run: npm ci
+
+      - name: Build web (dist)
+        if: steps.secrets.outputs.ready == 'yes'
+        run: npm run build
+
+      - uses: actions/setup-java@v4
+        if: steps.secrets.outputs.ready == 'yes'
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Capacitor sync
+        if: steps.secrets.outputs.ready == 'yes'
+        run: |
+          chmod +x android/gradlew
+          npx cap sync android
+
+      # The keystore is written to a temp dir OUTSIDE the work tree so git and
+      # upload-artifact can't pick it up by accident.
+      - name: Restore keystore
+        if: steps.secrets.outputs.ready == 'yes'
+        id: ks
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          path="$RUNNER_TEMP/squadio.keystore"
+          echo "$KEYSTORE_BASE64" | tr -d '\n\r' | base64 -d > "$path"
+          if [ ! -s "$path" ]; then echo "::error::keystore decode failed — check the base64 is complete"; exit 1; fi
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+
+      - name: Gradle — AAB
+        if: steps.secrets.outputs.ready == 'yes'
+        working-directory: android
+        env:
+          KEYSTORE_PATH: ${{ steps.ks.outputs.path }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Verify it is signed
+        if: steps.secrets.outputs.ready == 'yes'
+        id: out
+        run: |
+          aab=$(find android -name "*-release.aab" | head -1)
+          if [ -z "$aab" ]; then echo "::error::no AAB produced"; exit 1; fi
+          if ! unzip -l "$aab" | grep -q "META-INF/.*\.RSA\|META-INF/.*\.EC"; then
+            echo "::error::AAB is not signed — check the signing secrets"; exit 1
+          fi
+          echo "path=$aab" >> "$GITHUB_OUTPUT"
+          echo "::notice::signed AAB · $(du -h "$aab" | cut -f1) · versionCode ${{ github.run_number }}"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.secrets.outputs.ready == 'yes'
+        with:
+          name: squadio-aab
+          path: ${{ steps.out.outputs.path }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Delete the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/squadio.keystore"

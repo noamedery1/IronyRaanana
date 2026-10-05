@@ -7,8 +7,11 @@ android {
         applicationId "com.squadio.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // VERSION_CODE comes from CI (github.run_number); Play rejects a re-upload with the same
+        // code. Parens are required, not style (Groovy would otherwise parse versionName X ?: Y as
+        // (versionName(X)) ?: Y). Locally defaults to 1 / 1.0.
+        versionCode(((System.getenv("VERSION_CODE") ?: "1") as String).toInteger())
+        versionName((System.getenv("VERSION_NAME") ?: "1.0") as String)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +19,28 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing. File + passwords come ONLY from the environment (CI secrets), never the repo:
+    // a keystore is the app's signing identity — whoever holds it can publish updates in its name.
+    // NEVER commit it. Without KEYSTORE_PATH the block stays empty and the build still works, so
+    // assembleDebug (the sideload APK) needs no secrets.
+    signingConfigs {
+        release {
+            def ks = System.getenv("KEYSTORE_PATH")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (System.getenv("KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
