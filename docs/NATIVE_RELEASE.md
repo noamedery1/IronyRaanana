@@ -49,10 +49,13 @@ keytool -genkey -v -keystore squadio.keystore -alias squadio -keyalg RSA -keysiz
 4. **APNs Auth Key** (`.p8`) מחשבון המפתח של אפל → להעלות ל-Firebase (Project settings → Cloud Messaging).
 5. **Service Account** (JSON) מפיירבייס → סוד בשרת (Railway) כדי שהשרת ישלח פוש דרך FCM HTTP v1.
 
-**מה אני אבנה אחרי שיהיו החשבונות (הקוד מתוכנן, צריך רק את הקונפיג):**
-- לקוח (`native-shell`): לבקש הרשאת פוש, לקבל token, ולשלוח לשרת עם זהות המשתמש (המועדון/קבוצה שהוא הזין במעטפת) — זו "גשר הזהות": הטוקן הנייטיב מגיע מהמעטפת, בעוד הזהות של האתר חיה ב-WebView החיצוני.
-- שרת: endpoint `POST /api/<club>/native-push/register` לשמור טוקנים לפי segment (team:<name> / __OPERATOR__), ושליחה דרך FCM בנוסף ל-Web Push הקיים.
-- החלטה לקבל ביחד: למפות טוקנים נייטיב ל-segments הקיימים (כמו ב-Web Push) או מבנה חדש.
+**מה כבר מוכן בקוד:**
+- **לקוח הפוש (`native-shell/index.html`) כבר מחובר** — `registerPushForMember(club,role,team)`: מבקש הרשאה, מקבל token, ושולח ל-`POST /api/<club>/native-push/register` עם ה-segment (`team:<name>` להורה / `__OPERATOR__` לכלל המועדון). נקרא ב-`enter()` כשהמשתמש מזין לינק/קוד. **כבוי ע״י הדגל `NATIVE_PUSH_ENABLED=false`** כדי לא לבקש הרשאת התראות לפני ש-Firebase מחובר — **להפוך ל-`true`** ברגע שה-google-services.json/GoogleService-Info.plist במקום.
+- (ל-webDir=dist בעתיד יש גם `src/nativePush.js` מקביל ל-React.)
+
+**מה נבנה ביחד (צריך את חשבונות סעיף 3):**
+- שרת: endpoint `POST /api/<club>/native-push/register` לשמור טוקנים לפי segment (צריך טבלה `native_push_tokens` + migration), ושליחה דרך **FCM HTTP v1** (service-account) בנוסף ל-Web Push הקיים ב-`server/notify.js` (`broadcast`). המיפוי ל-segments זהה ל-Web Push (`team:<name>` / `__OPERATOR__`).
+- להפוך את `NATIVE_PUSH_ENABLED` ל-`true` ולבדוק מקצה לקצה על מכשיר.
 
 ### 4. חנויות — ליסטינג
 - **Google Play Console** (25$ חד-פעמי) + **App Store Connect**.

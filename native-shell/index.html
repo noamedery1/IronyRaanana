@@ -69,6 +69,39 @@
     var inp = document.getElementById('inp');
     var err = document.getElementById('err');
 
+    // --- Native push (FCM/APNs). The WebView can't receive Web Push, so the store app registers a
+    //     device token here (the launcher knows club+role+team from the invite) and sends it to the
+    //     server, which delivers training updates via FCM. Kept OFF until Firebase is wired
+    //     (google-services.json / GoogleService-Info.plist) so we don't ask for notification
+    //     permission before it actually works — flip to true then. See docs/NATIVE_RELEASE.md. ---
+    var NATIVE_PUSH_ENABLED = false;
+    function pushKey(club, team) { return 'pushReg:' + club + '|' + (team || ''); }
+    async function registerPushForMember(club, role, team) {
+      if (!NATIVE_PUSH_ENABLED || !club) return;
+      if (!(window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.PushNotifications)) return; // not native
+      try { if (localStorage.getItem(pushKey(club, team))) return; } catch (e) {} // already registered this member
+      try {
+        var PN = Capacitor.Plugins.PushNotifications;
+        var perm = await PN.checkPermissions();
+        if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') perm = await PN.requestPermissions();
+        if (perm.receive !== 'granted') return;
+        var token = await new Promise(function (resolve) {
+          var done = false, fin = function (v) { if (!done) { done = true; resolve(v); } };
+          PN.addListener('registration', function (t) { fin(t && t.value); });
+          PN.addListener('registrationError', function () { fin(null); });
+          PN.register();
+          setTimeout(function () { fin(null); }, 6000);
+        });
+        if (!token) return;
+        var seg = (role === 'member' && team) ? ('team:' + team) : '__OPERATOR__'; // no team → whole club
+        await fetch(BASE + '/api/' + encodeURIComponent(club) + '/native-push/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform: (Capacitor.getPlatform && Capacitor.getPlatform()) || 'native', token: token, segment: seg, role: role || '', team: team || '' }),
+        });
+        try { localStorage.setItem(pushKey(club, team), '1'); } catch (e) {}
+      } catch (e) { /* non-fatal */ }
+    }
+
     // Always use the APEX path — only some clubs have a subdomain. The server serves every club on the
     // apex and 302-redirects the ones that do have a subdomain (kept in-app by allowNavigation), so this
     // works for all clubs. Building "<slug>.squadio…" directly fails for clubs without a subdomain.
@@ -167,7 +200,7 @@
       nativeSync().then(nav, nav);
     }
 
-    function enter() {
+    async function enter() {
       err.textContent = '';
       var raw = inp.value.trim();
       if (!raw) { err.textContent = 'הדביקו קישור או הקלידו קוד מועדון'; return; }
@@ -175,11 +208,13 @@
         // A full invite/admin link — capture club+role+team (for the widget), then go to it.
         var p = parseInvite(raw);
         if (p.club) saveMember(p.club, p.role, p.team);
+        await registerPushForMember(p.club || slugFromUrl(raw), p.role, p.team); // no-op unless push enabled+native
         go(raw, p.club || slugFromUrl(raw));
       } else {
         var slug = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
         if (!slug) { err.textContent = 'קוד מועדון לא תקין'; return; }
         saveMember(slug, '', ''); // club code → whole-club view
+        await registerPushForMember(slug, '', ''); // whole-club segment
         go(clubUrl(slug), slug);
       }
     }
