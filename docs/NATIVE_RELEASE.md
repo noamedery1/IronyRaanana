@@ -14,6 +14,8 @@
 |---|---|---|
 | פלטפורמת iOS (פרויקט Xcode, SPM) | `ios/` | ✅ נוצר |
 | בניית iOS ב-CI (סימולטור, בלי מק) | `.github/workflows/ios.yml` | ✅ |
+| IPA חתום ל-App Store/TestFlight | `.github/workflows/ios-release.yml` | ✅ (מדלג בלי סודות אפל) |
+| לקוח פוש נייטיב (מעטפת, מאחורי דגל) | `native-shell/index.html` | ✅ |
 | בניית APK לבדיקה (sideload) | `.github/workflows/apk.yml` | ✅ (היה) |
 | AAB חתום לגוגל פליי | `.github/workflows/release-aab.yml` | ✅ (מדלג בלי סודות) |
 | גרסאות + חתימת release לאנדרואיד | `android/app/build.gradle` | ✅ (מהסביבה) |
@@ -93,7 +95,7 @@ keytool -genkey -v -keystore squadio.keystore -alias squadio -keyalg RSA -keysiz
 | סוד | בשביל | מתי |
 |---|---|---|
 | `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` | AAB חתום לאנדרואיד | סעיף 1 |
-| `IOS_DIST_CERT_P12_BASE64`, `IOS_CERT_PASSWORD`, `IOS_PROVISION_PROFILE_BASE64` | IPA חתום ל-iOS | סעיף 2 (אחרי חשבון אפל) |
+| `IOS_DIST_CERT_P12_BASE64`, `IOS_CERT_PASSWORD`, `IOS_PROVISION_PROFILE_BASE64`, `IOS_TEAM_ID`, `IOS_PROFILE_NAME`, `KEYCHAIN_PASSWORD` | IPA חתום ל-iOS (workflow **iOS Release (IPA)** `ios-release.yml` — כבר כתוב, מדלג בלי סודות) | סעיף 2 (אחרי חשבון אפל) |
 | (קבצי קונפיג, לא סודות) `google-services.json`, `GoogleService-Info.plist` | פוש FCM | סעיף 3 |
 | בשרת/Railway: `FCM_SERVICE_ACCOUNT_JSON` | שליחת פוש מהשרת | סעיף 3 |
 
