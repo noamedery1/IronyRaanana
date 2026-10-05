@@ -59,6 +59,11 @@ function App() {
         <Route path="/:club/join/:role" element={<RequireClub><Join /></RequireClub>} />
         <Route path="/:club/join/:role/:team" element={<RequireClub><Join /></RequireClub>} />
 
+        {/* Path-based personal sign-in link (/:club/u/<token>[/<role>[/<team>]]) — the iOS-safe
+            start_url the installed app opens at. boot's applyIdentityLink signs the user in and
+            rewrites the URL to /<club> before render; this route just serves the app if it doesn't. */}
+        <Route path="/:club/u/*" element={<RequireClub><PublicSchedule /></RequireClub>} />
+
         {/* Per-club manager dashboard — each manager manages only their own club */}
         <Route path="/:club/admin" element={<RequireClub><AdminLogin /></RequireClub>} />
         <Route

@@ -60,6 +60,27 @@ function PublicSchedule() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Carry the sign-in into the installed app. iOS gives a standalone PWA its OWN storage and
+    // strips the query from the manifest start_url, so a home-screen icon that opens plain "/<club>"
+    // lands anonymous (the "use your personal link" gate) even though the parent registered in
+    // Safari. Point the manifest start_url at a PATH personal-link (/<club>/u/<token>/<role>/<team>)
+    // — the path survives, and boot's applyIdentityLink signs them in on open. Needs a token.
+    useEffect(() => {
+        const tok = localStorage.getItem('userToken');
+        const role = localStorage.getItem('userRole');
+        if (!tok || (role !== 'member' && role !== 'operator')) return;
+        const team = localStorage.getItem('userTeam') || '';
+        const start = role === 'operator'
+            ? `/${club.slug}/u/${encodeURIComponent(tok)}/operator`
+            : `/${club.slug}/u/${encodeURIComponent(tok)}/member/${encodePathSeg(team)}`;
+        const link = document.querySelector('link[rel="manifest"]');
+        if (!link) return;
+        const prev = link.getAttribute('href');
+        link.setAttribute('href', `/clubs/${club.slug}.webmanifest?start=${encodeURIComponent(start)}`);
+        return () => { if (prev) link.setAttribute('href', prev); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [club.slug, memberTeam]);
+
     // Per-club brand logo (falls back to the PWA icon, then the built-in crest).
     const clubLogo = club.logo || club.icon512 || club.icon192 || '/men_logo.png';
     // Header display name: drop any " — …" suffix (e.g. 'עירוני רעננה — לו"ז' -> 'עירוני רעננה').

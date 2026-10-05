@@ -22,10 +22,26 @@ import './pwaInstall.js' // capture the browser's install prompt as early as pos
 function applyIdentityLink() {
     try {
         const p = new URLSearchParams(window.location.search);
-        const u = p.get('u');
+        let u = p.get('u');
+        let rRaw = p.get('r');
+        let team = p.get('team') || '';
+        let fromPath = false;
+        if (!u) {
+            // iOS gives an installed standalone PWA its OWN storage AND strips the query from the
+            // manifest start_url — so a ?u= personal link can't carry identity into the home-screen
+            // app. The PATH survives, so also accept /<club>/u/<token>[/<role>[/<team>]] and sign in
+            // from it. (This is what the schedule page points the installed icon's start_url at.)
+            const seg = window.location.pathname.split('/').filter(Boolean); // [club, 'u', token, role?, teamEnc?]
+            const i = seg.indexOf('u');
+            if (i >= 1 && seg[i + 1]) {
+                try { u = decodeURIComponent(seg[i + 1]); } catch { u = seg[i + 1]; }
+                rRaw = seg[i + 2] || '';
+                try { team = seg[i + 3] ? decodeURIComponent(seg[i + 3]) : ''; } catch { team = seg[i + 3] || ''; }
+                fromPath = true;
+            }
+        }
         if (!u) return;
-        const r = p.get('r') === 'operator' ? 'operator' : (p.get('r') === 'member' ? 'member' : '');
-        const team = p.get('team') || '';
+        const r = rRaw === 'operator' ? 'operator' : (rRaw === 'member' ? 'member' : (team ? 'member' : ''));
         localStorage.setItem('userToken', u);
         if (r) localStorage.setItem('userRole', r);
         if (r) localStorage.setItem('entryRole', r);
@@ -38,9 +54,15 @@ function applyIdentityLink() {
             if (!list.find((m) => m && m.team === team)) list.push({ team, token: u });
             localStorage.setItem('memberships', JSON.stringify(list));
         }
-        p.delete('u'); p.delete('r'); p.delete('team');
-        const qs = p.toString();
-        window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+        if (fromPath) {
+            // Strip the /u/<token>/… segments, land cleanly on /<club>.
+            const club = window.location.pathname.split('/').filter(Boolean)[0] || '';
+            window.history.replaceState(null, '', '/' + club + window.location.hash);
+        } else {
+            p.delete('u'); p.delete('r'); p.delete('team');
+            const qs = p.toString();
+            window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+        }
     } catch { /* non-fatal */ }
 }
 
