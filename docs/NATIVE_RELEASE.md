@@ -61,10 +61,27 @@ keytool -genkey -v -keystore squadio.keystore -alias squadio -keyalg RSA -keysiz
 
 ---
 
-## ⚠️ שתי החלטות ארכיטקטוניות (לדבר עליהן מחר)
+## 🎯 ההחלטה המומלצת: לארוז את האפליקציה (bundle) — בטוח יותר, ופותר גם את הפוש
 
-1. **סיכון דחייה של אפל (Guideline 4.2 — "minimal functionality").** אפל לעיתים דוחה אפליקציה שהיא רק מעטפת לאתר. SportDle עוקף זאת כי הוא **אורז את כל האתר** לתוך האפליקציה (`webDir: app-dist`). ל-Squadio יש מעטפת דקה שטוענת את האתר החי — סיכון גבוה יותר. אפשרויות: לארוז יותר תוכן מקומית, להוסיף יכולות נייטיב (פוש/שיתוף/ווידג'ט = נקודות זכות), או לנסות ולראות. **אנדרואיד הרבה פחות מחמיר בזה.**
-2. **פוש = הסיבה המרכזית לאפליקציה.** בלי FCM/APNs אין התראות באפליקציית החנות (סעיף 3). זו העבודה המהותית של מחר.
+במקום מעטפת דקה שטוענת את האתר המרוחק, **אורזים את אפליקציית ה-React לתוך האפליקציה** (`webDir: dist`, כמו SportDle). זה פותר את שתי הבעיות ביחד:
+
+1. **סיכון אפל 4.2 יורד דרמטית** — יש תוכן אמיתי במכשיר, לא "קיצור דרך לאתר". (אנדרואיד ממילא מקל.)
+2. **הפוש נעשה נקי** — כשהאפליקציה ארוזה היא רצה ב-origin של עצמה, אז **גשר ה-Capacitor זמין לקוד ה-React ישירות**: ה-React (שיודע מי המשתמש) נרשם לפוש ושולח את ה-token לשרת עם הזהות — בלי "גשר זהות". **אין דרך אחרת לפוש באפליקציית חנות** (WebView לא תומך ב-Web Push), אז פוש נייטיב דרך FCM נדרש בכל מקרה; האריזה רק מנקה את החיווט.
+
+**קוד שכבר מוכן (מודולים חדשים, no-op באינטרנט):**
+- `src/nativeBridge.js` — `isNativeApp()` + `installNativeApiBase()`: כשארוז, מפנה בקשות `/api/…` יחסיות לשרת הפרודקשן (האפליקציה רצה על origin מקומי). באינטרנט — לא עושה כלום.
+- `src/nativePush.js` — `registerNativePush({slug,userToken,role,team})`: מבקש הרשאה, מקבל token של FCM/APNs, ושולח ל-`POST /api/<club>/native-push/register`.
+
+**צ'ק-ליסט הפעלה (כשעוברים לארוז — נעשה ביחד, אחרי שה-QA יסיים ואחרי Firebase):**
+1. `capacitor.config.json`: לשנות `webDir` ל-`dist` (במקום `native-shell`), ולהסיר/לצמצם את `server.allowNavigation`.
+2. `src/main.jsx`: בתחילת boot לקרוא `installNativeApiBase()` (לפני כל fetch).
+3. **בורר מועדון בתוך האפליקציה:** באפליקציה הארוזה אין מועדון ב-URL. להפוך את מסך הפתיחה של `native-shell` (הדבקת לינק/קוד מועדון) לראוט React, ו-`RootRedirect` יציג אותו כשאין מועדון שמור (ב-native). ה-React מנווט ל-`/<club>` ומשם הכל כרגיל.
+4. **שרת — CORS:** לאפשר ל-origin הנייטיב (`capacitor://localhost`, `https://localhost`) לגשת ל-`/api/*` (headers + preflight OPTIONS). הזהות היא token ב-localStorage (לא cookies), אז cross-origin עובד.
+5. **שרת — endpoint פוש:** `POST /api/<club>/native-push/register` לשמור טוקנים לפי segment, ושליחה דרך FCM HTTP v1 (service-account) לצד ה-Web Push. (נבנה ביחד עם Firebase.)
+6. לקרוא ל-`registerNativePush(...)` אחרי התחברות מוצלחת (ב-`Join.jsx` אחרי הרשמה / ב-`PublicSchedule` כשיש זהות).
+7. לבנות iOS+Android ב-CI ולבדוק על מכשיר/סימולטור.
+
+> **הערה:** המעבר הזה בטוח — המודולים no-op באינטרנט, ושינוי ה-`webDir` משפיע רק על האפליקציה הנייטיב. עושים אותו בצעד נפרד עם בדיקת CI, לא באמצע עבודה אחרת.
 
 ---
 
