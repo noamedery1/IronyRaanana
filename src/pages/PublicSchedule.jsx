@@ -15,6 +15,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName, venues } from '../sportLabels.js';
 import { getIdentity, getMemberships, setActiveTeam, membershipSegment } from '../userIdentity.js';
+import { encodePathSeg } from '../encodeSeg.js';
 
 // Alias for compatibility if needed, or just use parseCellContent directly
 const parseScheduleContent = parseCellContent;
@@ -54,7 +55,7 @@ function PublicSchedule() {
         // breadcrumb, so a parent who once glanced at the trainer page isn't trapped there.
         if (isTrainer) { navigate(`/${club.slug}/trainer`, { replace: true }); return; }
         // Came in via a parent/operator invite but haven't registered yet → open that registration.
-        if (entryRole === 'member' && entryTeam) { navigate(`/${club.slug}/join/member/${encodeURIComponent(entryTeam)}`, { replace: true }); return; }
+        if (entryRole === 'member' && entryTeam) { navigate(`/${club.slug}/join/member/${encodePathSeg(entryTeam)}`, { replace: true }); return; }
         if (entryRole === 'operator') { navigate(`/${club.slug}/join/operator`, { replace: true }); return; }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

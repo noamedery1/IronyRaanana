@@ -611,6 +611,10 @@ function clubHead(club, pagePath) {
 // For an invite page, the PATH-based start_url the installed icon should use, so iOS (which reads the
 // manifest at page load and strips any query from start_url) installs with the role/team preserved.
 // Converts a legacy ?r=…&team=… link to the path form too, so old links also install cleanly.
+// Strict path-segment encoder — also escapes ! ' ( ) * (which encodeURIComponent leaves raw), so a
+// Hebrew team geresh (נוער א') doesn't end up as a bare ' that WhatsApp truncates / iOS mangles.
+const encPathSeg = (s) => encodeURIComponent(String(s ?? '')).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+
 function joinManifestStart(club, req) {
     const parts = req.path.split('/').filter(Boolean); // [slug, 'join', role?, teamEnc?]
     if (parts[0] !== club.slug || parts[1] !== 'join') return null;
@@ -620,7 +624,7 @@ function joinManifestStart(club, req) {
     }
     const r = req.query.r === 'operator' ? 'operator' : (req.query.r === 'member' ? 'member' : null);
     if (!r) return null;
-    return `/${club.slug}/join/${r}` + (req.query.team ? `/${encodeURIComponent(req.query.team)}` : '');
+    return `/${club.slug}/join/${r}` + (req.query.team ? `/${encPathSeg(req.query.team)}` : '');
 }
 
 // Render the SPA index.html with a club's <head> injected (title/icons/manifest/canonical/OG).

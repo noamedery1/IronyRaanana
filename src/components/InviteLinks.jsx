@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getActiveClub } from '../clubConfig.js';
 import { sortTeams, SORT_MODES } from '../teamSort.js';
 import { venues } from '../sportLabels.js';
+import { encodePathSeg } from '../encodeSeg.js';
 
 // Manager tool: generate invite links per team (members) + an operator link.
 // Members open their link once, register, and are then locked to that team's view.
@@ -28,7 +29,7 @@ export default function InviteLinks() {
             .catch(() => { /* server down in dev */ });
     }, [club.slug]);
 
-    const teamLink = (name) => `${base}/join/member/${encodeURIComponent(name)}`;
+    const teamLink = (name) => `${base}/join/member/${encodePathSeg(name)}`;
 
     const copy = (text, key) => {
         navigator.clipboard.writeText(text).then(() => {

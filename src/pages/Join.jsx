@@ -4,6 +4,7 @@ import { getActiveClub } from '../clubConfig.js';
 import BrandMark from '../components/BrandMark';
 import { addMembership, getIdentity, getMemberships, registerIdentityPush } from '../userIdentity.js';
 import { isInAppBrowser, isIOS } from '../inAppBrowser.js';
+import { encodePathSeg } from '../encodeSeg.js';
 
 // Invite-based registration. Opened from a manager-generated link:
 //   /<club>/join?r=member&team=<teamLabel>   (parent/trainee of a team)
@@ -42,7 +43,7 @@ export default function Join() {
 
     // The invite path (PATH-only, no query — iOS strips the query from a PWA start_url), used both to
     // skip-if-registered and as the installed icon's start_url.
-    const joinPath = `/${slug}/join/${role}` + (team ? `/${encodeURIComponent(team)}` : '');
+    const joinPath = `/${slug}/join/${role}` + (team ? `/${encodePathSeg(team)}` : '');
 
     // On iOS, Add-to-Home-Screen uses the manifest start_url (not the current URL), so a plain icon
     // opens "/<club>" and loses the operator/team context — the installed app then can't tell who they
