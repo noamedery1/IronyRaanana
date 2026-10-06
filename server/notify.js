@@ -3,6 +3,7 @@ import webpush from 'web-push';
 import { pool } from './db.js';
 import { clubId } from './people.js';
 import { getSetting, setSetting } from './settings.js';
+import { sendNative } from './nativePush.js';
 
 // IMPORTANT: this fallback MUST match the public key the client subscribes with (src/push.js)
 // and server.js. Previously this had no fallback, so if the env var was unset the manager's
@@ -94,9 +95,6 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
             [cid, seg],
         );
     }
-    if (!r.rows.length) return { sent: 0, failed: 0, expired: [], note: 'no subscribers' };
-    if (!pushReady) return { sent: 0, failed: r.rows.length, expired: [], error: 'push not configured (set VAPID_* env)' };
-
     // Prefix the club name so the recipient always knows WHICH club sent it — on a phone with more
     // than one club installed from this domain, Android may show the other club's app icon/name
     // (shared origin = shared notification identity), so the club name in the title disambiguates.
@@ -104,12 +102,25 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
     try { clubName = (await pool.query('SELECT name FROM clubs WHERE id=$1', [cid])).rows[0]?.name || ''; } catch { /* ignore */ }
     const baseTitle = title || 'הודעה מהמועדון';
     const fullTitle = clubName && !baseTitle.includes(clubName) ? `${clubName} · ${baseTitle}` : baseTitle;
+    const link = url || `/${slug}`;
+
+    // Native (store-app) delivery runs in PARALLEL with Web Push and is fully independent: it's a
+    // no-op unless enabled+configured, and any failure is swallowed so it can never affect the Web
+    // Push result or the caller. Fired here (not after the early-returns below) so a native-only
+    // audience — a device with no Web Push subscription — still receives the notification.
+    const nativePromise = sendNative(slug, { segment: seg, title: fullTitle, body, url: link, data, tag })
+        .catch((e) => ({ skipped: true, error: e && e.message }));
+
+    const withNative = async (webResult) => ({ ...webResult, native: await nativePromise });
+
+    if (!r.rows.length) return withNative({ sent: 0, failed: 0, expired: [], note: 'no subscribers' });
+    if (!pushReady) return withNative({ sent: 0, failed: r.rows.length, expired: [], error: 'push not configured (set VAPID_* env)' });
 
     const payload = JSON.stringify({
         title: fullTitle, body: body || '',
         // Default to the CLUB's own icon (football/basketball per club) rather than the built-in
         // basketball app icon, so a football club's push doesn't show a basketball.
-        url: url || `/${slug}`, icon: icon || `/api/${slug}/icon/192`,
+        url: link, icon: icon || `/api/${slug}/icon/192`,
         tag: tag || undefined,
         data: data || {}, actions: actions || [],
     });
@@ -126,7 +137,7 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
         }
     }));
     if (expired.length) await pool.query('DELETE FROM push_subscriptions WHERE endpoint = ANY($1)', [expired]);
-    return { sent, failed, expired, statusCodes };
+    return withNative({ sent, failed, expired, statusCodes });
 }
 
 // ===== Message archive (manager broadcasts) =====

@@ -11,6 +11,7 @@ import {
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
+import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
@@ -139,6 +140,7 @@ app.get('/api/health', async (req, res) => {
         out.ok = out.db && out.migrationsRan;
     } catch (e) { out.error = e.message; }
     try { out.push = await pushDiag(); } catch { /* non-fatal */ }
+    try { out.nativePush = await nativePushDiag(); } catch { /* non-fatal */ }
     res.status(out.ok ? 200 : 503).json(out);
 });
 
@@ -319,6 +321,33 @@ app.delete('/api/:club/push', async (req, res) => {
 });
 app.post('/api/:club/broadcast', requireManager, async (req, res) => {
     try { ok(res, await broadcast(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+
+// Native (store-app) push token registration. The bundled app's launcher page runs on its own origin
+// (capacitor://localhost / https://localhost) and POSTs here cross-origin, so these two PUBLIC routes
+// get a narrow CORS allowance for the native origins only — manager/other routes are untouched. The
+// token is just stored; actual delivery is gated server-side (NATIVE_PUSH_ENABLED + FCM creds), so
+// this is fully additive and can't affect the live web system.
+const NATIVE_ORIGINS = new Set(['capacitor://localhost', 'https://localhost', 'ionic://localhost', 'http://localhost']);
+const nativeCors = (req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && NATIVE_ORIGINS.has(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Vary', 'Origin');
+        res.set('Access-Control-Allow-Methods', 'POST, DELETE, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+};
+app.options('/api/:club/native-push/register', nativeCors);
+app.options('/api/:club/native-push/unregister', nativeCors);
+app.post('/api/:club/native-push/register', nativeCors, async (req, res) => {
+    try { ok(res, await registerNativeToken(req.params.club, { ...(req.body || {}), host: req.body?.host || reqHost(req) })); }
+    catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/:club/native-push/unregister', nativeCors, async (req, res) => {
+    try { ok(res, await unregisterNativeToken(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 // Manager message: send to segment(s) AND archive it (for review / resend). Message history.
 app.post('/api/:club/messages', requireManager, async (req, res) => {

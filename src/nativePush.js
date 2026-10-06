@@ -11,7 +11,10 @@ import { isNativeApp, nativePlatform } from './nativeBridge.js';
 
 // Register for native push and hand the token to the server. Call once after the user is identified
 // (member/operator), e.g. right after a successful Join or on an authenticated schedule load.
-export async function registerNativePush({ slug, userToken, role, team }) {
+// `segment` (preferred) is the full push segment for this device — a member's every team as
+// "team:<name>" lines, or "__OPERATOR__" — matching Web Push exactly. If omitted, the server derives
+// one from role/team (single team only).
+export async function registerNativePush({ slug, segment, userToken, role, team }) {
     if (!isNativeApp()) return { ok: false, reason: 'web' };
     if (!slug) return { ok: false, reason: 'no-club' };
 
@@ -47,7 +50,7 @@ export async function registerNativePush({ slug, userToken, role, team }) {
         await fetch(`/api/${slug}/native-push/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ platform: nativePlatform(), deviceToken, userToken: userToken || '', role: role || '', team: team || '' }),
+            body: JSON.stringify({ platform: nativePlatform(), deviceToken, segment: segment ?? undefined, userToken: userToken || '', role: role || '', team: team || '' }),
         }).catch(() => {});
 
         return { ok: true, deviceToken };

@@ -73,8 +73,11 @@
     //     device token here (the launcher knows club+role+team from the invite) and sends it to the
     //     server, which delivers training updates via FCM. Kept OFF until Firebase is wired
     //     (google-services.json / GoogleService-Info.plist) so we don't ask for notification
-    //     permission before it actually works — flip to true then. See docs/NATIVE_RELEASE.md. ---
-    var NATIVE_PUSH_ENABLED = false;
+    //     permission before it actually works — flip to true then. See docs/NATIVE_RELEASE.md.
+    //     ENABLED 2026-10-06: Firebase is wired (google-services.json). The app now registers an FCM
+    //     token on entry; the server stores it and delivers once NATIVE_PUSH_ENABLED + FCM creds are
+    //     set on Railway (delivery is gated server-side, so enabling here is safe/additive). ---
+    var NATIVE_PUSH_ENABLED = true;
     function pushKey(club, team) { return 'pushReg:' + club + '|' + (team || ''); }
     async function registerPushForMember(club, role, team) {
       if (!NATIVE_PUSH_ENABLED || !club) return;

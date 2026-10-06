@@ -2,6 +2,8 @@
 // own trainerToken; managers use isAdmin. This covers the invite-based roles.
 import { getActiveClub } from './clubConfig.js';
 import { subscribeToPush } from './push.js';
+import { isNativeApp } from './nativeBridge.js';
+import { registerNativePush } from './nativePush.js';
 
 export function getIdentity() {
     return {
@@ -83,15 +85,22 @@ export function membershipSegment(validTeamNames) {
 }
 
 // Register this device for push based on the identity's memberships IN THE CURRENT CLUB. Best-effort.
+// In the bundled native app the WebView can't receive Web Push, so register for FCM instead — with
+// the SAME segment, so native and web devices land in the same audience.
 export async function registerIdentityPush() {
     const role = localStorage.getItem('userRole');
     const slug = getActiveClub().slug;
-    if (role === 'operator') return subscribeToPush('__OPERATOR__', getActiveClub().sheetApi);
+    const native = isNativeApp();
+    if (role === 'operator') {
+        if (native) return registerNativePush({ slug, segment: '__OPERATOR__', userToken: localStorage.getItem('userToken') || '', role });
+        return subscribeToPush('__OPERATOR__', getActiveClub().sheetApi);
+    }
     if (role !== 'member') return { ok: false };
     let valid = null;
     try { const d = await fetch(`/api/${slug}/teams`).then((r) => r.json()); valid = (d.teams || []).map((t) => t.name); } catch { /* fall back to all */ }
     const seg = membershipSegment(valid);
     if (!seg) return { ok: false };
+    if (native) return registerNativePush({ slug, segment: seg, userToken: localStorage.getItem('userToken') || '', role });
     return subscribeToPush(seg, getActiveClub().sheetApi);
 }
 
