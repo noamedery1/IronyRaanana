@@ -437,6 +437,15 @@ function PublicSchedule() {
                             אחרי הרשמה חד-פעמית הדף נפתח ישירות על הקבוצה שלכם — וגם מהאפליקציה המותקנת.
                         </p>
                         <p className="welcome-parent-note">אין לכם את הקישור? פנו למאמן/ת או למנהל/ת המועדון.</p>
+                        {/* Simpler alternative to the link: a short code the coach/manager hands out. */}
+                        <Link
+                            to={`/${club.slug}/code`}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.9rem',
+                                padding: '0.7rem 1.1rem', borderRadius: 12, textDecoration: 'none', fontWeight: 800,
+                                background: 'linear-gradient(135deg,#34d399,#0d9488)', color: '#06281f',
+                            }}
+                        >🔢 יש לי קוד הצטרפות</Link>
                     </div>
                     <div style={{ display: 'flex', gap: '1.2rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.4rem' }}>
                         <Link to={`/${club.slug}/trainer`} className="welcome-admin">{sportEmoji()} כניסת מאמן</Link>

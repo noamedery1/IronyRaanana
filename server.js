@@ -9,6 +9,7 @@ import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
     registerUser, authUser, listMembers, deleteMember, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
+    resolveJoinCode, listTeamJoinCodes, ensureJoinCodes,
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
@@ -102,6 +103,7 @@ app.use((req, res, next) => {
 
 try {
     await ensureStore();
+    await ensureJoinCodes(); // backfill a 5-digit join code for every team (deploys skip migrations)
 } catch (e) {
     // Don't let a storage/volume hiccup take down the whole server — club features
     // degrade to the client's built-in fallback; push & schedule keep working.
@@ -350,6 +352,22 @@ app.post('/api/:club/teams', requireManager, async (req, res) => {
 });
 app.delete('/api/:club/teams/:id', requireManager, async (req, res) => {
     try { ok(res, await deleteTeam(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
+});
+// Manager-only: each team with its shareable 5-digit join code.
+app.get('/api/:club/teams/join-codes', requireManager, async (req, res) => {
+    try { ok(res, { teams: await listTeamJoinCodes(req.params.club) }); } catch (e) { fail(res, e); }
+});
+
+// Public: resolve a 5-digit join code → { clubSlug, team }. Lets a parent type a code instead of
+// following an invite link; the code-entry screen then opens that team's normal join flow. The code
+// alone only reveals a club+team name (same as a shareable invite), and joining still needs the
+// regular registration — so this is safe to expose unauthenticated. 404 for an unknown code.
+app.get('/api/join/:code', async (req, res) => {
+    try {
+        const r = await resolveJoinCode(req.params.code);
+        if (!r) return res.status(404).json({ error: 'קוד לא קיים' });
+        res.json(r);
+    } catch (e) { fail(res, e); }
 });
 
 // Push subscriptions + broadcast (DB-backed)
