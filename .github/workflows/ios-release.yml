@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 1
+  # rebuild: 2 (archive unsigned; sign for App Store at export — fixes dev-profile error)
   push:
     branches: [feat/native-app]
     paths:
@@ -91,15 +91,14 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NAME" App/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" App/Info.plist 2>/dev/null || true
 
-          # 1) Archive with automatic signing (the API key creates cert + profile as needed).
+          # 1) Archive UNSIGNED for a generic iOS device. Signing is done at export, so the archive
+          #    never tries to fetch a Development profile (which needs registered devices and fails).
           xcodebuild -project App.xcodeproj -scheme App -configuration Release \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$P8_PATH" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER_ID" \
+            -destination 'generic/platform=iOS' \
+            -skipPackagePluginValidation \
             DEVELOPMENT_TEAM="$TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGNING_ALLOWED=NO \
             archive 2>&1 | tail -60
 
           # 2) Export a signed App Store .ipa.
