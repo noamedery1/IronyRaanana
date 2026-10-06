@@ -223,17 +223,16 @@ export async function resolveJoinCode(code) {
     const c = (code || '').toString().trim();
     if (!/^\d{4,6}$/.test(c)) return null;
     const r = await pool.query(
-        `SELECT t.name AS team, t.gender, c.slug AS club_slug, c.name AS club_name,
-                c.config->>'inviteOrigin' AS invite_origin
+        `SELECT t.name AS team, t.gender, c.slug AS club_slug, c.name AS club_name
            FROM teams t JOIN clubs c ON c.id = t.club_id
           WHERE t.join_code=$1 AND t.active=true LIMIT 1`,
         [c],
     );
     if (!r.rows.length) return null;
     const row = r.rows[0];
-    // inviteOrigin: a subdomain club lives on its own origin (storage/PWA isolation). The code-entry
-    // screen must land the parent THERE, not on whatever origin they typed the code on.
-    return { clubSlug: row.club_slug, clubName: row.club_name, team: row.team, gender: row.gender, inviteOrigin: row.invite_origin || '' };
+    // The endpoint annotates inviteOrigin (a subdomain club lives on its own origin) — it owns the
+    // SUBDOMAIN_CLUBS source of truth, same as /api/clubs.
+    return { clubSlug: row.club_slug, clubName: row.club_name, team: row.team, gender: row.gender };
 }
 
 // Manager-only: every active team with its join code, so the manager can share it.

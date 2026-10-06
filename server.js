@@ -366,7 +366,10 @@ app.get('/api/join/:code', async (req, res) => {
     try {
         const r = await resolveJoinCode(req.params.code);
         if (!r) return res.status(404).json({ error: 'קוד לא קיים' });
-        res.json(r);
+        // A subdomain club lives on its own origin — tell the code-entry screen so it lands the parent
+        // there (storage/PWA isolation). Same source of truth as /api/clubs' inviteOrigin.
+        const inviteOrigin = SUBDOMAIN_CLUBS.has(r.clubSlug) ? clubSubOrigin(r.clubSlug) : '';
+        res.json({ ...r, inviteOrigin });
     } catch (e) { fail(res, e); }
 });
 
