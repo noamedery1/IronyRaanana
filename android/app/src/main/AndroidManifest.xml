@@ -18,6 +18,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- App Links: tapping a Squadio invite/club https link opens the app directly (verified via
+                 /.well-known/assetlinks.json on each host). Covers the apex and the known club subdomain;
+                 add more club subdomains here as they are provisioned. Capacitor delivers the URL to the
+                 web layer via the App plugin's appUrlOpen / getLaunchUrl. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="squadio.techbynoam.com" />
+                <data android:scheme="https" android:host="fcraanana.squadio.techbynoam.com" />
+            </intent-filter>
         </activity>
 
         <!-- Home-screen schedule widget -->

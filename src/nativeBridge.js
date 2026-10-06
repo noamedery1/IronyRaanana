@@ -15,6 +15,25 @@ export function nativePlatform() {
 // device instead of the server. We rewrite same-origin absolute-path requests to this host.
 export const PROD_ORIGIN = 'https://squadio.techbynoam.com';
 
+// Deep links while the web app is already loaded (warm open): tapping a Squadio https link opens the
+// app via App Links / Universal Links; navigate the in-app WebView to that exact URL so the invite's
+// Join / personal-sign-in handling runs. Cold-start launch URLs are handled by the native-shell boot.
+// No-op on web. Safe to call once at boot.
+export function installNativeDeepLinks() {
+    if (!isNativeApp()) return;
+    if (window.__nativeDeepLinksInstalled) return;
+    window.__nativeDeepLinksInstalled = true;
+    import('@capacitor/app').then(({ App }) => {
+        App.addListener('appUrlOpen', (data) => {
+            try {
+                const u = new URL(data.url);
+                if (!/(^|\.)squadio\.techbynoam\.com$/i.test(u.hostname)) return;
+                if (u.href !== window.location.href) window.location.href = u.href;
+            } catch { /* ignore malformed */ }
+        });
+    }).catch(() => { /* plugin missing */ });
+}
+
 // Install a one-time fetch shim that sends relative "/…" requests to the production server when
 // running as the bundled native app. Call once at boot (main.jsx), BEFORE any fetch. No-op on web,
 // where "/api/…" already resolves to the same origin as the site. Server must allow the native

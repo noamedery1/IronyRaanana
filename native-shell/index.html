@@ -203,6 +203,20 @@
       nativeSync().then(nav, nav);
     }
 
+    // Deep link (Android App Link / iOS Universal Link): the user tapped a Squadio invite/club https
+    // link and the OS opened the app. Capture club+role+team (for the widget + push), then open that
+    // exact URL inside the app — so the invite lands straight on the registration/board, link attached.
+    async function handleDeepLink(url) {
+      if (!url) return false;
+      try { var u = new URL(url); if (!/(^|\.)squadio\.techbynoam\.com$/i.test(u.hostname)) return false; } catch (e) { return false; }
+      var p = parseInvite(url);
+      var slug = p.club || slugFromUrl(url);
+      if (slug) saveMember(slug, p.role, p.team);
+      await registerPushForMember(slug, p.role, p.team); // no-op unless push enabled+native
+      go(url, slug);
+      return true;
+    }
+
     async function enter() {
       err.textContent = '';
       var raw = inp.value.trim();
@@ -254,7 +268,20 @@
     //  - cold start + exactly ONE saved club  → go straight in (no chooser).
     //  - cold start + several clubs, or none  → show this home screen.
     //  - navigating BACK here (same session)  → always show it, so you can switch / add a club.
-    (function boot() {
+    (async function boot() {
+      // Deep link: if the app was launched by tapping a Squadio link (cold start), or one arrives while
+      // the launcher is showing (warm), open it directly instead of the normal chooser flow.
+      try {
+        var App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App;
+        if (App) {
+          App.addListener('appUrlOpen', function (d) { handleDeepLink(d && d.url); });
+          if (App.getLaunchUrl) {
+            var launch = await App.getLaunchUrl();
+            if (launch && launch.url && await handleDeepLink(launch.url)) return;
+          }
+        }
+      } catch (e) { /* non-native / plugin missing */ }
+
       var list = getRecent();
       nativeSync(); // mirror existing clubs + memberships to the widget on every open
       var backHome = false;
