@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { pushSupported, subscribeToPush, unsubscribeFromPush, isStandalone, isIOS } from '../push.js';
+import { isNativeApp } from '../native.js';
 import { canInstallNow, onInstallChange, promptInstall } from '../pwaInstall.js';
 import { getActiveClub } from '../clubConfig.js';
 
@@ -174,7 +175,16 @@ const RegisterUpdatesModal = ({ isOpen, onClose, teamName, pushSegment, sheetUrl
                     בחרו איך לקבל עדכונים על קבוצת <strong style={{ color: '#0f172a' }}>{teamName}</strong> — פוש, מייל, או שניהם.
                 </p>
 
-                {canPush ? (
+                {isNativeApp() ? (
+                    /* Inside the bundled app push is delivered via FCM (registered automatically on
+                       entry) — no web-push toggle and no "install to home screen" guidance. */
+                    <div style={{ border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: '10px', padding: '0.9rem', marginBottom: '0.9rem' }}>
+                        <div style={{ fontWeight: 'bold', color: '#047857', fontSize: '0.95rem', marginBottom: '0.15rem' }}>📱 התראות לטלפון</div>
+                        <div style={{ color: '#047857', opacity: 0.9, fontSize: '0.82rem', lineHeight: 1.6 }}>
+                            התראות הפוש פעילות אוטומטית דרך האפליקציה — אין צורך להתקין כלום. רק ודאו שאישרתם התראות ל-Squadio בהגדרות הטלפון.
+                        </div>
+                    </div>
+                ) : canPush ? (
                     <div style={{ border: '1px solid #fed7aa', background: '#fff7ed', borderRadius: '10px', padding: '0.9rem', marginBottom: '0.9rem' }}>
                         <div style={{ fontWeight: 'bold', color: '#9a3412', fontSize: '0.95rem', marginBottom: '0.15rem' }}>📱 התראות לטלפון</div>
                         <div style={{ color: '#9a3412', opacity: 0.8, fontSize: '0.8rem', marginBottom: '0.7rem', lineHeight: 1.5 }}>

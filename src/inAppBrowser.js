@@ -35,7 +35,7 @@ function iosInAppWebView() {
 // would falsely trip iosInAppWebView(). It's a real app with persistent storage, so never treat it
 // as an in-app browser (otherwise the Join page shows a misplaced "open in Safari" banner).
 function isNativeApp() {
-    try { return window.Capacitor?.isNativePlatform?.() === true; } catch { return false; }
+    try { return window.Capacitor?.isNativePlatform?.() === true || /SquadioApp/i.test(navigator.userAgent || ''); } catch { return false; }
 }
 
 export function isInAppBrowser() {

@@ -4,7 +4,13 @@
 // web build needs no native dependency and stays unchanged for ordinary web users.
 
 export function isNativeApp() {
-    try { return window.Capacitor?.isNativePlatform?.() === true; } catch { return false; }
+    try {
+        if (window.Capacitor?.isNativePlatform?.() === true) return true;
+        // The bundled app navigates to this live site, where Capacitor's bridge isn't injected. It
+        // tags its WebView User-Agent with "SquadioApp" (capacitor.config appendUserAgent) so we can
+        // still detect it here and suppress web-only UI (install popups, PWA-notification guidance).
+        return /SquadioApp/i.test(navigator.userAgent || '');
+    } catch { return false; }
 }
 
 // When running inside the native app, a tapped Squadio https link (App Link / Universal Link) that
