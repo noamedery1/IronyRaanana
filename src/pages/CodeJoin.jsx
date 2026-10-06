@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { encodePathSeg } from '../encodeSeg.js';
 import { getActiveClub } from '../clubConfig.js';
+import { getMemberships, setActiveTeam } from '../userIdentity.js';
 
 // Join by CODE. A parent types the short 5-digit code their coach/manager gave them instead of
 // following an invite link (links are fragile across in-app browsers / iOS PWAs). We resolve the
@@ -23,7 +24,13 @@ export default function CodeJoin() {
             const res = await fetch(`/api/join/${encodeURIComponent(c)}`);
             if (!res.ok) { setError('קוד לא קיים. בדקו שוב עם המאמן או המנהל.'); setLoading(false); return; }
             const d = await res.json();
-            // Open the team's normal registration flow (reuses the existing Join page).
+            // Already registered to this team on this device → go straight to the schedule.
+            if (getMemberships().some((m) => m.team === d.team)) {
+                setActiveTeam(d.team);
+                navigate(`/${d.clubSlug}`, { replace: true });
+                return;
+            }
+            // Otherwise open the team's normal registration flow (reuses the existing Join page).
             navigate(`/${d.clubSlug}/join/member/${encodePathSeg(d.team)}`, { replace: true });
         } catch {
             setError('שגיאת תקשורת, נסו שוב.'); setLoading(false);

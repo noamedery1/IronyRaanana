@@ -158,6 +158,15 @@ async function boot() {
     initTheme()
     await loadClubs()
     applyIdentityLink() // a personal ?u=<token> link signs the user in before any routing decision
+    // An operator who signed in before `operatorToken` existed has no recoverable operator identity,
+    // so the account switcher can't offer "back to מפעיל". Backfill it from the active token once.
+    try {
+        if (localStorage.getItem('userRole') === 'operator'
+            && localStorage.getItem('userToken')
+            && !localStorage.getItem('operatorToken')) {
+            localStorage.setItem('operatorToken', localStorage.getItem('userToken'));
+        }
+    } catch { /* non-fatal */ }
     if (redirectApexToSubdomain()) return // converging to the club's own origin — stop; the page is navigating
     applySubdomainClub() // carry a subdomain's club into the path before routing/PWA identity
     setupClubPwa()

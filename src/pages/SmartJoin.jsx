@@ -4,6 +4,7 @@ import { isNativeApp } from '../native.js';
 import { isIOS } from '../inAppBrowser.js';
 import { encodePathSeg } from '../encodeSeg.js';
 import { playStoreUrl, appStoreUrl } from '../appStores.js';
+import { getMemberships, setActiveTeam } from '../userIdentity.js';
 
 const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
 
@@ -25,7 +26,10 @@ export default function SmartJoin() {
             .then((d) => {
                 if (!alive) return;
                 if (!d) { setState({ loading: false, error: true }); return; }
-                const joinPath = `/${d.clubSlug}/join/member/${encodePathSeg(d.team)}`;
+                // Already registered to this team on this device → straight to the schedule.
+                const alreadyMember = getMemberships().some((m) => m.team === d.team);
+                const joinPath = alreadyMember ? `/${d.clubSlug}` : `/${d.clubSlug}/join/member/${encodePathSeg(d.team)}`;
+                if (alreadyMember) setActiveTeam(d.team);
                 // In the app, or on a desktop browser → no store step; go straight in.
                 if (isNativeApp() || !isMobile()) { navigate(joinPath, { replace: true }); return; }
                 setState({ loading: false, joinPath, ...d });
