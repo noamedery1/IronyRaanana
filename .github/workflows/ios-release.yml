@@ -1,42 +1,49 @@
 # ============================================================
-# Signed iOS .ipa (App Store / TestFlight) — needs an Apple Developer account.
+# Signed iOS .ipa → App Store Connect / TestFlight, via the App Store Connect API key.
 # ------------------------------------------------------------
-# Produces an installable, signed .ipa on a macOS runner. Unlike ios.yml (Simulator, no signing),
-# this requires Apple signing material, added as repo secrets. **With no secrets it succeeds and
-# skips** (so it never red-fails before the account exists).
+# Uses AUTOMATIC signing driven by the ASC API key (no manual distribution cert / provisioning
+# profile needed): xcodebuild -allowProvisioningUpdates creates the Apple Distribution cert + App
+# Store provisioning profile on the fly, then the build is uploaded to TestFlight with the same key.
+#
+# **With no secrets it succeeds and skips** (so it never red-fails before the account is wired).
 #
 # ============================================================
-# Secrets (Repo → Settings → Secrets and variables → Actions) — prepared once with the Apple account
+# Secrets (Repo → Settings → Secrets and variables → Actions) — once, with the Apple account
 # ============================================================
-#   IOS_DIST_CERT_P12_BASE64   Apple Distribution cert + private key exported as .p12, base64:
-#                                base64 -i dist.p12 | pbcopy          (mac)
-#                                certutil -encode dist.p12 c.b64      (windows)
-#   IOS_CERT_PASSWORD          the .p12 export password
-#   IOS_PROVISION_PROFILE_BASE64  the App Store provisioning profile (.mobileprovision) for
-#                                 bundle id com.squadio.app, base64-encoded
-#   IOS_TEAM_ID                your 10-char Apple Team ID (Membership page)
-#   IOS_PROFILE_NAME           the provisioning profile's NAME (as shown in the developer portal)
-#   KEYCHAIN_PASSWORD          any throwaway string (a temp keychain is created per run)
+#   ASC_API_KEY_P8_BASE64   the App Store Connect API key .p8, base64-encoded:
+#                             certutil -encode AuthKey_XXXX.p8 k.b64   (windows)
+#                             base64 -i AuthKey_XXXX.p8 | pbcopy        (mac)
+#   ASC_KEY_ID              the key id (e.g. T5Y2Q6SGZW)
+#   ASC_ISSUER_ID          the API issuer id (Users and Access → Integrations)
+#   IOS_TEAM_ID            the 10-char Apple Team ID (Membership page)
+# Bundle id is com.techbynoam.squadio (set in the Xcode project). The key needs Admin/App Manager.
 # ============================================================
 name: iOS Release (IPA)
 
 on:
   workflow_dispatch:
+  # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
+  # since workflow_dispatch only works from the default branch and no workflows live on main.
+  # rebuild: 1
+  push:
+    branches: [feat/native-app]
+    paths:
+      - ".github/workflows/ios-release.yml"
 
 jobs:
   ipa:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
       - name: Signing secrets present?
         id: secrets
         env:
-          CERT: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          K: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
         run: |
-          if [ -z "$CERT" ]; then
-            echo "::notice::IOS_DIST_CERT_P12_BASE64 not set — skipping. See the header of this file."
+          if [ -z "$K" ]; then
+            echo "::notice::ASC_API_KEY_P8_BASE64 not set — skipping. See the header of this file."
             echo "ready=no" >> "$GITHUB_OUTPUT"
           else
             echo "ready=yes" >> "$GITHUB_OUTPUT"
@@ -55,90 +62,86 @@ jobs:
           npm run build
           npx cap sync ios
 
-      - name: Import signing cert into a temp keychain
+      - name: Write ASC API key
         if: steps.secrets.outputs.ready == 'yes'
+        id: key
         env:
-          CERT_B64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
-          CERT_PW: ${{ secrets.IOS_CERT_PASSWORD }}
-          KC_PW: ${{ secrets.KEYCHAIN_PASSWORD }}
+          P8_B64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
         run: |
-          KC="$RUNNER_TEMP/build.keychain-db"
-          echo "$CERT_B64" | base64 -d > "$RUNNER_TEMP/dist.p12"
-          security create-keychain -p "$KC_PW" "$KC"
-          security set-keychain-settings -lut 21600 "$KC"
-          security unlock-keychain -p "$KC_PW" "$KC"
-          security import "$RUNNER_TEMP/dist.p12" -k "$KC" -P "$CERT_PW" -T /usr/bin/codesign
-          security list-keychain -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KC_PW" "$KC" >/dev/null
+          # altool/xcodebuild look for the key here.
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          P8="$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
+          echo "$P8_B64" | base64 -d > "$P8"
+          echo "path=$P8" >> "$GITHUB_OUTPUT"
 
-      - name: Install provisioning profile
-        if: steps.secrets.outputs.ready == 'yes'
-        env:
-          PROFILE_B64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
-        run: |
-          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "$PROFILE_B64" | base64 -d > "$RUNNER_TEMP/app.mobileprovision"
-          UUID=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision" | plutil -extract UUID raw - -o -)
-          cp "$RUNNER_TEMP/app.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
-          echo "PROFILE_UUID=$UUID" >> "$GITHUB_ENV"
-
-      - name: Archive + export .ipa
+      - name: Archive + export + upload
         if: steps.secrets.outputs.ready == 'yes'
         working-directory: ios/App
         env:
           TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
-          PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          P8_PATH: ${{ steps.key.outputs.path }}
           VERSION_NAME: 1.0.${{ github.run_number }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           set -o pipefail
-          # Marketing/build version from the run number.
+          # Marketing + build versions from the run number (build must increase per upload).
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NAME" App/Info.plist 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" App/Info.plist 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" App/Info.plist 2>/dev/null || true
 
+          # 1) Archive with automatic signing (the API key creates cert + profile as needed).
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$P8_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            archive 2>&1 | tail -60
+
+          # 2) Export a signed App Store .ipa.
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0"><dict>
             <key>method</key><string>app-store</string>
             <key>teamID</key><string>${TEAM_ID}</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>provisioningProfiles</key><dict>
-              <key>com.squadio.app</key><string>${PROFILE_NAME}</string>
-            </dict>
+            <key>signingStyle</key><string>automatic</string>
             <key>uploadSymbols</key><true/>
+            <key>destination</key><string>export</string>
           </dict></plist>
           PLIST
-
-          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            archive 2>&1 | tail -40
 
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath "$RUNNER_TEMP/export" 2>&1 | tail -30
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$P8_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" 2>&1 | tail -40
 
-      - name: Locate .ipa
-        if: steps.secrets.outputs.ready == 'yes'
-        id: out
-        run: |
-          ipa=$(find "$RUNNER_TEMP/export" -name "*.ipa" | head -1)
-          if [ -z "$ipa" ]; then echo "::error::no .ipa produced — check signing logs above"; exit 1; fi
-          echo "path=$ipa" >> "$GITHUB_OUTPUT"
-          echo "::notice::signed IPA · $(du -h "$ipa" | cut -f1)"
+          IPA=$(find "$RUNNER_TEMP/export" -name "*.ipa" | head -1)
+          if [ -z "$IPA" ]; then echo "::error::no .ipa produced"; exit 1; fi
+          echo "::notice::signed IPA · $(du -h "$IPA" | cut -f1)"
+
+          # 3) Upload to App Store Connect (TestFlight) with the API key.
+          xcrun altool --upload-app -f "$IPA" -t ios \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID" 2>&1 | tail -30
+
+          cp "$IPA" "$RUNNER_TEMP/Squadio.ipa"
 
       - uses: actions/upload-artifact@v4
         if: steps.secrets.outputs.ready == 'yes'
         with:
           name: squadio-ios-ipa
-          path: ${{ steps.out.outputs.path }}
+          path: ${{ runner.temp }}/Squadio.ipa
           if-no-files-found: error
           retention-days: 30
 
-      - name: Clean up keychain
+      - name: Clean up key
         if: always()
-        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+        run: rm -f "$HOME/.appstoreconnect/private_keys/"*.p8 2>/dev/null || true
