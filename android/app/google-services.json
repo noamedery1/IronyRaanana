@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "292935941612",
+    "project_id": "squadio-10636",
+    "storage_bucket": "squadio-10636.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:292935941612:android:b7bf9932f5f129549954c9",
+        "android_client_info": {
+          "package_name": "com.squadio.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApWCKlZ7gFg5KDFkxuTO-f2EIJuo4m-B4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
