@@ -59,9 +59,13 @@ export async function unregisterPush(slug, { endpoint }) {
 
 // Deliver to a segment. '' = whole club; 'team:X' / '__TRAINER__:X' / '__OPERATOR__' match
 // exactly or by prefix (so '__TRAINER__' hits every '__TRAINER__:name').
-export async function broadcast(slug, { segment = '', title, body, url, icon, tag, data, actions }) {
+export async function broadcast(slug, { segment = '', title, body, url, icon, tag, data, actions, channel = 'all' }) {
     const cid = await clubId(slug);
     const seg = (segment || '').toString();
+    // channel: 'all' (web + native, default) · 'native' (store apps only — manager testing, so a test
+    // push doesn't reach real web users) · 'web' (web only). Fully backward compatible (omit = 'all').
+    const wantWeb = channel !== 'native';
+    const wantNative = channel !== 'web';
     // Deliver to EVERY matching subscription regardless of which origin (apex vs subdomain) it was
     // registered on. We deliberately do NOT auto-drop by origin: an active parent who only installed
     // the old apex app would silently stop getting notifications, and origin can't distinguish a
@@ -70,8 +74,8 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
     // Match the target's subscriptions. A team target (team:<name>) must also reach rows stored
     // in the legacy label format ("<name> - <coach>" or bare "<name>") that the notifications
     // modal used to create — otherwise team sends silently skip those parents.
-    let r;
-    if (seg.startsWith('team:')) {
+    let r = { rows: [] };
+    if (wantWeb && seg.startsWith('team:')) {
         const name = seg.slice(5);
         const escLike = (x) => x.replace(/[%_\\]/g, '\\$&');
         // A device subscribes to all its teams as one "team:<name>" per line. Match this team as a
@@ -87,7 +91,7 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
              )`,
             [cid, wholeLine, name, escLike(name) + ' - %'],
         );
-    } else {
+    } else if (wantWeb) {
         // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).
         r = await pool.query(
             `SELECT id, endpoint, subscription FROM push_subscriptions
@@ -108,11 +112,14 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
     // no-op unless enabled+configured, and any failure is swallowed so it can never affect the Web
     // Push result or the caller. Fired here (not after the early-returns below) so a native-only
     // audience — a device with no Web Push subscription — still receives the notification.
-    const nativePromise = sendNative(slug, { segment: seg, title: fullTitle, body, url: link, data, tag })
-        .catch((e) => ({ skipped: true, error: e && e.message }));
+    const nativePromise = wantNative
+        ? sendNative(slug, { segment: seg, title: fullTitle, body, url: link, data, tag })
+            .catch((e) => ({ skipped: true, error: e && e.message }))
+        : Promise.resolve({ skipped: true, reason: 'channel=web' });
 
     const withNative = async (webResult) => ({ ...webResult, native: await nativePromise });
 
+    if (!wantWeb) return withNative({ sent: 0, failed: 0, expired: [], note: 'native-only (channel)' });
     if (!r.rows.length) return withNative({ sent: 0, failed: 0, expired: [], note: 'no subscribers' });
     if (!pushReady) return withNative({ sent: 0, failed: r.rows.length, expired: [], error: 'push not configured (set VAPID_* env)' });
 
@@ -147,28 +154,31 @@ const PUSH_LOG_KEY = 'pushLog';
 const PUSH_LOG_MAX = 100;
 
 // Send one manager message to one or more segments, aggregate the result, and archive it.
-export async function sendMessage(slug, { title, body, target, segments }) {
+export async function sendMessage(slug, { title, body, target, segments, channel = 'all' }) {
     const segs = Array.isArray(segments) && segments.length ? segments : [''];
     let sent = 0, failed = 0;
     const statusCodes = {};
+    let nativeSent = 0, nativeFailed = 0;
     for (const seg of segs) {
-        const r = await broadcast(slug, { segment: seg, title, body });
+        const r = await broadcast(slug, { segment: seg, title, body, channel });
         sent += r.sent || 0;
         failed += r.failed || 0;
         Object.entries(r.statusCodes || {}).forEach(([k, v]) => { statusCodes[k] = (statusCodes[k] || 0) + v; });
+        if (r.native) { nativeSent += r.native.sent || 0; nativeFailed += r.native.failed || 0; }
     }
     const entry = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         at: new Date().toISOString(),
         target: target || '', segments: segs,
         title: title || '', body: body || '',
-        sent, failed,
+        sent, failed, channel,
+        nativeSent, nativeFailed,
     };
     const existing = await getSetting(slug, PUSH_LOG_KEY);
     const arr = Array.isArray(existing) ? existing : [];
     arr.unshift(entry);
     await setSetting(slug, PUSH_LOG_KEY, arr.slice(0, PUSH_LOG_MAX));
-    return { sent, failed, statusCodes, entry };
+    return { sent, failed, statusCodes, nativeSent, nativeFailed, entry };
 }
 
 export async function listMessages(slug) {

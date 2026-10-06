@@ -13,6 +13,7 @@ export default function MessageCenter() {
     const [body, setBody] = useState('');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
+    const [nativeOnly, setNativeOnly] = useState(false); // testing: send only to the store apps (FCM), not web
 
     const [stats, setStats] = useState({ total: 0, bySegment: {} }); // subscriber counts per segment
 
@@ -76,13 +77,16 @@ export default function MessageCenter() {
             // One call: the server sends to every segment AND archives the message (for resend).
             const r = await fetch(`/api/${slug}/messages`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
-                body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, target: targetLabel(), segments: segs }),
+                body: JSON.stringify({ title: 'הודעה מהנהלת המועדון', body, target: targetLabel(), segments: segs, channel: nativeOnly ? 'native' : 'all' }),
             });
             const d = await r.json().catch(() => ({ error: 'x' }));
             if (d.error) { setMsg('⚠️ שגיאה בשליחה'); return; }
             const codes = d.statusCodes || {};
             const codeStr = Object.keys(codes).length ? ` [${Object.entries(codes).map(([k, v]) => `${k}×${v}`).join(', ')}]` : '';
-            setMsg(`✓ נשלח (${d.sent || 0} מכשירים${d.failed ? `, ${d.failed} נכשלו${codeStr}` : ''})`);
+            const nativeStr = (d.nativeSent || d.nativeFailed) ? ` · אפליקציות: ${d.nativeSent || 0}${d.nativeFailed ? `, ${d.nativeFailed} נכשלו` : ''}` : '';
+            setMsg(nativeOnly
+                ? `✓ נשלח לאפליקציות (${d.nativeSent || 0} מכשירים${d.nativeFailed ? `, ${d.nativeFailed} נכשלו` : ''})`
+                : `✓ נשלח (${d.sent || 0} מכשירים${d.failed ? `, ${d.failed} נכשלו${codeStr}` : ''}${nativeStr})`);
             setBody('');
             loadStats(); // refresh counts (a send prunes expired subscriptions)
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
@@ -141,8 +145,13 @@ export default function MessageCenter() {
             <label style={{ display: 'block', margin: '1rem 0 0.4rem', fontWeight: 600 }}>תוכן ההודעה</label>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} placeholder="לדוגמה: אימון מחר יתקיים כרגיל" style={{ ...input, resize: 'vertical' }} />
 
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.8rem', padding: '0.6rem 0.8rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, cursor: 'pointer', fontSize: '0.9rem' }}>
+                <input type="checkbox" checked={nativeOnly} onChange={(e) => setNativeOnly(e.target.checked)} />
+                <span>📱 בדיקה: שליחה <b>רק לאפליקציות</b> (Android/iOS) — לא לדפדפן/ווב-פוש</span>
+            </label>
+
             <button onClick={send} disabled={busy} style={{ marginTop: '1rem', background: '#ff7a18', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: busy ? 'wait' : 'pointer' }}>
-                {busy ? 'שולח...' : '🔔 שלח הודעה'}
+                {busy ? 'שולח...' : (nativeOnly ? '📱 שלח לאפליקציות' : '🔔 שלח הודעה')}
             </button>
             {msg && <div style={{ marginTop: '1rem', fontWeight: 'bold', color: msg.startsWith('✓') ? '#10b981' : '#ef4444' }}>{msg}</div>}
         </div>
