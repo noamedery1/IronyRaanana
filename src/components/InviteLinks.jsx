@@ -4,6 +4,7 @@ import { sortTeams, SORT_MODES } from '../teamSort.js';
 import { venues } from '../sportLabels.js';
 import { encodePathSeg } from '../encodeSeg.js';
 import { authHeaders } from '../adminApi.js';
+import { smartLink } from '../appStores.js';
 
 // Manager tool: generate invite links per team (members) + an operator link.
 // Members open their link once, register, and are then locked to that team's view.
@@ -82,8 +83,9 @@ export default function InviteLinks() {
                     </select>
                 </label>
             </div>
-            <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem' }}>
-                💡 <b>הכי פשוט להורים:</b> תנו להם את <b>הקוד</b> (5 ספרות) — באפליקציה הם לוחצים "יש לי קוד הצטרפות" ומקלידים אותו. הלינק הוא חלופה.
+            <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem', lineHeight: 1.7 }}>
+                💡 <b>הכי פשוט:</b> שלחו את <b>🔗 הלינק החכם</b> — הוא מפנה לחנות/אפליקציה הנכונה ומראה את הקוד.
+                חלופות: ה-<b>קוד</b> (5 ספרות, להקלדה ידנית) או הלינק הישיר (פתיחה בדפדפן).
             </p>
             {teams.length === 0 && <div style={{ color: '#94a3b8' }}>אין קבוצות עדיין — הקימו קבוצות ב"👥 ניהול קבוצות".</div>}
             {sortTeams(teams, teamSort).map((t) => (
@@ -100,6 +102,10 @@ export default function InviteLinks() {
                             <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.12rem', color: '#0d9488', background: '#ecfdf5', border: '1px solid #99f6e4', borderRadius: 8, padding: '0.25rem 0.6rem' }}>{codes[t.name]}</span>
                             <button onClick={() => copy(codes[t.name], 'code:' + t.name)} style={{ background: '#0d9488', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 0.8rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>
                                 {copied === 'code:' + t.name ? '✓' : 'קוד'}
+                            </button>
+                            {/* Smart link — routes to app/store/browser and shows the code as fallback. */}
+                            <button onClick={() => copy(smartLink(codes[t.name]), 'smart:' + t.name)} style={{ background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 0.8rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                {copied === 'smart:' + t.name ? '✓' : '🔗 חכם'}
                             </button>
                         </div>
                     )}
