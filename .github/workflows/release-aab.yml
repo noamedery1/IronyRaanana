@@ -37,7 +37,7 @@ on:
   # Build a signed AAB on feat/native-app whenever this workflow file changes (bump the rebuild
   # counter below to trigger a fresh build) — workflow_dispatch only works from the default branch,
   # and no workflows live on main by design. versionCode = github.run_number, so each run increments.
-  # rebuild: 2 (icon fix = Squadio shield, in-app install UI suppressed, App Links deep linking)
+  # rebuild: 3 (appendUserAgent=SquadioApp so the live site detects the app; launcher push on all paths)
   push:
     branches: [feat/native-app]
     paths:

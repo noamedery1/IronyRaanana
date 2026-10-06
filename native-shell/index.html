@@ -96,7 +96,7 @@
           setTimeout(function () { fin(null); }, 6000);
         });
         if (!token) return;
-        var seg = (role === 'member' && team) ? ('team:' + team) : '__OPERATOR__'; // no team → whole club
+        var seg = team ? ('team:' + team) : ''; // team member → team segment; otherwise whole-club ('' reaches all)
         await fetch(BASE + '/api/' + encodeURIComponent(club) + '/native-push/register', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ platform: (Capacitor.getPlatform && Capacitor.getPlatform()) || 'native', token: token, segment: seg, role: role || '', team: team || '' }),
@@ -197,10 +197,16 @@
       return Promise.resolve();
     }
 
-    function go(url, slug) {
+    async function go(url, slug) {
       if (slug) saveRecent(slug);
+      // Register for native push on EVERY club entry (recent tap, auto-enter, link, code), using the
+      // saved team if we know it. The server's whole-club sends ('') reach every registered device.
+      if (slug) {
+        try { var m = getMembers().find(function (x) { return x.club === slug; }); await registerPushForMember(slug, (m && m.team) ? 'member' : '', m ? m.team : ''); } catch (e) {}
+      }
       var nav = function () { window.location.href = url; };
-      nativeSync().then(nav, nav);
+      try { await nativeSync(); } catch (e) {}
+      nav();
     }
 
     // Deep link (Android App Link / iOS Universal Link): the user tapped a Squadio invite/club https

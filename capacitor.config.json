@@ -2,6 +2,7 @@
   "appId": "com.squadio.app",
   "appName": "Squadio",
   "webDir": "native-shell",
+  "appendUserAgent": "SquadioApp",
   "server": {
     "allowNavigation": [
       "squadio.techbynoam.com",
