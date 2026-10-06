@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 2 (archive unsigned; sign for App Store at export — fixes dev-profile error)
+  # rebuild: 3 (iPhone-only device family; export-compliance key in Info.plist)
   push:
     branches: [feat/native-app]
     paths:
