@@ -34,9 +34,10 @@ name: AAB
 
 on:
   workflow_dispatch:
-  # TEMPORARY: one-shot trigger to build the first signed AAB from feat/native-app
-  # (workflow_dispatch only works from the default branch, and no workflows live on
-  # main by design). Remove this push block right after the AAB artifact is produced.
+  # Build a signed AAB on feat/native-app whenever this workflow file changes (bump the rebuild
+  # counter below to trigger a fresh build) — workflow_dispatch only works from the default branch,
+  # and no workflows live on main by design. versionCode = github.run_number, so each run increments.
+  # rebuild: 2 (icon fix = Squadio shield, in-app install UI suppressed, App Links deep linking)
   push:
     branches: [feat/native-app]
     paths:
