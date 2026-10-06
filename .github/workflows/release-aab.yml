@@ -34,6 +34,13 @@ name: AAB
 
 on:
   workflow_dispatch:
+  # TEMPORARY: one-shot trigger to build the first signed AAB from feat/native-app
+  # (workflow_dispatch only works from the default branch, and no workflows live on
+  # main by design). Remove this push block right after the AAB artifact is produced.
+  push:
+    branches: [feat/native-app]
+    paths:
+      - ".github/workflows/release-aab.yml"
 
 jobs:
   aab:
