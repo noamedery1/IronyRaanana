@@ -12,6 +12,7 @@ import ErrorPage from './pages/ErrorPage';
 import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
 import AdminSwitcher from './components/AdminSwitcher';
+import AccountSwitcher from './components/AccountSwitcher';
 import { useI18n } from './i18n.jsx';
 import { isKnownClub } from './clubConfig.js';
 import './App.css';
@@ -121,6 +122,7 @@ function App() {
       <InstallPrompt />
 
       <AdminSwitcher />
+      <AccountSwitcher />
 
     </Router>
   );
