@@ -145,6 +145,26 @@ app.use((req, res, next) => {
     next();
 });
 
+// Android App Links / Digital Asset Links. Served on EVERY host (apex + club subdomains) so tapping a
+// Squadio https invite link opens the native app directly instead of the browser. Lists the Play App
+// Signing cert (apps installed from Play are re-signed by Google) AND the upload-key cert (sideload).
+// Static + public; no secrets. iOS Universal Links (apple-app-site-association) can be added later.
+const ASSETLINKS = [{
+    relation: ['delegate_permission/common.handle_all_urls'],
+    target: {
+        namespace: 'android_app',
+        package_name: 'com.squadio.app',
+        sha256_cert_fingerprints: [
+            '04:EA:3A:C0:B8:78:EA:7E:8D:1F:A1:59:25:4F:D3:41:5B:DF:1A:B3:8D:69:24:94:7B:52:0B:4C:4F:93:BA:CC', // Play App Signing key
+            '9F:DA:0B:D8:3B:9A:58:AB:66:98:47:EA:C8:86:60:5E:6B:1F:DA:1E:5F:4F:B4:BC:5D:D4:88:C9:8A:26:D2:B3', // upload key
+        ],
+    },
+}];
+app.get('/.well-known/assetlinks.json', (req, res) => {
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.json(ASSETLINKS);
+});
+
 // Diagnostics: confirms the server is connected to Postgres and that migrations ran.
 // Open <APP_BASE_URL>/api/health — no secrets are exposed (host only, no credentials).
 app.get('/api/health', async (req, res) => {
