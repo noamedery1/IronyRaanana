@@ -31,6 +31,14 @@ function iosInAppWebView() {
     return !realSafari;
 }
 
+// The bundled native app (Capacitor) also runs in a WebView without Safari/Version UA tokens, which
+// would falsely trip iosInAppWebView(). It's a real app with persistent storage, so never treat it
+// as an in-app browser (otherwise the Join page shows a misplaced "open in Safari" banner).
+function isNativeApp() {
+    try { return window.Capacitor?.isNativePlatform?.() === true; } catch { return false; }
+}
+
 export function isInAppBrowser() {
+    if (isNativeApp()) return false;
     return knownInAppUA() || iosInAppWebView();
 }
