@@ -28,11 +28,16 @@ export default function SmartJoin() {
                 if (!d) { setState({ loading: false, error: true }); return; }
                 // Already registered to this team on this device → straight to the schedule.
                 const alreadyMember = getMemberships().some((m) => m.team === d.team);
-                const joinPath = alreadyMember ? `/${d.clubSlug}` : `/${d.clubSlug}/join/member/${encodePathSeg(d.team)}`;
+                const path = alreadyMember ? `/${d.clubSlug}` : `/${d.clubSlug}/join/member/${encodePathSeg(d.team)}`;
                 if (alreadyMember) setActiveTeam(d.team);
+                // A subdomain club lives on its own origin — land the parent there (full nav) so identity
+                // and PWA state live on the right origin and the club always resolves server-side.
+                const origin = (d.inviteOrigin || '').replace(/\/$/, '');
+                const joinUrl = (origin && origin !== window.location.origin) ? origin + path : '';
+                const goJoin = () => { if (joinUrl) window.location.href = joinUrl; else navigate(path, { replace: true }); };
                 // In the app, or on a desktop browser → no store step; go straight in.
-                if (isNativeApp() || !isMobile()) { navigate(joinPath, { replace: true }); return; }
-                setState({ loading: false, joinPath, ...d });
+                if (isNativeApp() || !isMobile()) { goJoin(); return; }
+                setState({ loading: false, goJoin, ...d });
             })
             .catch(() => { if (alive) setState({ loading: false, error: true }); });
         return () => { alive = false; };
@@ -82,7 +87,7 @@ export default function SmartJoin() {
                     {ios ? '📥 התקן מ‑App Store' : '📥 התקן מ‑Google Play'}
                 </a>
                 <button
-                    onClick={() => navigate(state.joinPath)}
+                    onClick={() => state.goJoin && state.goJoin()}
                     style={{ ...btn, background: 'var(--glass-2, rgba(255,255,255,0.08))', color: 'var(--text,#e8edf7)', border: '1px solid var(--bd2, rgba(255,255,255,0.18))' }}
                 >המשך בדפדפן (בלי התקנה)</button>
 
