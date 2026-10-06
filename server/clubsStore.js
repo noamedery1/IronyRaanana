@@ -61,6 +61,25 @@ export async function ensureStore() {
         // Registrant's name, so the manager can identify a device (not just its team/origin).
         await pool.query('ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS label text');
     } catch { /* push_subscriptions not created yet — migration will handle it */ }
+    // Native (store-app) push tokens — FCM/APNs device tokens for the bundled Android/iOS apps.
+    // Created here too (not only in the formal migration) because deploys don't run migrations, and
+    // the native-push register endpoint must have the table to write to. Fully additive.
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS native_push_tokens (
+              id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+              club_id     uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+              token       text UNIQUE NOT NULL,
+              segment     text,
+              platform    text,
+              label       text,
+              host        text,
+              user_token  text,
+              created_at  timestamptz NOT NULL DEFAULT now(),
+              updated_at  timestamptz NOT NULL DEFAULT now()
+            )`);
+        await pool.query('CREATE INDEX IF NOT EXISTS native_push_seg_idx ON native_push_tokens (club_id, segment)');
+    } catch (e) { console.error('[native-push] table init failed (non-fatal):', e.message); }
 }
 
 export async function listClubs() {
