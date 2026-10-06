@@ -43,6 +43,25 @@ function applyIdentityLink() {
         }
         if (!u) return;
         const r = rRaw === 'operator' ? 'operator' : (rRaw === 'member' ? 'member' : (team ? 'member' : ''));
+        // An operator link must NOT silently bury an existing parent (member) identity with no way
+        // back (the bug: parent board vanishes). Before taking over the active pointers, preserve the
+        // parent identity — snapshot a legacy single-team member into `memberships` (modern members
+        // already keep the array) — and stash the operator token under its own key so the
+        // AccountSwitcher can flip between the two identities.
+        if (r === 'operator') {
+            try {
+                const prevRole = localStorage.getItem('userRole');
+                const prevTok = localStorage.getItem('userToken');
+                const prevTeam = localStorage.getItem('userTeam');
+                let list = JSON.parse(localStorage.getItem('memberships') || '[]');
+                if (!Array.isArray(list)) list = [];
+                if (prevRole === 'member' && prevTeam && prevTok && !list.find((m) => m && m.team === prevTeam)) {
+                    list.push({ team: prevTeam, token: prevTok });
+                    localStorage.setItem('memberships', JSON.stringify(list));
+                }
+            } catch { /* ignore */ }
+            localStorage.setItem('operatorToken', u);
+        }
         localStorage.setItem('userToken', u);
         if (r) localStorage.setItem('userRole', r);
         if (r) localStorage.setItem('entryRole', r);

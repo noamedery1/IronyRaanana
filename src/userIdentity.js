@@ -54,7 +54,38 @@ export function setIdentity(d) {
 }
 
 export function clearIdentity() {
-    ['userToken', 'userRole', 'userTeam', 'userName', 'memberships'].forEach((k) => localStorage.removeItem(k));
+    ['userToken', 'userRole', 'userTeam', 'userName', 'memberships', 'operatorToken'].forEach((k) => localStorage.removeItem(k));
+}
+
+// ===== Dual identity (parent + operator on the same device) =====
+// A device can hold BOTH a parent (member) identity and an operator one — e.g. a parent who later
+// opens an operator link. The operator token is preserved separately (see main.jsx) so the two can
+// be switched between losslessly without re-opening a link.
+
+export function getOperatorToken() {
+    return localStorage.getItem('operatorToken') || '';
+}
+
+// Flip the ACTIVE identity to the preserved operator identity. Returns false if there is none.
+export function switchToOperator() {
+    const tok = getOperatorToken();
+    if (!tok) return false;
+    localStorage.setItem('userToken', tok);
+    localStorage.setItem('userRole', 'operator');
+    localStorage.removeItem('userTeam'); // operator sees the full board — no single active team
+    return true;
+}
+
+// Flip the ACTIVE identity back to the parent (member) identity, activating one of their teams
+// (the named one, else the first). Returns false if there are no memberships.
+export function switchToMember(team) {
+    const list = getMemberships();
+    if (!list.length) return false;
+    const pick = list.find((m) => m.team === team) || list[0];
+    localStorage.setItem('userRole', 'member');
+    localStorage.setItem('userTeam', pick.team);
+    localStorage.setItem('userToken', pick.token || '');
+    return true;
 }
 
 // Push segment this device should register under, by role.

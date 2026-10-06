@@ -11,6 +11,7 @@ import NavButton from '../components/NavButton';
 import CalendarSubscribe from '../components/CalendarSubscribe';
 import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import { getActiveClub } from '../clubConfig.js';
+import { isNativeApp } from '../native.js';
 import { sportEmoji } from '../sportLabels.js';
 
 const parseScheduleContent = parseCellContent;
@@ -335,10 +336,13 @@ function PublicScheduleWomen() {
                                         <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                             <span>{t('share_whatsapp')}</span><span>💬</span>
                                         </button>
-                                        <CalendarSubscribe teamLabel={getSelectedTeamName()} />
-                                        <button onClick={saveToCalendar} className="action-btn ghost" title={t('cal_save_title')}>
-                                            <span>{t('cal_save')}</span><span>📅</span>
-                                        </button>
+                                        {/* Calendar export hidden inside the native app (clutter) — web/PWA keeps it. */}
+                                        {!isNativeApp() && <CalendarSubscribe teamLabel={getSelectedTeamName()} />}
+                                        {!isNativeApp() && (
+                                            <button onClick={saveToCalendar} className="action-btn ghost" title={t('cal_save_title')}>
+                                                <span>{t('cal_save')}</span><span>📅</span>
+                                            </button>
+                                        )}
                                         <button onClick={() => setIsRegisterModalOpen(true)} className="action-btn ghost">
                                             <span>{t('updates')}</span><span>🔔</span>
                                         </button>
