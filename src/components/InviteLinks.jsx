@@ -3,11 +3,14 @@ import { getActiveClub } from '../clubConfig.js';
 import { sortTeams, SORT_MODES } from '../teamSort.js';
 import { venues } from '../sportLabels.js';
 import { encodePathSeg } from '../encodeSeg.js';
+import { authHeaders } from '../adminApi.js';
 
 // Manager tool: generate invite links per team (members) + an operator link.
 // Members open their link once, register, and are then locked to that team's view.
+// Each team also has a short 5-digit CODE a parent can type instead of the link (simpler on phones).
 export default function InviteLinks() {
     const [teams, setTeams] = useState([]); // full team objects from the DB (name/gender/age/grade)
+    const [codes, setCodes] = useState({}); // team name -> 5-digit join code
     const [teamSort, setTeamSort] = useState('name');
     const [copied, setCopied] = useState('');
 
@@ -27,6 +30,16 @@ export default function InviteLinks() {
         fetch(`/api/${club.slug}/teams`).then((r) => r.json())
             .then((d) => { if (Array.isArray(d.teams)) setTeams(d.teams); })
             .catch(() => { /* server down in dev */ });
+        // Each team's 5-digit join code (manager-only endpoint).
+        fetch(`/api/${club.slug}/teams/join-codes`, { headers: authHeaders(club.slug) }).then((r) => r.json())
+            .then((d) => {
+                if (Array.isArray(d.teams)) {
+                    const m = {};
+                    d.teams.forEach((t) => { if (t.code) m[t.team] = t.code; });
+                    setCodes(m);
+                }
+            })
+            .catch(() => { /* non-fatal */ });
     }, [club.slug]);
 
     const teamLink = (name) => `${base}/join/member/${encodePathSeg(name)}`;
@@ -69,6 +82,9 @@ export default function InviteLinks() {
                     </select>
                 </label>
             </div>
+            <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem' }}>
+                💡 <b>הכי פשוט להורים:</b> תנו להם את <b>הקוד</b> (5 ספרות) — באפליקציה הם לוחצים "יש לי קוד הצטרפות" ומקלידים אותו. הלינק הוא חלופה.
+            </p>
             {teams.length === 0 && <div style={{ color: '#94a3b8' }}>אין קבוצות עדיין — הקימו קבוצות ב"👥 ניהול קבוצות".</div>}
             {sortTeams(teams, teamSort).map((t) => (
                 <div key={t.name} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
@@ -78,6 +94,15 @@ export default function InviteLinks() {
                         {t.age ? <span style={{ background: '#e0e7ff', color: '#3730a3', fontSize: '0.66rem', borderRadius: 8, padding: '0.02rem 0.4rem' }}>גיל {t.age}</span> : null}
                         {t.grade ? <span style={{ background: '#dcfce7', color: '#166534', fontSize: '0.66rem', borderRadius: 8, padding: '0.02rem 0.4rem' }}>כיתה {t.grade}</span> : null}
                     </div>
+                    {/* The 5-digit code — the simple option to hand a parent (they type it in the app). */}
+                    {codes[t.name] && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.12rem', color: '#0d9488', background: '#ecfdf5', border: '1px solid #99f6e4', borderRadius: 8, padding: '0.25rem 0.6rem' }}>{codes[t.name]}</span>
+                            <button onClick={() => copy(codes[t.name], 'code:' + t.name)} style={{ background: '#0d9488', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 0.8rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                {copied === 'code:' + t.name ? '✓' : 'קוד'}
+                            </button>
+                        </div>
+                    )}
                     <input readOnly value={teamLink(t.name)} onFocus={(e) => e.target.select()} style={{ flex: 1, minWidth: 180, padding: '0.5rem', borderRadius: 6, border: '1px solid #cbd5e1', direction: 'ltr', fontSize: '0.8rem', color: '#334155' }} />
                     <button onClick={() => copy(teamLink(t.name), t.name)} style={{ background: '#ff7a18', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 0.9rem', fontWeight: 'bold', cursor: 'pointer' }}>
                         {copied === t.name ? '✓ הועתק' : 'העתק'}

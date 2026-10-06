@@ -161,7 +161,9 @@ export async function upsertTeam(slug, { id, name, gender, coach, age, grade, ac
             `UPDATE teams SET name=$1, gender=$2, coach=$3, age=$4, grade=$5, active=COALESCE($6, active) WHERE id=$7 AND club_id=$8 RETURNING *`,
             [nm, gender || 'M', coach || null, ag, gr, active, id, cid],
         );
-        return r.rows[0];
+        const row = r.rows[0];
+        if (row && !row.join_code) row.join_code = await assignJoinCode(row.id);
+        return row;
     }
     const r = await pool.query(
         `INSERT INTO teams (club_id, name, gender, coach, age, grade) VALUES ($1,$2,$3,$4,$5,$6)
@@ -169,13 +171,76 @@ export async function upsertTeam(slug, { id, name, gender, coach, age, grade, ac
          RETURNING *`,
         [cid, nm, gender || 'M', coach || null, ag, gr],
     );
-    return r.rows[0];
+    const row = r.rows[0];
+    // New team → mint its shareable join code right away (existing teams are backfilled on boot).
+    if (row && !row.join_code) row.join_code = await assignJoinCode(row.id);
+    return row;
 }
 
 export async function deleteTeam(slug, id) {
     const cid = await clubId(slug);
     await pool.query('DELETE FROM teams WHERE id=$1 AND club_id=$2', [id, cid]);
     return { ok: true };
+}
+
+// ===== Team join codes (5-digit, globally unique) =====
+// A short code a parent types instead of following an invite link. Globally unique across ALL
+// clubs (the parent enters only the code, with no club context), 5 digits (10000–99999).
+function randomJoinCode() {
+    return String(10000 + crypto.randomInt(90000)); // 10000..99999, never a leading zero
+}
+
+// Give one team a unique code if it has none. Collision-safe; returns the code (new or existing).
+async function assignJoinCode(teamId) {
+    for (let i = 0; i < 50; i++) {
+        const code = randomJoinCode();
+        try {
+            const r = await pool.query(
+                `UPDATE teams SET join_code=$1 WHERE id=$2 AND (join_code IS NULL OR join_code='') RETURNING join_code`,
+                [code, teamId],
+            );
+            if (r.rows.length) return r.rows[0].join_code;        // we assigned it
+            const cur = await pool.query('SELECT join_code FROM teams WHERE id=$1', [teamId]);
+            return cur.rows[0]?.join_code || null;                // already had one (or gone)
+        } catch { /* unique-index collision — pick another code and retry */ }
+    }
+    return null;
+}
+
+// Assign a join_code to every team that lacks one. Idempotent, collision-safe — safe on every boot.
+export async function ensureJoinCodes() {
+    try {
+        const miss = await pool.query(`SELECT id FROM teams WHERE join_code IS NULL OR join_code=''`);
+        let n = 0;
+        for (const { id } of miss.rows) { if (await assignJoinCode(id)) n++; }
+        if (n) console.log(`[join-code] assigned ${n} new team code(s)`);
+        return n;
+    } catch (e) { console.error('[join-code] ensure failed (non-fatal):', e.message); return 0; }
+}
+
+// Resolve a join code to its club + team. Public (code-entry screen). null if unknown/inactive.
+export async function resolveJoinCode(code) {
+    const c = (code || '').toString().trim();
+    if (!/^\d{4,6}$/.test(c)) return null;
+    const r = await pool.query(
+        `SELECT t.name AS team, t.gender, c.slug AS club_slug, c.name AS club_name
+           FROM teams t JOIN clubs c ON c.id = t.club_id
+          WHERE t.join_code=$1 AND t.active=true LIMIT 1`,
+        [c],
+    );
+    if (!r.rows.length) return null;
+    const row = r.rows[0];
+    return { clubSlug: row.club_slug, clubName: row.club_name, team: row.team, gender: row.gender };
+}
+
+// Manager-only: every active team with its join code, so the manager can share it.
+export async function listTeamJoinCodes(slug) {
+    const cid = await clubId(slug);
+    await ensureJoinCodes();
+    const r = await pool.query(
+        `SELECT name, gender, join_code FROM teams WHERE club_id=$1 AND active=true ORDER BY name`, [cid],
+    );
+    return r.rows.map((x) => ({ team: x.name, gender: x.gender, code: x.join_code || '' }));
 }
 
 // ===== Managers (manager-app login) =====

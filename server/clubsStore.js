@@ -53,6 +53,10 @@ export async function ensureStore() {
     try {
         await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS age text');
         await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS grade text');
+        // Short, globally-unique 5-digit join code parents type instead of an invite link.
+        // Codes are backfilled at boot by people.ensureJoinCodes(); this just guarantees the column.
+        await pool.query('ALTER TABLE teams ADD COLUMN IF NOT EXISTS join_code text');
+        await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS teams_join_code_uniq ON teams (join_code) WHERE join_code IS NOT NULL');
     } catch { /* teams table not created yet — migration will handle it */ }
     // Origin a push subscription was created on (apex vs a club's subdomain) — lets a club that
     // moved to a subdomain deliver only to subdomain subscriptions and drop stale apex duplicates.
