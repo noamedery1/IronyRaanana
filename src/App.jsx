@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import TrainerPortal from './pages/TrainerPortal';
 import Join from './pages/Join';
 import CodeJoin from './pages/CodeJoin';
+import SmartJoin from './pages/SmartJoin';
 import SuperUser from './pages/SuperUser';
 import NoClub from './pages/NoClub';
 import ErrorPage from './pages/ErrorPage';
@@ -53,6 +54,10 @@ function App() {
 
         {/* Superuser console (system owner) */}
         <Route path="/superuser" element={<SuperUser />} />
+
+        {/* Smart link — one shareable link per team (code is global, so no club segment). Routes the
+            visitor to the app / correct store / browser, with the code shown as the fallback. */}
+        <Route path="/s/:code" element={<SmartJoin />} />
 
         {/* Invite-based registration — only valid inside a real club link. Path-based variants
             (/:club/join/:role[/:team]) carry the role/team in the PATH, because iOS strips the query
