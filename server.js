@@ -772,13 +772,20 @@ app.get(/.*/, async (req, res) => {
     try {
         // On a club subdomain the club comes from the host; otherwise from the first path segment.
         const subSlug = clubSubFromReq(req);
-        const seg = subSlug || req.path.split('/').filter(Boolean)[0];
+        let seg = subSlug || req.path.split('/').filter(Boolean)[0];
+        // Smart link /s/<code>: resolve the code to its club so link previews (WhatsApp/Telegram)
+        // show THAT club's logo + name — not the default app icon. The code's club owns the page.
+        let smartLink = false;
+        const sm = !subSlug && req.path.match(/^\/s\/([^/]+)\/?$/);
+        if (sm) {
+            try { const r = await resolveJoinCode(sm[1]); if (r && r.clubSlug) { seg = r.clubSlug; smartLink = true; } } catch { /* unknown code → default head */ }
+        }
         const club = seg ? await getClub(seg) : null;
         const html = readIndexHtml();
         if (html) {
             let patched;
             if (club) {
-                patched = renderClubIndex(club, subSlug ? `/${club.slug}` : req.path, joinManifestStart(club, req));
+                patched = renderClubIndex(club, smartLink ? req.path : (subSlug ? `/${club.slug}` : req.path), smartLink ? null : joinManifestStart(club, req));
             } else {
                 // Non-club SPA page (unknown slug, legacy routes) — still emit a canonical for this path.
                 const canonical = `${CANONICAL_BASE}${req.path}`;
