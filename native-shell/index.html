@@ -48,9 +48,9 @@
     </div>
 
     <div class="card">
-      <label for="inp">כניסה עם קישור הזמנה או קוד מועדון</label>
-      <div class="hint">הדביקו את קישור ההזמנה שקיבלתם (הורה / מפעיל / מאמן), או הקלידו את קוד המועדון. מנהל — הדביקו את קישור הניהול.</div>
-      <input id="inp" inputmode="url" placeholder="הדביקו קישור, או קוד מועדון (למשל fcraanana)" autocapitalize="off" autocomplete="off" spellcheck="false" />
+      <label for="inp">כניסה עם קוד קבוצה, קישור הזמנה או קוד מועדון</label>
+      <div class="hint">הקלידו את <b>קוד הקבוצה</b> (5 ספרות) שקיבלתם מהמאמן/המנהל, או הדביקו קישור הזמנה. אפשר גם קוד מועדון (למשל fcraanana). מנהל — הדביקו את קישור הניהול.</div>
+      <input id="inp" inputmode="text" placeholder="קוד קבוצה (5 ספרות), קישור, או קוד מועדון" autocapitalize="off" autocomplete="off" spellcheck="false" />
       <button class="primary" id="enter">כניסה ←</button>
       <div class="err" id="err"></div>
     </div>
@@ -233,9 +233,24 @@
         if (p.club) saveMember(p.club, p.role, p.team);
         await registerPushForMember(p.club || slugFromUrl(raw), p.role, p.team); // no-op unless push enabled+native
         go(raw, p.club || slugFromUrl(raw));
+      } else if (/^\d{4,6}$/.test(raw)) {
+        // A 5-digit TEAM join code — resolve it to its club+team. MUST NOT be treated as a club slug,
+        // or typing a code (e.g. 44711) navigates to /44711 ("הדף אינו מחובר למועדון") and saves a bogus club.
+        err.textContent = 'בודק קוד…';
+        try {
+          var res = await fetch(BASE + '/api/join/' + encodeURIComponent(raw));
+          if (!res.ok) { err.textContent = 'קוד לא קיים. בדקו עם המאמן או המנהל.'; return; }
+          var d = await res.json();
+          var origin = (d.inviteOrigin || BASE).replace(/\/+$/, ''); // subdomain club → its own origin
+          if (d.clubSlug) saveMember(d.clubSlug, 'member', d.team);
+          await registerPushForMember(d.clubSlug, 'member', d.team);
+          err.textContent = '';
+          go(origin + '/' + d.clubSlug + '/join/member/' + encodeURIComponent(d.team), d.clubSlug);
+        } catch (e) { err.textContent = 'שגיאת תקשורת, נסו שוב.'; }
+        return;
       } else {
         var slug = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
-        if (!slug) { err.textContent = 'קוד מועדון לא תקין'; return; }
+        if (!slug) { err.textContent = 'קוד/קישור לא תקין'; return; }
         saveMember(slug, '', ''); // club code → whole-club view
         await registerPushForMember(slug, '', ''); // whole-club segment
         go(clubUrl(slug), slug);
@@ -245,19 +260,34 @@
     document.getElementById('enter').addEventListener('click', enter);
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') enter(); });
 
+    // Remove one entry from the recent list (and any membership for it), then re-render.
+    function removeRecent(slug) {
+      var list = getRecent().filter(function (s) { return s !== slug; });
+      try { localStorage.setItem('recentClubs', JSON.stringify(list)); } catch (e) {}
+      syncNative(list);
+      try {
+        var mem = getMembers().filter(function (m) { return m.club !== slug; });
+        localStorage.setItem('members', JSON.stringify(mem)); syncMembers(mem);
+      } catch (e) {}
+      renderRecent(list);
+    }
+
     function renderRecent(list) {
-      if (!list.length) return;
       var box = document.getElementById('recent');
       box.innerHTML = '';
+      if (!list.length) { document.getElementById('recentCard').style.display = 'none'; return; }
       list.forEach(function (slug) {
         var row = document.createElement('div');
         row.className = 'club';
         var name = document.createElement('div'); name.className = 'name'; name.textContent = slug;
+        var delBtn = document.createElement('button'); delBtn.className = 'go del'; delBtn.textContent = '✕'; delBtn.title = 'הסר';
+        delBtn.style.background = 'none'; delBtn.style.color = '#f87171'; delBtn.style.border = 'none'; delBtn.style.fontWeight = '800';
+        delBtn.addEventListener('click', function () { removeRecent(slug); });
         var enterBtn = document.createElement('button'); enterBtn.className = 'go'; enterBtn.textContent = 'כניסה';
         enterBtn.addEventListener('click', function () { go(clubUrl(slug), slug); });
         var mgrBtn = document.createElement('button'); mgrBtn.className = 'go mgr'; mgrBtn.textContent = 'מנהל';
         mgrBtn.addEventListener('click', function () { go(adminUrl(slug), slug); });
-        row.appendChild(name); row.appendChild(mgrBtn); row.appendChild(enterBtn);
+        row.appendChild(name); row.appendChild(delBtn); row.appendChild(mgrBtn); row.appendChild(enterBtn);
         box.appendChild(row);
       });
       document.getElementById('recentCard').style.display = '';
