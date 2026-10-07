@@ -260,6 +260,23 @@
     document.getElementById('enter').addEventListener('click', enter);
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') enter(); });
 
+    // Club display metadata (Hebrew name + logo) for the recent list — fetched once from the live site
+    // so the home screen shows the club's logo + Hebrew name + team instead of the raw slug.
+    var clubMeta = {};
+    async function loadClubMeta() {
+      try {
+        var res = await fetch(BASE + '/api/clubs');
+        if (!res.ok) return;
+        var list = await res.json();
+        (list || []).forEach(function (c) {
+          if (!c || !c.slug) return;
+          var logo = c.logo || c.icon192 || '';
+          if (logo && !/^https?:/i.test(logo)) logo = BASE + logo;
+          clubMeta[c.slug] = { name: c.name || c.shortName || c.slug, logo: logo };
+        });
+      } catch (e) { /* offline — fall back to the slug */ }
+    }
+
     // Remove one entry from the recent list (and any membership for it), then re-render.
     function removeRecent(slug) {
       var list = getRecent().filter(function (s) { return s !== slug; });
@@ -277,9 +294,28 @@
       box.innerHTML = '';
       if (!list.length) { document.getElementById('recentCard').style.display = 'none'; return; }
       list.forEach(function (slug) {
+        var meta = clubMeta[slug] || {};
         var row = document.createElement('div');
         row.className = 'club';
-        var name = document.createElement('div'); name.className = 'name'; name.textContent = slug;
+        // Club logo (small), falls back to hidden if it fails to load.
+        if (meta.logo) {
+          var logo = document.createElement('img');
+          logo.src = meta.logo; logo.alt = '';
+          logo.style.cssText = 'width:32px;height:32px;border-radius:8px;object-fit:contain;background:#fff;padding:2px;flex:none;';
+          logo.onerror = function () { this.style.display = 'none'; };
+          row.appendChild(logo);
+        }
+        // Hebrew club name + the team(s) this device is registered to in that club.
+        var info = document.createElement('div'); info.className = 'name';
+        var title = document.createElement('div'); title.textContent = meta.name || slug; title.style.fontWeight = '700';
+        info.appendChild(title);
+        var teams = getMembers().filter(function (m) { return m.club === slug && m.team; }).map(function (m) { return m.team; });
+        if (teams.length) {
+          var sub = document.createElement('div');
+          sub.textContent = teams.join(' · ');
+          sub.style.cssText = 'color:#94a3b8;font-size:.76rem;font-weight:600;margin-top:.12rem;';
+          info.appendChild(sub);
+        }
         var delBtn = document.createElement('button'); delBtn.className = 'go del'; delBtn.textContent = '✕'; delBtn.title = 'הסר';
         delBtn.style.background = 'none'; delBtn.style.color = '#f87171'; delBtn.style.border = 'none'; delBtn.style.fontWeight = '800';
         delBtn.addEventListener('click', function () { removeRecent(slug); });
@@ -287,14 +323,17 @@
         enterBtn.addEventListener('click', function () { go(clubUrl(slug), slug); });
         var mgrBtn = document.createElement('button'); mgrBtn.className = 'go mgr'; mgrBtn.textContent = 'מנהל';
         mgrBtn.addEventListener('click', function () { go(adminUrl(slug), slug); });
-        row.appendChild(name); row.appendChild(delBtn); row.appendChild(mgrBtn); row.appendChild(enterBtn);
+        row.appendChild(info); row.appendChild(delBtn); row.appendChild(mgrBtn); row.appendChild(enterBtn);
         box.appendChild(row);
       });
       document.getElementById('recentCard').style.display = '';
     }
 
     function showHome(list) {
-      renderRecent(list);
+      renderRecent(list); // immediate (slug fallback) …
+      if (list.length) {
+        loadClubMeta().then(function () { renderRecent(getRecent()); }); // … then upgrade to logo + Hebrew name + team
+      }
       // Once a club exists, the input card is "add another", not the main action.
       if (list.length) document.querySelector('label[for="inp"]').textContent = 'הוספת מועדון / קישור חדש';
       document.querySelector('.wrap').style.visibility = 'visible';
