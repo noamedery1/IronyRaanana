@@ -459,6 +459,19 @@ app.put('/api/:club/settings/:key', requireManager, async (req, res) => {
 });
 
 // Club landing-page registrations (public form → secretary inbox/email)
+const SITE_ORIGINS = new Set(['https://noamedery1.github.io', ...(process.env.SITE_ORIGINS || '').split(',').map((x) => x.trim()).filter(Boolean)]);
+app.use('/api/:club/signups', (req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && SITE_ORIGINS.has(origin)) {
+        res.set('Access-Control-Allow-Origin', origin);
+        res.set('Vary', 'Origin');
+        res.set('Access-Control-Allow-Methods', 'POST,OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+        res.set('Access-Control-Max-Age', '86400');
+        if (req.method === 'OPTIONS') return res.sendStatus(204);
+    }
+    next();
+});
 app.post('/api/:club/signups', async (req, res) => {
     try { ok(res, await createSignup(req.params.club, req.body || {}, req.ip)); } catch (e) { res.status(400).json({ error: e.message }); }
 });
@@ -655,13 +668,14 @@ app.get('/sales-landing', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'sales-landing.html'));
 });
 
-// Public club landing pages (marketing site per club): /site/<slug> → dist/site/<slug>.html
+// Club marketing sites live on their OWN origin (never under the app's origin/scope — an installed
+// PWA/WebAPK captures every in-scope URL and would resume on the site instead of the schedule).
+// Old /site/<slug> links redirect there.
+// Until the standalone site is hosted, send old links (and any device that got stuck on it) back to the app.
+const CLUB_SITES = { fcraanana: '/fcraanana' };
 app.get('/site/:club', (req, res, next) => {
-    const slug = String(req.params.club).toLowerCase();
-    if (!/^[a-z0-9-]+$/.test(slug)) return next();
-    const file = path.join(__dirname, 'dist', 'site', slug + '.html');
-    if (!fs.existsSync(file)) return next();
-    res.sendFile(file);
+    const url = CLUB_SITES[String(req.params.club).toLowerCase()];
+    return url ? res.redirect(302, url) : next();
 });
 
 // (Per-club calendar feed is served from /api/:club/calendar.ics — DB-backed.)
