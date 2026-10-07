@@ -14,7 +14,7 @@ import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName, venues } from '../sportLabels.js';
-import { getIdentity, getMemberships, setActiveTeam, membershipSegment, getOperatorToken, switchToOperator, switchToMember, removeMembership } from '../userIdentity.js';
+import { getIdentity, getMemberships, setActiveTeam, membershipSegment, getOperatorToken, switchToOperator, switchToMember, removeMembership, removeOperator } from '../userIdentity.js';
 import { encodePathSeg } from '../encodeSeg.js';
 import { isNativeApp } from '../native.js';
 
@@ -559,6 +559,11 @@ function PublicSchedule() {
                             else { switchToMember(name); window.location.href = `/${club.slug}`; }
                         };
                         const toOperator = () => { if (switchToOperator()) window.location.href = `/${club.slug}`; };
+                        const leaveOperator = () => {
+                            if (pendingLeave !== '__operator__') { setPendingLeave('__operator__'); return; } // first ✕ tap = arm confirm
+                            removeOperator(); // local only — never deletes the shared operator account on the server
+                            window.location.href = `/${club.slug}`;
+                        };
                         const leave = async (name, token) => {
                             if (pendingLeave !== name) { setPendingLeave(name); return; } // first ✕ tap = arm confirm
                             try {
@@ -583,7 +588,14 @@ function PublicSchedule() {
                                     </span>
                                 ))}
                                 {hasOperator && (
-                                    <button onClick={toOperator} className={`vtab ${role === 'operator' ? 'on' : ''}`} style={{ fontWeight: 700 }}>🛠️ מפעיל</button>
+                                    <span className={`vtab ${role === 'operator' ? 'on' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}>
+                                        <button onClick={toOperator} style={{ all: 'unset', cursor: 'pointer' }}>🛠️ מפעיל</button>
+                                        <button
+                                            onClick={leaveOperator}
+                                            title="הסרת המפעיל מהמכשיר"
+                                            style={{ all: 'unset', cursor: 'pointer', fontWeight: 800, fontSize: '0.78rem', borderRadius: 6, padding: '0.05rem 0.35rem', color: pendingLeave === '__operator__' ? '#fff' : '#f87171', background: pendingLeave === '__operator__' ? '#dc2626' : 'transparent' }}
+                                        >{pendingLeave === '__operator__' ? 'להסיר?' : '✕'}</button>
+                                    </span>
                                 )}
                             </div>
                         );

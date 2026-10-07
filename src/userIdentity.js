@@ -88,6 +88,17 @@ export function switchToMember(team) {
     return true;
 }
 
+// Remove the operator identity from THIS device only (local). The server account is left intact, so
+// the same operator link still works on the operator's other devices — this just stops showing and
+// using the operator here. If operator was the active role, fall back to a team, else clear.
+export function removeOperator() {
+    localStorage.removeItem('operatorToken');
+    if ((localStorage.getItem('userRole') || '') === 'operator') {
+        if (getMemberships().length) switchToMember();
+        else clearIdentity();
+    }
+}
+
 // Remove ONE team membership from this device (e.g. a child who left the team). If the removed team
 // was the active one, repoint to another team, else fall back to the operator identity, else clear.
 export function removeMembership(team) {
