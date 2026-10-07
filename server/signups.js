@@ -32,6 +32,62 @@ function ensureTable() {
     return _ready;
 }
 
+const PUBLIC_BASE = process.env.APP_PUBLIC_URL || 'https://squadio.techbynoam.com';
+const abs = (u) => (!u ? '' : /^https?:/.test(u) ? u : PUBLIC_BASE + (u.startsWith('/') ? '' : '/') + u);
+const fmtPhone = (p) => { const d = String(p).replace(/^\+972/, '0'); return /^05\d{8}$/.test(d) ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d; };
+
+// Email-safe HTML (tables + inline styles only; Gmail/Outlook strip <style> and flex/grid).
+export function signupEmailHtml({ club, slug, row, id, at }) {
+    const accent = /^#[0-9a-f]{6}$/i.test(club?.themeColor || '') ? club.themeColor : '#d90b18';
+    const name = esc(club?.name || slug);
+    const logo = abs(club?.icon192 || club?.logo || `/api/${slug}/icon/192`);
+    const intl = row.phone.replace(/^0/, '972').replace(/^\+/, '');
+    const waText = `היי ${row.parent_name}, כאן מ${club?.name || 'המועדון'} — לגבי ההרשמה של ${row.child_name}${row.team ? ` ל${row.team}` : ''} ⚽`;
+    const wa = `https://wa.me/${intl}?text=${encodeURIComponent(waText)}`;
+    const when = new Intl.DateTimeFormat('he-IL', { timeZone: 'Asia/Jerusalem', dateStyle: 'short', timeStyle: 'short' }).format(at);
+    const field = (k, v) => v ? `<tr><td style="padding:10px 0;border-bottom:1px solid #eee;color:#777;font-size:14px;width:110px;vertical-align:top">${esc(k)}</td><td style="padding:10px 0;border-bottom:1px solid #eee;color:#111;font-size:16px;font-weight:bold">${v}</td></tr>` : '';
+    const btn = (href, label, bg) => `<a href="${esc(href)}" style="display:inline-block;background:${bg};color:#fff;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 22px;border-radius:12px;margin:4px">${label}</a>`;
+    return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f2efe9;font-family:Arial,Helvetica,sans-serif" dir="rtl">
+<div style="display:none;max-height:0;overflow:hidden">${esc(row.parent_name)} השאיר/ה פרטים — ${esc(row.child_name)}, ${esc(row.team || 'ללא קבוצה')}. ${esc(fmtPhone(row.phone))}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2efe9"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.06)">
+  <tr><td style="background:#0d0d0f;padding:22px 24px;border-bottom:5px solid ${accent}" dir="rtl">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="64" style="vertical-align:middle"><img src="${esc(logo)}" width="56" height="56" alt="" style="display:block;border-radius:50%;background:#fff;border:2px solid #fff"></td>
+      <td style="vertical-align:middle;padding-right:14px;color:#fff;text-align:right">
+        <div style="font-size:12px;letter-spacing:2px;color:${accent};font-weight:bold">הרשמה חדשה מהאתר</div>
+        <div style="font-size:22px;font-weight:bold;margin-top:2px">${name}</div>
+      </td></tr></table>
+  </td></tr>
+  <tr><td style="padding:24px 24px 6px;text-align:right" dir="rtl">
+    <div style="font-size:15px;color:#555">${esc(row.parent_name)} השאיר/ה פרטים להרשמה. כדאי לחזור אליו/ה בהקדם 👇</div>
+    <div style="margin-top:14px;background:#faf7f2;border-radius:14px;padding:16px 18px;border-right:4px solid ${accent}">
+      <div style="font-size:13px;color:#777">קבוצה מבוקשת</div>
+      <div style="font-size:24px;font-weight:bold;color:#111;margin-top:2px">${esc(row.team || 'לא נבחרה — לעזור לבחור')}</div>
+    </div>
+  </td></tr>
+  <tr><td style="padding:8px 24px 0" dir="rtl">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="text-align:right">
+      ${field('שם הילד/ה', esc(row.child_name))}
+      ${field('שנת לידה', esc(row.birth_year))}
+      ${field('הורה', esc(row.parent_name))}
+      ${field('טלפון', `<a href="tel:${esc(row.phone)}" style="color:#111;text-decoration:none" dir="ltr">${esc(fmtPhone(row.phone))}</a>`)}
+      ${field('אימייל', row.email ? `<a href="mailto:${esc(row.email)}" style="color:#111">${esc(row.email)}</a>` : '')}
+      ${field('הערות', esc(row.notes))}
+      ${field('דיוור', row.marketing ? 'אישר/ה קבלת עדכונים' : '')}
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding:22px 16px 8px">
+    ${btn(wa, '💬 וואטסאפ', '#1faa59')}${btn('tel:' + row.phone, '📞 התקשרו', accent)}
+  </td></tr>
+  <tr><td style="padding:12px 24px 22px;text-align:center;color:#999;font-size:12px" dir="rtl">פנייה מס' ${esc(id)} · ${esc(when)}</td></tr>
+  <tr><td style="background:#faf7f2;padding:14px 24px;text-align:center;color:#999;font-size:11px;line-height:1.6" dir="rtl">
+    המידע נמסר בהסכמת ההורה לצורך יצירת קשר והרשמה בלבד — אין להעבירו לגורם אחר.<br>נשלח אוטומטית ע״י <a href="https://squadio.techbynoam.com/sales-landing" style="color:#999">Squadio</a>
+  </td></tr>
+</table></td></tr></table></body></html>`;
+}
+
 const clip = (v, n) => String(v ?? '').trim().slice(0, n);
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -77,19 +133,11 @@ export async function createSignup(slug, body, ip) {
         const setting = await getSetting(slug, 'signupEmail').catch(() => null);
         const to = (Array.isArray(setting) ? setting : setting ? [setting] : null) || club?.managerEmails || [];
         if (to.length) {
-            const lines = [
-                ['קבוצה', row.team || 'לא נבחרה'], ['שם הילד/ה', row.child_name], ['שנת לידה', row.birth_year],
-                ['הורה', row.parent_name], ['טלפון', row.phone], ['אימייל', row.email], ['הערות', row.notes],
-            ].filter(([, v]) => v);
-            const wa = 'https://wa.me/' + row.phone.replace(/^0/, '972').replace(/^\+/, '');
             const sent = await sendEmail({
                 to,
+                fromName: `${club?.name || slug} · Squadio`,
                 subject: `הרשמה חדשה — ${row.child_name} (${row.team || 'ללא קבוצה'})`,
-                html: `<div dir="rtl" style="font-family:Arial,sans-serif">
-                    <h2>הרשמה חדשה מדף המועדון — ${esc(club?.name || slug)}</h2>
-                    <table cellpadding="6">${lines.map(([k, v]) => `<tr><td><b>${esc(k)}</b></td><td>${esc(v)}</td></tr>`).join('')}</table>
-                    <p><a href="tel:${esc(row.phone)}">📞 התקשרו</a> · <a href="${esc(wa)}">💬 וואטסאפ</a></p>
-                    <p style="color:#888">מס' פנייה ${r.rows[0].id}</p></div>`,
+                html: signupEmailHtml({ club, slug, row, id: r.rows[0].id, at: new Date() }),
             });
             if (!sent.ok || sent.dev) console.warn('[signups] email not delivered:', sent.reason || 'dev mode (no RESEND_API_KEY)');
         } else {

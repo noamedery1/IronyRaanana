@@ -14,7 +14,8 @@ export async function sendEmail(args) {
     return r;
 }
 
-async function sendEmailRaw({ to, subject, html }) {
+// fromName: optional display name (e.g. the club's) in front of the shared, generic MAIL_FROM address.
+async function sendEmailRaw({ to, subject, html, fromName }) {
     if (!to) return { ok: false, reason: 'no recipient' };
     const key = process.env.RESEND_API_KEY;
     if (!key) {
@@ -25,11 +26,16 @@ async function sendEmailRaw({ to, subject, html }) {
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from: FROM, to, subject, html }),
+            body: JSON.stringify({ from: fromHeader(fromName), to, subject, html }),
         });
         if (!res.ok) return { ok: false, reason: 'resend ' + res.status + ' ' + (await res.text().catch(() => '')).slice(0, 200) };
         return { ok: true };
     } catch (e) {
         return { ok: false, reason: e.message };
     }
+}
+
+function fromHeader(name) {
+    const clean = String(name || '').replace(/["<>\r\n]/g, '').trim();
+    return clean && !FROM.includes('<') ? `"${clean}" <${FROM}>` : FROM;
 }
