@@ -18,6 +18,7 @@ import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publish
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
+import { createSignup, listSignups, setSignupStatus, deleteSignup } from './server/signups.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveAsset, getAsset, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -457,6 +458,20 @@ app.put('/api/:club/settings/:key', requireManager, async (req, res) => {
     try { ok(res, await setSetting(req.params.club, req.params.key, (req.body || {}).value)); } catch (e) { fail(res, e); }
 });
 
+// Club landing-page registrations (public form → secretary inbox/email)
+app.post('/api/:club/signups', async (req, res) => {
+    try { ok(res, await createSignup(req.params.club, req.body || {}, req.ip)); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/:club/signups', requireManager, async (req, res) => {
+    try { ok(res, { signups: await listSignups(req.params.club) }); } catch (e) { fail(res, e); }
+});
+app.put('/api/:club/signups/:id', requireManager, async (req, res) => {
+    try { ok(res, await setSignupStatus(req.params.club, req.params.id, (req.body || {}).status)); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/:club/signups/:id', requireManager, async (req, res) => {
+    try { ok(res, await deleteSignup(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
+});
+
 // Change requests + manager approval
 app.post('/api/:club/requests', async (req, res) => {
     try { ok(res, await createRequest(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
@@ -638,6 +653,15 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // Standalone sales landing page (clean URL without .html)
 app.get('/sales-landing', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'sales-landing.html'));
+});
+
+// Public club landing pages (marketing site per club): /site/<slug> → dist/site/<slug>.html
+app.get('/site/:club', (req, res, next) => {
+    const slug = String(req.params.club).toLowerCase();
+    if (!/^[a-z0-9-]+$/.test(slug)) return next();
+    const file = path.join(__dirname, 'dist', 'site', slug + '.html');
+    if (!fs.existsSync(file)) return next();
+    res.sendFile(file);
 });
 
 // (Per-club calendar feed is served from /api/:club/calendar.ics — DB-backed.)
