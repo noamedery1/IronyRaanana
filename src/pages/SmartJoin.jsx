@@ -68,10 +68,25 @@ export default function SmartJoin() {
     }
 
     const ios = isIOS();
-    const storeHref = ios ? appStoreUrl() : playStoreUrl(state.code || code);
+    const codeVal = state.code || code;
+    const storeHref = ios ? appStoreUrl() : playStoreUrl(codeVal);
     const btn = {
         display: 'block', width: '100%', marginTop: '0.7rem', padding: '0.85rem', borderRadius: 12,
         border: 'none', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', textDecoration: 'none',
+    };
+
+    // Deferred-join: stash the code on the clipboard (on this tap gesture) before the store detour.
+    // The installed app reads it once on first launch and auto-joins — neither iOS nor Android deliver
+    // an install referrer. Best-effort; the code is also shown below to type manually either way.
+    const toStore = (e) => {
+        if (e) e.preventDefault();
+        const go = () => { window.location.href = storeHref; };
+        try {
+            const w = navigator.clipboard && navigator.clipboard.writeText
+                ? navigator.clipboard.writeText('squadio:join:' + codeVal) : Promise.reject(new Error('no clipboard'));
+            Promise.resolve(w).then(go, go);
+            setTimeout(go, 600); // navigate even if the clipboard write stalls
+        } catch { go(); }
     };
 
     return (
@@ -83,7 +98,7 @@ export default function SmartJoin() {
                     {state.clubName || ''}
                 </p>
 
-                <a href={storeHref} style={{ ...btn, background: 'linear-gradient(135deg,#34d399,#0d9488)', color: '#06281f' }}>
+                <a href={storeHref} onClick={toStore} style={{ ...btn, background: 'linear-gradient(135deg,#34d399,#0d9488)', color: '#06281f' }}>
                     {ios ? '📥 התקן מ‑App Store' : '📥 התקן מ‑Google Play'}
                 </a>
                 <button
