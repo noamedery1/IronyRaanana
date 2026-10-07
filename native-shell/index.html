@@ -399,7 +399,13 @@
         var App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App;
         if (App) {
           App.addListener('appUrlOpen', function (d) { handleDeepLink(d && d.url); });
-          if (App.getLaunchUrl) {
+          // Process the LAUNCH url only once per app run. getLaunchUrl() keeps returning the same URL
+          // for the whole process, so without this guard every return to the home screen (the in-app ⌂)
+          // re-fires the deep link and bounces straight back into the team — an inescapable loop.
+          var launchDone = false;
+          try { launchDone = !!sessionStorage.getItem('launchUrlHandled'); } catch (e) {}
+          if (!launchDone && App.getLaunchUrl) {
+            try { sessionStorage.setItem('launchUrlHandled', '1'); } catch (e) {}
             var launch = await App.getLaunchUrl();
             if (launch && launch.url && await handleDeepLink(launch.url)) return;
           }

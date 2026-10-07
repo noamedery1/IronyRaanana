@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 8 (smart-link /s/<code> resolves the team code, no phantom "S" club; incl. clipboard deferred-join + cosmetic + push)
+  # rebuild: 9 (fix smart-link open loop: process launch URL once per run; incl. /s/ code resolve + clipboard + cosmetic + push)
   push:
     branches: [feat/native-app]
     paths:
