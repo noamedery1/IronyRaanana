@@ -18,7 +18,8 @@ import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publish
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
-import { createSignup, listSignups, setSignupStatus, deleteSignup } from './server/signups.js';
+import { createSignup, listSignups, setSignupStatus, deleteSignup, signupDiag } from './server/signups.js';
+import { mailDiag } from './server/mailer.js';
 import {
     ensureStore, listClubs, getClub, upsertClub, deleteClub, saveAsset, getAsset, manifestFor, ICONS_DIR,
 } from './server/clubsStore.js';
@@ -184,6 +185,7 @@ app.get('/api/health', async (req, res) => {
     } catch (e) { out.error = e.message; }
     try { out.push = await pushDiag(); } catch { /* non-fatal */ }
     try { out.nativePush = await nativePushDiag(); } catch { /* non-fatal */ }
+    try { out.mail = mailDiag(); out.signups = await signupDiag(); } catch { /* non-fatal */ }
     res.status(out.ok ? 200 : 503).json(out);
 });
 

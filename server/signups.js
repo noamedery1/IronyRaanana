@@ -82,7 +82,7 @@ export async function createSignup(slug, body, ip) {
                 ['הורה', row.parent_name], ['טלפון', row.phone], ['אימייל', row.email], ['הערות', row.notes],
             ].filter(([, v]) => v);
             const wa = 'https://wa.me/' + row.phone.replace(/^0/, '972').replace(/^\+/, '');
-            await sendEmail({
+            const sent = await sendEmail({
                 to,
                 subject: `הרשמה חדשה — ${row.child_name} (${row.team || 'ללא קבוצה'})`,
                 html: `<div dir="rtl" style="font-family:Arial,sans-serif">
@@ -91,6 +91,9 @@ export async function createSignup(slug, body, ip) {
                     <p><a href="tel:${esc(row.phone)}">📞 התקשרו</a> · <a href="${esc(wa)}">💬 וואטסאפ</a></p>
                     <p style="color:#888">מס' פנייה ${r.rows[0].id}</p></div>`,
             });
+            if (!sent.ok || sent.dev) console.warn('[signups] email not delivered:', sent.reason || 'dev mode (no RESEND_API_KEY)');
+        } else {
+            console.warn('[signups] no recipient configured for', slug);
         }
     } catch (e) { console.warn('[signups] notify failed:', e.message); }
 
@@ -118,4 +121,11 @@ export async function deleteSignup(slug, id) {
     const cid = await clubId(slug);
     await pool.query('DELETE FROM club_signups WHERE club_id=$1 AND id=$2', [cid, id]);
     return { ok: true };
+}
+
+// Counts only (no personal data) — surfaced in /api/health to confirm the form reaches the DB.
+export async function signupDiag() {
+    await ensureTable();
+    const r = await pool.query('SELECT count(*)::int AS total, max(created_at) AS last_at FROM club_signups');
+    return r.rows[0];
 }
