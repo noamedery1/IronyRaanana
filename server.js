@@ -671,8 +671,7 @@ app.get('/sales-landing', (req, res) => {
 // Club marketing sites live on their OWN origin (never under the app's origin/scope — an installed
 // PWA/WebAPK captures every in-scope URL and would resume on the site instead of the schedule).
 // Old /site/<slug> links redirect there.
-// Until the standalone site is hosted, send old links (and any device that got stuck on it) back to the app.
-const CLUB_SITES = { fcraanana: '/fcraanana' };
+const CLUB_SITES = { fcraanana: 'https://hapoel-raanana.techbynoam.com/' };
 app.get('/site/:club', (req, res, next) => {
     const url = CLUB_SITES[String(req.params.club).toLowerCase()];
     return url ? res.redirect(302, url) : next();
