@@ -461,7 +461,7 @@ app.put('/api/:club/settings/:key', requireManager, async (req, res) => {
 });
 
 // Club landing-page registrations (public form → secretary inbox/email)
-const SITE_ORIGINS = new Set(['https://hapoel-raanana.techbynoam.com', 'https://noamedery1.github.io', ...(process.env.SITE_ORIGINS || '').split(',').map((x) => x.trim()).filter(Boolean)]);
+const SITE_ORIGINS = new Set(['https://hapoel-raanana.techbynoam.com', 'https://maccabi-oranit.techbynoam.com', 'https://noamedery1.github.io', ...(process.env.SITE_ORIGINS || '').split(',').map((x) => x.trim()).filter(Boolean)]);
 app.use('/api/:club/signups', (req, res, next) => {
     const origin = req.headers.origin;
     if (origin && SITE_ORIGINS.has(origin)) {
@@ -673,7 +673,10 @@ app.get('/sales-landing', (req, res) => {
 // Club marketing sites live on their OWN origin (never under the app's origin/scope — an installed
 // PWA/WebAPK captures every in-scope URL and would resume on the site instead of the schedule).
 // Old /site/<slug> links redirect there.
-const CLUB_SITES = { fcraanana: 'https://hapoel-raanana.techbynoam.com/' };
+const CLUB_SITES = {
+    fcraanana: 'https://hapoel-raanana.techbynoam.com/',
+    macabioranit: 'https://maccabi-oranit.techbynoam.com/',
+};
 app.get('/site/:club', (req, res, next) => {
     const url = CLUB_SITES[String(req.params.club).toLowerCase()];
     return url ? res.redirect(302, url) : next();
