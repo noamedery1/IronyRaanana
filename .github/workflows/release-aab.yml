@@ -37,8 +37,8 @@ on:
   # Build a signed AAB on feat/native-app whenever this workflow file changes (bump the rebuild
   # counter below to trigger a fresh build) — workflow_dispatch only works from the default branch,
   # and no workflows live on main by design. versionCode = github.run_number, so each run increments.
-  # rebuild: 5 (launcher recent list shows club logo + Hebrew name + team instead of the raw slug;
-  #            account/team UX fixes arrive via live)
+  # rebuild: 6 (clipboard deferred-join: auto-fill the invite code on first launch after install;
+  #            incl. launcher cosmetic + account/team UX fixes via live)
   push:
     branches: [feat/native-app]
     paths:

@@ -339,6 +339,31 @@
       document.querySelector('.wrap').style.visibility = 'visible';
     }
 
+    // Deferred invite via clipboard. When a parent taps a smart link (/s/<code>) and is sent to the
+    // store, that page copies "squadio:join:<code>" to the clipboard. On the FIRST launch after install
+    // we read it once and join automatically — closing the loop neither iOS nor Android deliver via an
+    // install referrer. Guarded to run ONCE and only on a fresh device, so returning users are never
+    // re-prompted (reading the clipboard shows a one-time paste banner on iOS).
+    async function checkClipboardJoin() {
+      try { if (localStorage.getItem('clipJoinChecked')) return false; } catch (e) {}
+      if (getRecent().length) { try { localStorage.setItem('clipJoinChecked', '1'); } catch (e) {} return false; }
+      var text = '';
+      try {
+        if (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.Clipboard) {
+          var r = await Capacitor.Plugins.Clipboard.read();
+          text = (r && r.value) || '';
+        } else if (navigator.clipboard && navigator.clipboard.readText) {
+          text = await navigator.clipboard.readText();
+        }
+      } catch (e) { /* denied / empty — fall through to the normal home screen */ }
+      try { localStorage.setItem('clipJoinChecked', '1'); } catch (e) {} // only ever try once
+      var m = /squadio:join:(\d{4,6})/.exec(text || '');
+      if (!m) return false;
+      inp.value = m[1];
+      enter(); // resolves the code → club+team, then joins
+      return true;
+    }
+
     // Entry behaviour:
     //  - cold start + exactly ONE saved club  → go straight in (no chooser).
     //  - cold start + several clubs, or none  → show this home screen.
@@ -356,6 +381,9 @@
           }
         }
       } catch (e) { /* non-native / plugin missing */ }
+
+      // Deferred invite: first launch after install via a smart link → auto-join from the clipboard.
+      if (await checkClipboardJoin()) return;
 
       var list = getRecent();
       nativeSync(); // mirror existing clubs + memberships to the widget on every open

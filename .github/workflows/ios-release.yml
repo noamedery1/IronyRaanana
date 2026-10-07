@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 6 (launcher cosmetic: club logo + Hebrew name + team; still incl. push entitlement + code-join + account deletion)
+  # rebuild: 7 (clipboard deferred-join: auto-fill the invite code on first launch; incl. launcher cosmetic + push + account deletion)
   push:
     branches: [feat/native-app]
     paths:
