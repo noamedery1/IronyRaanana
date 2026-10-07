@@ -139,22 +139,27 @@ export async function deleteMember(slug, { name, team }) {
 // account and personal data. Proven by possessing the account token(s) — no manager auth. Removes the
 // app_users record(s), any email-list signups for those accounts, and native push tokens registered
 // under them. (Web-push device subscriptions are removed on the client via unsubscribeFromPush.)
-export async function deleteAccount(slug, { tokens, token, email } = {}) {
+// `keepEmail` is set when LEAVING a single team (not a full account delete): we remove that team's
+// registration + its push token, but keep the parent's email-list signup (their other kids may share
+// the same email).
+export async function deleteAccount(slug, { tokens, token, email, keepEmail } = {}) {
     const cid = await clubId(slug);
     const toks = (Array.isArray(tokens) ? tokens : [tokens, token]).filter(Boolean);
     const emails = [];
     let removedUsers = 0;
     if (toks.length) {
-        const er = await pool.query(
-            `SELECT DISTINCT email FROM app_users WHERE club_id=$1 AND token = ANY($2) AND email IS NOT NULL AND email <> ''`,
-            [cid, toks],
-        );
-        er.rows.forEach((r) => emails.push(r.email));
+        if (!keepEmail) {
+            const er = await pool.query(
+                `SELECT DISTINCT email FROM app_users WHERE club_id=$1 AND token = ANY($2) AND email IS NOT NULL AND email <> ''`,
+                [cid, toks],
+            );
+            er.rows.forEach((r) => emails.push(r.email));
+        }
         const dr = await pool.query(`DELETE FROM app_users WHERE club_id=$1 AND token = ANY($2)`, [cid, toks]);
         removedUsers = dr.rowCount;
         try { await pool.query(`DELETE FROM native_push_tokens WHERE club_id=$1 AND user_token = ANY($2)`, [cid, toks]); } catch { /* table may lack column on old DB */ }
     }
-    if (email) emails.push(email);
+    if (email && !keepEmail) emails.push(email);
     let removedEmails = 0;
     for (const em of [...new Set(emails.filter(Boolean))]) {
         const r = await pool.query(`DELETE FROM email_subscribers WHERE club_id=$1 AND lower(email)=lower($2)`, [cid, em]);

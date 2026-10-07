@@ -88,6 +88,25 @@ export function switchToMember(team) {
     return true;
 }
 
+// Remove ONE team membership from this device (e.g. a child who left the team). If the removed team
+// was the active one, repoint to another team, else fall back to the operator identity, else clear.
+export function removeMembership(team) {
+    const list = getMemberships().filter((m) => m.team !== team);
+    localStorage.setItem('memberships', JSON.stringify(list));
+    if ((localStorage.getItem('userTeam') || '') === team) {
+        if (list.length) {
+            localStorage.setItem('userTeam', list[0].team);
+            localStorage.setItem('userToken', list[0].token || '');
+            localStorage.setItem('userRole', 'member');
+        } else if (getOperatorToken()) {
+            switchToOperator();
+        } else {
+            clearIdentity();
+        }
+    }
+    return list;
+}
+
 // Push segment this device should register under, by role.
 export function pushSegmentFor(role, team) {
     if (role === 'operator') return '__OPERATOR__';

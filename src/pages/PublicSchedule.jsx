@@ -14,7 +14,7 @@ import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName, venues } from '../sportLabels.js';
-import { getIdentity, getMemberships, setActiveTeam, membershipSegment } from '../userIdentity.js';
+import { getIdentity, getMemberships, setActiveTeam, membershipSegment, getOperatorToken, switchToOperator, switchToMember, removeMembership } from '../userIdentity.js';
 import { encodePathSeg } from '../encodeSeg.js';
 import { isNativeApp } from '../native.js';
 
@@ -33,6 +33,7 @@ function PublicSchedule() {
     // A member may belong to several teams (e.g. two kids). memberTeam is the ACTIVE one.
     const memberships = identity.role === 'member' ? getMemberships() : [];
     const [memberTeam, setMemberTeam] = useState(identity.role === 'member' ? identity.team : '');
+    const [pendingLeave, setPendingLeave] = useState(''); // team whose ✕ was tapped once (two-tap confirm)
 
     // Who is this device? Members are locked to their team; operators/managers/trainers
     // get the full board. Anyone the system doesn't recognise is "anonymous" — they see
@@ -471,6 +472,7 @@ function PublicSchedule() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <ThemeToggle />
                     <LanguageSwitcher />
+                    {(memberTeam || identity.role === 'operator') && <Link to={`/${club.slug}/account`} className="admin-gear" title="החשבון שלי">👤</Link>}
                     {!memberTeam && <Link to={`/${club.slug}/admin`} className="admin-gear" title={t('admin')}>⚙</Link>}
                 </div>
             </nav>
@@ -541,23 +543,48 @@ function PublicSchedule() {
                     </div>
                     )}
 
-                    {/* Multi-team parent: switch between only their own teams IN THIS CLUB (memberships
-                        are shared across clubs on the same origin, so filter to this club's teams). */}
+                    {/* Identity switcher (top tabs): the parent's teams in this club — each removable via
+                        ✕ (two-tap confirm; window.confirm is unreliable in the app WebView) — plus an
+                        "operator" tab when this device also holds an operator identity. Shown in BOTH the
+                        parent and operator views so you can switch either way. Replaces the old floating
+                        account bar (which duplicated these teams and whose exit didn't work in-app). */}
                     {(() => {
-                        const clubMemberships = memberships.filter((m) => teams.some((tt) => tt.name === m.team || tt.label === m.team));
-                        if (!(memberTeam && clubMemberships.length > 1)) return null;
+                        const clubMemberships = getMemberships().filter((m) => teams.some((tt) => tt.name === m.team || tt.label === m.team));
+                        const hasOperator = !!getOperatorToken();
+                        if (clubMemberships.length + (hasOperator ? 1 : 0) < 2) return null;
+                        const role = localStorage.getItem('userRole');
+                        const activeTeam = localStorage.getItem('userTeam') || '';
+                        const pickTeam = (name) => {
+                            if (role === 'member') { setActiveTeam(name); setMemberTeam(name); setPendingLeave(''); }
+                            else { switchToMember(name); window.location.href = `/${club.slug}`; }
+                        };
+                        const toOperator = () => { if (switchToOperator()) window.location.href = `/${club.slug}`; };
+                        const leave = async (name, token) => {
+                            if (pendingLeave !== name) { setPendingLeave(name); return; } // first ✕ tap = arm confirm
+                            try {
+                                await fetch(`/api/${club.slug}/account/delete`, {
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ tokens: [token], keepEmail: true }),
+                                });
+                            } catch { /* still remove locally */ }
+                            removeMembership(name);
+                            window.location.href = `/${club.slug}`;
+                        };
                         return (
                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 1rem' }}>
                                 {clubMemberships.map((m) => (
-                                    <button
-                                        key={m.team}
-                                        onClick={() => { setActiveTeam(m.team); setMemberTeam(m.team); }}
-                                        className={`vtab ${memberTeam === m.team ? 'on' : ''}`}
-                                        style={{ fontWeight: 700 }}
-                                    >
-                                        {m.team}
-                                    </button>
+                                    <span key={m.team} className={`vtab ${role === 'member' && activeTeam === m.team ? 'on' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}>
+                                        <button onClick={() => pickTeam(m.team)} style={{ all: 'unset', cursor: 'pointer' }}>👨‍👩‍👧 {m.team}</button>
+                                        <button
+                                            onClick={() => leave(m.team, m.token)}
+                                            title="הסרת קבוצה מהמכשיר"
+                                            style={{ all: 'unset', cursor: 'pointer', fontWeight: 800, fontSize: '0.78rem', borderRadius: 6, padding: '0.05rem 0.35rem', color: pendingLeave === m.team ? '#fff' : '#f87171', background: pendingLeave === m.team ? '#dc2626' : 'transparent' }}
+                                        >{pendingLeave === m.team ? 'להסיר?' : '✕'}</button>
+                                    </span>
                                 ))}
+                                {hasOperator && (
+                                    <button onClick={toOperator} className={`vtab ${role === 'operator' ? 'on' : ''}`} style={{ fontWeight: 700 }}>🛠️ מפעיל</button>
+                                )}
                             </div>
                         );
                     })()}
