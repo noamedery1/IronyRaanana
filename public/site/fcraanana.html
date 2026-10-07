@@ -126,13 +126,29 @@ section{position:relative}
 .pillar h3{font-size:1.9rem}
 .pillar p{margin:.2rem 0 0;font-size:.98rem;color:var(--muted)}
 .mosaic{position:relative;aspect-ratio:4/5}
-.tile{position:absolute;border-radius:24px;overflow:hidden;background:var(--ink);box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
-.tile img{width:100%;height:100%;object-fit:cover}
+.tile{position:absolute;border-radius:24px;overflow:hidden;isolation:isolate;background:var(--ink);box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
+.tile>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
 .tile.a{inset:0 18% 26% 0}
 .tile.b{inset:46% 0 0 34%;background:var(--red)}
-.tile .art{position:absolute;inset:0;display:grid;place-items:center}
-.tile .cap{position:absolute;bottom:14px;right:16px;color:#fff;font:700 2.2rem var(--display);text-shadow:0 2px 12px rgba(0,0,0,.4)}
-.sticker{position:absolute;top:56%;right:-10px;background:var(--gold);color:var(--ink);font:700 1.7rem/1 var(--display);padding:1rem 1.1rem;border-radius:50%;width:122px;height:122px;display:grid;place-items:center;text-align:center;transform:rotate(-12deg);box-shadow:0 12px 30px -10px rgba(0,0,0,.4);animation:wob 5s ease-in-out infinite}
+.tile .art{position:absolute;inset:0}
+.tile .art svg{width:100%;height:100%;display:block}
+.tile .cap{position:absolute;z-index:2;top:0;inset-inline:0;padding:1.1rem 1.3rem 2.6rem;color:#fff;font:700 2.3rem/1 var(--display);background:linear-gradient(rgba(0,0,0,.6),transparent)}
+.tile .cap small{display:block;font:700 .75rem var(--body);letter-spacing:.18em;color:var(--gold);margin-bottom:.35rem}
+.plays path{stroke-dashoffset:300;animation:play 6s ease-in-out infinite}
+.plays path:nth-child(2){animation-delay:.6s}.plays path:nth-child(3){animation-delay:1.2s}
+@keyframes play{0%{stroke-dashoffset:300;opacity:0}15%{opacity:1}45%,80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+.pl circle{stroke:#fff;stroke-width:3}.pl.home{fill:var(--red)}.pl.away{fill:#111}
+.pl.away circle{animation:drift 6s ease-in-out infinite}.pl.away circle:nth-child(2){animation-delay:-2s}.pl.away circle:nth-child(3){animation-delay:-4s}
+@keyframes drift{50%{transform:translate(12px,-8px)}}
+.tball{offset-path:path("M110 330 Q 90 250 140 220 Q 230 200 270 160 Q 300 110 230 70");animation:pass 6s ease-in-out infinite;offset-rotate:0deg}
+@keyframes pass{0%,10%{offset-distance:0%}85%,100%{offset-distance:100%}}
+.art-b{background:radial-gradient(circle at 80% 10%,#ff3b45,var(--red) 55%,var(--red-d));color:#fff;overflow:hidden}
+.art-b .crest-wm{position:absolute;width:85%;left:-18%;bottom:-22%;opacity:.35;mix-blend-mode:multiply;filter:grayscale(1) contrast(1.4);transform:rotate(-14deg)}
+.art-b .stripes{position:absolute;top:0;left:0;width:70%;height:100%;background:repeating-linear-gradient(115deg,rgba(255,255,255,.09) 0 14px,transparent 14px 34px);-webkit-mask-image:linear-gradient(to right,#000,transparent);mask-image:linear-gradient(to right,#000,transparent)}
+.art-b .bnum{position:absolute;inset-inline-start:1.4rem;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:.8rem;z-index:1}
+.art-b .bnum b{font:700 clamp(5rem,9vw,7.5rem)/.8 var(--display)}
+.art-b .bnum span{font-weight:700;font-size:1.05rem;line-height:1.25}
+.sticker{position:absolute;z-index:3;top:34%;right:-14px;background:var(--gold);color:var(--ink);font:700 1.7rem/1 var(--display);padding:1rem 1.1rem;border-radius:50%;width:122px;height:122px;display:grid;place-items:center;text-align:center;transform:rotate(-12deg);box-shadow:0 12px 30px -10px rgba(0,0,0,.4);animation:wob 5s ease-in-out infinite}
 @keyframes wob{50%{transform:rotate(-4deg) scale(1.05)}}
 @media(max-width:860px){.about .grid{grid-template-columns:1fr;gap:2.5rem}.sticker{right:6px}}
 
@@ -388,15 +404,30 @@ dialog[open]{animation:dlg .35s cubic-bezier(.2,.9,.3,1.1)}
     </div>
     <div class="mosaic reveal">
       <div class="tile a">
-        <img src="/site/fcraanana/team.jpg" alt="שחקני הפועל רעננה באימון" onerror="this.remove()" />
-        <div class="art" aria-hidden="true" style="z-index:-1">
-          <svg viewBox="0 0 400 400" width="100%" height="100%" preserveAspectRatio="xMidYMid slice"><rect width="400" height="400" fill="#1f7a3f"/><g fill="#24894a"><rect y="0" width="400" height="50"/><rect y="100" width="400" height="50"/><rect y="200" width="400" height="50"/><rect y="300" width="400" height="50"/></g><g stroke="#fff" stroke-width="4" fill="none" opacity=".75"><circle cx="200" cy="200" r="70"/><path d="M0 200h400"/><rect x="120" y="-2" width="160" height="70"/><rect x="120" y="332" width="160" height="70"/></g><g fill="#d90b18"><circle cx="150" cy="140" r="12"/><circle cx="260" cy="170" r="12"/><circle cx="200" cy="260" r="12"/><circle cx="110" cy="250" r="12"/></g><g fill="#fff"><circle cx="300" cy="260" r="12"/><circle cx="240" cy="90" r="12"/></g><circle cx="215" cy="215" r="7" fill="#fff" stroke="#000" stroke-width="2"/></svg>
+        <div class="art" aria-hidden="true">
+          <svg viewBox="0 0 400 420" preserveAspectRatio="xMidYMid slice">
+            <defs><pattern id="mow" width="400" height="70" patternUnits="userSpaceOnUse"><rect width="400" height="35" fill="#1d7a3e"/><rect y="35" width="400" height="35" fill="#22874a"/></pattern>
+              <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ffcf3f"/></marker></defs>
+            <rect width="400" height="420" fill="url(#mow)"/>
+            <g stroke="#fff" stroke-opacity=".55" stroke-width="3" fill="none"><rect x="24" y="24" width="352" height="372" rx="2"/><path d="M24 210h352"/><circle cx="200" cy="210" r="58"/><rect x="110" y="24" width="180" height="70"/><rect x="160" y="24" width="80" height="26"/><rect x="110" y="326" width="180" height="70"/><path d="M160 94a46 46 0 0 0 80 0M160 326a46 46 0 0 1 80 0"/></g>
+            <g class="plays" fill="none" stroke="#ffcf3f" stroke-width="3.5" stroke-dasharray="9 8" stroke-linecap="round" marker-end="url(#arr)">
+              <path d="M110 330 Q 90 250 140 220"/><path d="M150 210 Q 230 200 270 160"/><path d="M280 150 Q 300 110 230 70"/>
+            </g>
+            <g class="pl home"><circle cx="110" cy="340" r="14"/><circle cx="140" cy="215" r="14"/><circle cx="280" cy="150" r="14"/><circle cx="300" cy="300" r="14"/><circle cx="200" cy="270" r="14"/></g>
+            <g class="pl away"><circle cx="200" cy="120" r="13"/><circle cx="120" cy="140" r="13"/><circle cx="270" cy="230" r="13"/></g>
+            <circle class="tball" cx="0" cy="0" r="8" fill="#fff" stroke="#111" stroke-width="2"/>
+          </svg>
         </div>
-        <div class="cap">מגרש · אימון · משחק</div>
+        <img src="/site/fcraanana/team.jpg" alt="שחקני הפועל רעננה באימון" onerror="this.remove()" />
+        <div class="cap"><small>תוכנית אימון</small>מגרש · אימון · משחק</div>
       </div>
       <div class="tile b">
+        <div class="art art-b" aria-hidden="true">
+          <img class="crest-wm" src="/api/fcraanana/icon/512" alt="" onerror="this.remove()" />
+          <div class="bnum"><b>28</b><span>קבוצות<br/>בנים ובנות</span></div>
+          <div class="stripes"></div>
+        </div>
         <img src="/site/fcraanana/kids.jpg" alt="ילדי המחלקה עם הכדור" onerror="this.remove()" />
-        <div class="art" aria-hidden="true" style="z-index:-1;color:#fff;font:700 9rem/1 var(--display)">#1</div>
       </div>
       <div class="sticker">מגיל<br/>5 ⚽</div>
     </div>
