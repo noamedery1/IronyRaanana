@@ -78,14 +78,26 @@ export default function SmartJoin() {
     // Deferred-join: stash the code on the clipboard (on this tap gesture) before the store detour.
     // The installed app reads it once on first launch and auto-joins — neither iOS nor Android deliver
     // an install referrer. Best-effort; the code is also shown below to type manually either way.
+    // Dual write: the async Clipboard API, plus a synchronous execCommand('copy') fallback for the
+    // Android/WebView cases where the async API silently rejects without a strong user gesture.
+    const writeClip = (text) => {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+            try { document.execCommand('copy'); } catch { /* ignore */ }
+            document.body.removeChild(ta);
+        } catch { /* ignore */ }
+        try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text); } catch { /* ignore */ }
+        return Promise.resolve();
+    };
     const toStore = (e) => {
         if (e) e.preventDefault();
         const go = () => { window.location.href = storeHref; };
         try {
-            const w = navigator.clipboard && navigator.clipboard.writeText
-                ? navigator.clipboard.writeText('squadio:join:' + codeVal) : Promise.reject(new Error('no clipboard'));
-            Promise.resolve(w).then(go, go);
-            setTimeout(go, 600); // navigate even if the clipboard write stalls
+            Promise.resolve(writeClip('squadio:join:' + codeVal)).then(go, go);
+            setTimeout(go, 500); // navigate even if the clipboard write stalls
         } catch { go(); }
     };
 
