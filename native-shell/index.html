@@ -209,12 +209,44 @@
       nav();
     }
 
+    // A smart link is BASE/s/<code> — return the 5-digit code, else ''. Used so pasting or opening a
+    // smart link resolves the TEAM CODE instead of mis-reading its first path segment "s" as a club
+    // slug (which saved a bogus club named "S" on the home screen).
+    function smartCodeFromUrl(u) {
+      try {
+        var url = new URL(u);
+        if (!/(^|\.)squadio\.techbynoam\.com$/i.test(url.hostname)) return '';
+        var segs = url.pathname.split('/').filter(Boolean);
+        if (segs.length === 2 && segs[0].toLowerCase() === 's' && /^\d{4,6}$/.test(segs[1])) return segs[1];
+      } catch (e) {}
+      return '';
+    }
+
+    // Resolve a 5-digit team code → its club+team and go there. Shared by typed codes, smart links,
+    // and the clipboard deferred-join, so all three behave identically. Returns true on success.
+    async function joinByCode(code) {
+      err.textContent = 'בודק קוד…';
+      try {
+        var res = await fetch(BASE + '/api/join/' + encodeURIComponent(code));
+        if (!res.ok) { err.textContent = 'קוד לא קיים. בדקו עם המאמן או המנהל.'; return false; }
+        var d = await res.json();
+        var origin = (d.inviteOrigin || BASE).replace(/\/+$/, ''); // subdomain club → its own origin
+        if (d.clubSlug) saveMember(d.clubSlug, 'member', d.team);
+        await registerPushForMember(d.clubSlug, 'member', d.team);
+        err.textContent = '';
+        go(origin + '/' + d.clubSlug + '/join/member/' + encodeURIComponent(d.team), d.clubSlug);
+        return true;
+      } catch (e) { err.textContent = 'שגיאת תקשורת, נסו שוב.'; return false; }
+    }
+
     // Deep link (Android App Link / iOS Universal Link): the user tapped a Squadio invite/club https
     // link and the OS opened the app. Capture club+role+team (for the widget + push), then open that
     // exact URL inside the app — so the invite lands straight on the registration/board, link attached.
     async function handleDeepLink(url) {
       if (!url) return false;
       try { var u = new URL(url); if (!/(^|\.)squadio\.techbynoam\.com$/i.test(u.hostname)) return false; } catch (e) { return false; }
+      var sc = smartCodeFromUrl(url);
+      if (sc) { await joinByCode(sc); return true; } // smart link → resolve the team code (never "s")
       var p = parseInvite(url);
       var slug = p.club || slugFromUrl(url);
       if (slug) saveMember(slug, p.role, p.team);
@@ -227,6 +259,8 @@
       err.textContent = '';
       var raw = inp.value.trim();
       if (!raw) { err.textContent = 'הדביקו קישור או הקלידו קוד מועדון'; return; }
+      var sc = smartCodeFromUrl(raw);
+      if (sc) { await joinByCode(sc); return; } // a pasted smart link /s/<code> → resolve the team code
       if (/^https?:\/\//i.test(raw)) {
         // A full invite/admin link — capture club+role+team (for the widget), then go to it.
         var p = parseInvite(raw);
@@ -236,17 +270,7 @@
       } else if (/^\d{4,6}$/.test(raw)) {
         // A 5-digit TEAM join code — resolve it to its club+team. MUST NOT be treated as a club slug,
         // or typing a code (e.g. 44711) navigates to /44711 ("הדף אינו מחובר למועדון") and saves a bogus club.
-        err.textContent = 'בודק קוד…';
-        try {
-          var res = await fetch(BASE + '/api/join/' + encodeURIComponent(raw));
-          if (!res.ok) { err.textContent = 'קוד לא קיים. בדקו עם המאמן או המנהל.'; return; }
-          var d = await res.json();
-          var origin = (d.inviteOrigin || BASE).replace(/\/+$/, ''); // subdomain club → its own origin
-          if (d.clubSlug) saveMember(d.clubSlug, 'member', d.team);
-          await registerPushForMember(d.clubSlug, 'member', d.team);
-          err.textContent = '';
-          go(origin + '/' + d.clubSlug + '/join/member/' + encodeURIComponent(d.team), d.clubSlug);
-        } catch (e) { err.textContent = 'שגיאת תקשורת, נסו שוב.'; }
+        await joinByCode(raw);
         return;
       } else {
         var slug = raw.toLowerCase().replace(/[^a-z0-9-]/g, '');
