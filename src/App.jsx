@@ -8,6 +8,7 @@ import TrainerPortal from './pages/TrainerPortal';
 import Join from './pages/Join';
 import CodeJoin from './pages/CodeJoin';
 import SmartJoin from './pages/SmartJoin';
+import Account from './pages/Account';
 import SuperUser from './pages/SuperUser';
 import NoClub from './pages/NoClub';
 import ErrorPage from './pages/ErrorPage';
@@ -64,6 +65,9 @@ function App() {
             string from a PWA's start_url — so the installed icon must not rely on "?r=operator". */}
         {/* Join by 5-digit code — a friendlier front door than an invite link. */}
         <Route path="/:club/code" element={<RequireClub><CodeJoin /></RequireClub>} />
+
+        {/* My account — view + delete account/data (App Store account-deletion requirement). */}
+        <Route path="/:club/account" element={<RequireClub><Account /></RequireClub>} />
 
         <Route path="/:club/join" element={<RequireClub><Join /></RequireClub>} />
         <Route path="/:club/join/:role" element={<RequireClub><Join /></RequireClub>} />

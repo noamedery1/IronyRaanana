@@ -7,7 +7,7 @@ import webpush from 'web-push';
 import { publishClub, getLiveSchedule, listPublications, teamICS, getPublicationSessions } from './server/publish.js';
 import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
-    registerUser, authUser, listMembers, deleteMember, listTeams, upsertTeam, deleteTeam,
+    registerUser, authUser, listMembers, deleteMember, deleteAccount, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
     resolveJoinCode, listTeamJoinCodes, ensureJoinCodes,
 } from './server/people.js';
@@ -321,6 +321,11 @@ app.post('/api/:club/users', async (req, res) => {
 });
 app.post('/api/:club/users/auth', async (req, res) => {
     try { ok(res, await authUser(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+// Self-service account deletion (App Store Guideline 5.1.1(v)). The caller proves ownership by sending
+// their own account token(s); removes the account, email signups, and native push tokens.
+app.post('/api/:club/account/delete', async (req, res) => {
+    try { ok(res, await deleteAccount(req.params.club, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 // Manager-only roster — names grouped by team, NO contact details.
 app.get('/api/:club/members', requireManager, async (req, res) => {
