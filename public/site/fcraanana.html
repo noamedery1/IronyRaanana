@@ -112,7 +112,7 @@ section{position:relative}
 .stats .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:2px solid var(--ink)}
 .stat{padding:1.6rem 1rem 1rem;border-inline-start:1px solid var(--line)}
 .stat:first-child{border:0}
-.stat b{display:block;font:700 clamp(4rem,9vw,7rem) var(--display);line-height:.85;color:var(--red)}
+.stat b{display:block;text-align:right;font:700 clamp(4rem,9vw,7rem) var(--display);line-height:.85;color:var(--red)}
 .stat span{font-weight:500;color:var(--muted)}
 @media(max-width:700px){.stats .grid{grid-template-columns:repeat(2,1fr)}.stat:nth-child(3){border:0}}
 
@@ -205,7 +205,7 @@ section{position:relative}
 .feat div{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:1rem}
 .feat b{display:block;font-size:1.02rem;margin-bottom:.15rem}
 .feat span{color:#9aa6bd;font-size:.9rem}
-.phone{position:relative;width:min(320px,80%);margin:0 auto;aspect-ratio:9/19;background:#05070f;border-radius:46px;border:10px solid #1d2233;box-shadow:0 60px 120px -40px rgba(52,211,153,.35),0 0 0 2px #2b3146 inset}
+.phone{position:relative;overflow:hidden;width:min(320px,80%);margin:0 auto;aspect-ratio:9/19;background:#05070f;border-radius:46px;border:10px solid #1d2233;box-shadow:0 60px 120px -40px rgba(52,211,153,.35),0 0 0 2px #2b3146 inset}
 .phone::before{content:"";position:absolute;top:10px;left:50%;transform:translateX(-50%);width:34%;height:22px;background:#000;border-radius:20px;z-index:3}
 .screen{position:absolute;inset:0;border-radius:36px;overflow:hidden;background:#0a0f1e;padding:46px 14px 14px;font-size:.78rem}
 .screen .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -213,7 +213,9 @@ section{position:relative}
 .screen .top img{width:28px;height:28px;border-radius:50%;background:#fff}
 .sess{background:#121a30;border-radius:14px;padding:10px 12px;margin-bottom:8px;border-inline-start:4px solid #34d399;transition:background .4s}
 .sess small{color:#8b96b0;display:block}
-.sess b{font-size:.92rem}
+.sess b{font-size:.95rem;display:block}
+.sess em{font-style:normal;color:#c6cde0;font-size:.8rem}
+.t{direction:ltr;unicode-bidi:isolate;display:inline-block}
 .sess.changed{border-color:#ffcf3f;background:#2a2410}
 .sess .old{text-decoration:line-through;color:#8b96b0;margin-inline-end:6px}
 .notif{position:absolute;top:44px;left:10px;right:10px;background:rgba(240,242,248,.97);color:#111;border-radius:18px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 20px 40px rgba(0,0,0,.4);transform:translateY(-140%);transition:transform .6s cubic-bezier(.2,.9,.3,1.2);z-index:4}
@@ -256,6 +258,7 @@ form.f{background:var(--paper);color:var(--ink);border-radius:28px;padding:2rem;
 .f .full{grid-column:1/-1}
 .f label{display:flex;flex-direction:column;gap:.35rem;font-weight:500;font-size:.92rem}
 .f input,.f select,.f textarea{font:inherit;font-size:1rem;padding:.8rem .9rem;border-radius:12px;border:1.5px solid #cfc6b6;background:#fff;color:var(--ink);width:100%}
+.f input[type=tel],.f input[type=email]{direction:ltr;text-align:right}
 .f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 4px rgba(217,11,24,.15)}
 .f .req::after{content:" *";color:var(--red)}
 .f .chk{flex-direction:row;align-items:flex-start;gap:.6rem;font-weight:400;font-size:.88rem;color:#3a3732}
@@ -271,6 +274,25 @@ form.f{background:var(--paper);color:var(--ink);border-radius:28px;padding:2rem;
 .done h3{font-size:3rem}
 @media(max-width:900px){.signup .grid{grid-template-columns:1fr}form.f{grid-template-columns:1fr;padding:1.4rem}}
 
+@media(max-width:600px){
+  .sticker{width:94px;height:94px;font-size:1.35rem;top:auto;bottom:2%;right:auto;left:4%}
+  .tile .cap{font-size:1.75rem;padding:.9rem 1rem 2rem}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;margin-inline:-16px;padding:0 16px 4px;scrollbar-width:none;scroll-snap-type:x mandatory}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:none;scroll-snap-align:start}
+  .card{min-height:0;padding:1rem 1.1rem;gap:.35rem}
+  .card h3{font-size:2.1rem}
+  .card .days{margin-top:.3rem}
+  .float-chip{font-size:.78rem;padding:.45rem .7rem}
+  .float-chip.c1{top:-10px;right:2%}.float-chip.c2{bottom:-10px;left:2%}
+  .phone{width:min(300px,88%)}
+  footer{padding-bottom:96px}
+  .about{padding-bottom:70px}
+  footer ul a,footer button.lnk{display:inline-block;padding:.45rem 0}
+  .slot{grid-template-columns:62px 1fr auto}
+  .slot .d{font-size:1.5rem}
+  .dlg-head h3{font-size:2.6rem}
+}
 /* ---------- FOOTER ---------- */
 footer{background:var(--ink);color:#bdb9b2;padding:60px 0 30px;font-size:.92rem}
 footer .grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:2rem}
@@ -383,7 +405,7 @@ dialog[open]{animation:dlg .35s cubic-bezier(.2,.9,.3,1.1)}
     <div class="grid reveal">
       <div class="stat"><b data-count="28">0</b><span>קבוצות פעילות</span></div>
       <div class="stat"><b data-count="15">0</b><span>מאמנים מקצועיים</span></div>
-      <div class="stat"><b data-count="100" data-suffix="+">0</b><span>אימונים בשבוע</span></div>
+      <div class="stat"><b data-count="100" data-suffix="+" dir="ltr">0</b><span>אימונים בשבוע</span></div>
       <div class="stat"><b data-count="3">0</b><span>מתחמי אימון בעיר</span></div>
     </div>
   </div>
@@ -485,10 +507,10 @@ dialog[open]{animation:dlg .35s cubic-bezier(.2,.9,.3,1.1)}
         <div class="notif" id="notif"><img src="/api/fcraanana/icon/192" alt="" /><div><b>הפועל רעננה · עכשיו</b><span id="notifTxt">אימון ילדים ב' היום עבר למגרש עליון 17:30</span></div></div>
         <div class="screen">
           <div class="top"><b>ילדים ב' · השבוע</b><img src="/api/fcraanana/icon/192" alt="" /></div>
-          <div class="sess"><small>ראשון</small><b>16:30–18:00 · מגרש הבייסבול</b></div>
-          <div class="sess"><small>שלישי</small><b>18:00–19:30 · לב הפארק עליון</b></div>
-          <div class="sess" id="demoSess"><small>רביעי · היום</small><b><span class="old" id="oldTxt"></span><span id="newTxt">17:30–19:00 · לב הפארק תחתון</span></b></div>
-          <div class="sess"><small>חמישי</small><b>15:00–16:30 · לב הפארק תחתון</b></div>
+          <div class="sess"><small>ראשון</small><b class="t">16:30–18:00</b><em>מגרש הבייסבול</em></div>
+          <div class="sess"><small>שלישי</small><b class="t">18:00–19:30</b><em>לב הפארק · עליון</em></div>
+          <div class="sess" id="demoSess"><small>רביעי · היום</small><b><span class="old t" id="oldTxt"></span> <span class="t" id="newTxt">17:30–19:00</span></b><em id="demoPlace">לב הפארק · תחתון</em></div>
+          <div class="sess"><small>חמישי</small><b class="t">15:00–16:30</b><em>לב הפארק · תחתון</em></div>
         </div>
       </div>
       <div class="float-chip c1">🔔 עודכן לפני דקה</div>
@@ -803,7 +825,7 @@ function openTeam(t) {
   $('#tdCoach').textContent = t.coach || 'צוות המחלקה המקצועית'; $('#tdAv').textContent = (t.coach || 'ה')[0];
   $('#tdSlots').innerHTML = t.slots.slice().sort((a,b) => a[0]-b[0] || a[1].localeCompare(b[1])).map(([d,s,e,h]) => {
     const [vk, label] = HALL[h] || ['park', h]; const v = VENUES[vk];
-    return `<div class="slot"><span class="d">${DAY_FULL[d]}</span><div><b>${s}–${e}</b><small>${esc(label)}</small></div><a href="https://waze.com/ul?q=${encodeURIComponent(v.addr)}&navigate=yes" target="_blank" rel="noopener">ניווט ↗</a></div>`;
+    return `<div class="slot"><span class="d">${DAY_FULL[d]}</span><div><b class="t">${s}–${e}</b><small>${esc(label)}</small></div><a href="https://waze.com/ul?q=${encodeURIComponent(v.addr)}&navigate=yes" target="_blank" rel="noopener">ניווט ↗</a></div>`;
   }).join('');
   tdlg.showModal();
 }
@@ -821,17 +843,17 @@ $('#venueGrid').innerHTML = Object.values(VENUES).map((v, i) => {
 document.querySelectorAll('#venueGrid .reveal').forEach(n => io.observe(n));
 
 // squadio phone demo loop
-const notif = $('#notif'), demo = $('#demoSess'), oldT = $('#oldTxt'), newT = $('#newTxt');
+const notif = $('#notif'), demo = $('#demoSess'), oldT = $('#oldTxt'), newT = $('#newTxt'), place = $('#demoPlace');
 const SCRIPT = [
-  ['אימון ילדים ב׳ היום הוזז ל‑18:00 · לב הפארק עליון', '17:30–19:00 · לב הפארק תחתון', '18:00–19:30 · לב הפארק עליון'],
-  ['האימון של היום בוטל בגלל מזג האוויר 🌧️', '17:30–19:00 · לב הפארק תחתון', 'בוטל'],
+  ['אימון ילדים ב׳ היום הוזז לשעה 18:00, לב הפארק עליון', '18:00–19:30', 'לב הפארק · עליון'],
+  ['האימון של היום בוטל בגלל מזג האוויר 🌧️', 'בוטל', 'לב הפארק · תחתון'],
 ];
 let si = 0;
 function loop() {
-  const [msg, oldv, newv] = SCRIPT[si++ % SCRIPT.length];
-  demo.classList.remove('changed'); oldT.textContent = ''; newT.textContent = oldv; notif.classList.remove('show');
+  const [msg, newv, newPlace] = SCRIPT[si++ % SCRIPT.length];
+  demo.classList.remove('changed'); oldT.textContent = ''; newT.textContent = '17:30–19:00'; place.textContent = 'לב הפארק · תחתון'; notif.classList.remove('show');
   setTimeout(() => { $('#notifTxt').textContent = msg; notif.classList.add('show'); }, 1200);
-  setTimeout(() => { demo.classList.add('changed'); oldT.textContent = oldv.split(' · ')[0]; newT.textContent = newv; }, 2000);
+  setTimeout(() => { demo.classList.add('changed'); oldT.textContent = '17:30–19:00'; newT.textContent = newv; place.textContent = newPlace; }, 2000);
   setTimeout(() => notif.classList.remove('show'), 4800);
 }
 loop(); setInterval(loop, 7000);
