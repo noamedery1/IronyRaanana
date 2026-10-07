@@ -15,6 +15,7 @@
 //   FCM_SERVICE_ACCOUNT_JSON = the full service-account JSON (one line) for Firebase project squadio-10636
 //   NATIVE_PUSH_ENABLED      = true
 import crypto from 'node:crypto';
+import http2 from 'node:http2';
 import { pool } from './db.js';
 import { clubId } from './people.js';
 
@@ -40,9 +41,83 @@ try {
 
 const envEnabled = ['1', 'true', 'yes', 'on'].includes(String(process.env.NATIVE_PUSH_ENABLED || '').toLowerCase());
 
-// Delivery happens only when explicitly enabled AND we actually have credentials to send with.
+// ===== APNs (direct) — for iOS device tokens from @capacitor/push-notifications =====
+// iOS hands us an APNs token (not an FCM token), so we deliver to iOS straight through APNs HTTP/2
+// using the token-based auth key (.p8). Android keeps going through FCM — sendNative routes by the
+// stored `platform`. Gated by env exactly like FCM: with no APNS_* vars every iOS send is a no-op,
+// so this is fully additive and never affects Android or the live web.
+const APNS_KEY_P8 = process.env.APNS_KEY_P8 || '';
+const APNS_KEY_ID = (process.env.APNS_KEY_ID || '').trim();
+const APNS_TEAM_ID = (process.env.APNS_TEAM_ID || '').trim();
+const APNS_BUNDLE = (process.env.APNS_BUNDLE || 'com.techbynoam.squadio').trim();
+// A token-based auth key works for both environments; TestFlight + App Store builds use production APNs.
+const APNS_HOST = (process.env.APNS_HOST || 'api.push.apple.com').trim();
+
+function apnsConfigured() {
+    return Boolean(APNS_KEY_P8 && APNS_KEY_ID && APNS_TEAM_ID && APNS_BUNDLE);
+}
+
+// Provider JWT (ES256), cached and refreshed well within Apple's 20–60 minute window.
+let apnsJwt = null; // { token, iat }
+function apnsAuthToken() {
+    const now = Math.floor(Date.now() / 1000);
+    if (apnsJwt && now - apnsJwt.iat < 45 * 60) return apnsJwt.token;
+    const header = base64url(JSON.stringify({ alg: 'ES256', kid: APNS_KEY_ID }));
+    const claim = base64url(JSON.stringify({ iss: APNS_TEAM_ID, iat: now }));
+    const signingInput = `${header}.${claim}`;
+    const sig = crypto.sign('SHA256', Buffer.from(signingInput), { key: APNS_KEY_P8, dsaEncoding: 'ieee-p1363' });
+    apnsJwt = { token: `${signingInput}.${base64url(sig)}`, iat: now };
+    return apnsJwt.token;
+}
+
+// Deliver to a batch of iOS tokens over ONE HTTP/2 connection. Returns { sent, failed, invalid[] }.
+function sendApnsBatch(rows, { title, body, link }) {
+    return new Promise((resolve) => {
+        const result = { sent: 0, failed: 0, invalid: [] };
+        let authToken;
+        try { authToken = apnsAuthToken(); } catch { result.failed = rows.length; resolve(result); return; }
+        let client;
+        try { client = http2.connect(`https://${APNS_HOST}`); } catch { result.failed = rows.length; resolve(result); return; }
+        let settled = false;
+        const finish = () => { if (settled) return; settled = true; try { client.close(); } catch { /* */ } resolve(result); };
+        client.on('error', () => { result.failed = rows.length - result.sent - result.failed; finish(); });
+        const payload = JSON.stringify({
+            aps: { alert: { title: title || 'הודעה מהמועדון', body: body || '' }, sound: 'default' },
+            url: link || '',
+        });
+        let pending = rows.length;
+        const done = () => { if (--pending <= 0) finish(); };
+        rows.forEach((row) => {
+            let status = 0, data = '';
+            const req = client.request({
+                ':method': 'POST',
+                ':path': `/3/device/${row.token}`,
+                authorization: `bearer ${authToken}`,
+                'apns-topic': APNS_BUNDLE,
+                'apns-push-type': 'alert',
+                'apns-priority': '10',
+                'content-type': 'application/json',
+            });
+            req.on('response', (h) => { status = h[':status']; });
+            req.on('data', (c) => { data += c; });
+            req.on('end', () => {
+                if (status === 200) result.sent++;
+                else {
+                    result.failed++;
+                    if (status === 410 || (status === 400 && /BadDeviceToken|Unregistered/i.test(data))) result.invalid.push(row.token);
+                }
+                done();
+            });
+            req.on('error', () => { result.failed++; done(); });
+            req.setTimeout(10000, () => { try { req.close(); } catch { /* */ } });
+            req.end(payload);
+        });
+    });
+}
+
+// Delivery happens only when explicitly enabled AND we have credentials to send with (FCM or APNs).
 export function nativeDeliveryEnabled() {
-    return Boolean(envEnabled && serviceAccount);
+    return Boolean(envEnabled && (serviceAccount || apnsConfigured()));
 }
 
 // ===== OAuth2 access token (service account → bearer), cached until shortly before expiry =====
@@ -134,7 +209,7 @@ async function matchingTokens(cid, seg) {
         const escLike = (x) => x.replace(/[%_\\]/g, '\\$&');
         const wholeLine = '%\n' + escLike('team:' + name) + '\n%';
         const r = await pool.query(
-            `SELECT id, token FROM native_push_tokens
+            `SELECT id, token, platform FROM native_push_tokens
              WHERE club_id=$1 AND (
                  (chr(10) || segment || chr(10)) LIKE $2
                  OR segment = $3
@@ -145,7 +220,7 @@ async function matchingTokens(cid, seg) {
         return r.rows;
     }
     const r = await pool.query(
-        `SELECT id, token FROM native_push_tokens
+        `SELECT id, token, platform FROM native_push_tokens
          WHERE club_id=$1 AND left(segment, length($2)) = $2`,
         [cid, seg],
     );
@@ -164,41 +239,58 @@ export async function sendNative(slug, { segment = '', title, body, url, data, t
     try { rows = await matchingTokens(cid, seg); } catch { return { skipped: true, sent: 0, failed: 0 }; }
     if (!rows.length) return { sent: 0, failed: 0, note: 'no native tokens' };
 
-    let accessToken;
-    try { accessToken = await getAccessToken(); } catch (e) { return { sent: 0, failed: rows.length, error: e.message }; }
-    if (!accessToken) return { sent: 0, failed: rows.length, error: 'no access token' };
-
-    const endpoint = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
     const link = url || `/${slug}`;
-    // FCM data values must be strings.
-    const dataObj = {};
-    Object.entries(data || {}).forEach(([k, v]) => { dataObj[k] = typeof v === 'string' ? v : JSON.stringify(v); });
-    dataObj.url = link;
+    const iosRows = rows.filter((r) => (r.platform || '').toLowerCase() === 'ios');
+    const fcmRows = rows.filter((r) => (r.platform || '').toLowerCase() !== 'ios');
 
     let sent = 0, failed = 0;
     const invalid = [];
-    await Promise.all(rows.map(async (row) => {
-        const message = {
-            token: row.token,
-            notification: { title: title || 'הודעה מהמועדון', body: body || '' },
-            data: dataObj,
-            android: { priority: 'HIGH', notification: { tag: tag || undefined, default_sound: true } },
-            apns: { payload: { aps: { sound: 'default' } } },
-        };
-        try {
-            const res = await fetch(endpoint, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message }),
-            });
-            if (res.ok) { sent++; return; }
-            failed++;
-            // 404 UNREGISTERED / 400 INVALID_ARGUMENT => the token is dead; drop it.
-            if (res.status === 404 || res.status === 400) {
-                invalid.push(row.token);
-            }
-        } catch { failed++; }
-    }));
+
+    // ---- iOS: direct APNs over one HTTP/2 connection (tokens are APNs device tokens, not FCM) ----
+    if (iosRows.length) {
+        if (apnsConfigured()) {
+            const r = await sendApnsBatch(iosRows, { title, body, link });
+            sent += r.sent; failed += r.failed; invalid.push(...r.invalid);
+        } else {
+            failed += iosRows.length; // APNs not configured — iOS stays a no-op, Android unaffected
+        }
+    }
+
+    // ---- Android (+ any non-iOS): FCM HTTP v1 (unchanged behaviour) ----
+    if (fcmRows.length) {
+        let accessToken = null;
+        if (serviceAccount) { try { accessToken = await getAccessToken(); } catch { accessToken = null; } }
+        if (!accessToken) {
+            failed += fcmRows.length;
+        } else {
+            const endpoint = `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`;
+            // FCM data values must be strings.
+            const dataObj = {};
+            Object.entries(data || {}).forEach(([k, v]) => { dataObj[k] = typeof v === 'string' ? v : JSON.stringify(v); });
+            dataObj.url = link;
+            await Promise.all(fcmRows.map(async (row) => {
+                const message = {
+                    token: row.token,
+                    notification: { title: title || 'הודעה מהמועדון', body: body || '' },
+                    data: dataObj,
+                    android: { priority: 'HIGH', notification: { tag: tag || undefined, default_sound: true } },
+                    apns: { payload: { aps: { sound: 'default' } } },
+                };
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message }),
+                    });
+                    if (res.ok) { sent++; return; }
+                    failed++;
+                    // 404 UNREGISTERED / 400 INVALID_ARGUMENT => the token is dead; drop it.
+                    if (res.status === 404 || res.status === 400) invalid.push(row.token);
+                } catch { failed++; }
+            }));
+        }
+    }
+
     if (invalid.length) {
         try { await pool.query('DELETE FROM native_push_tokens WHERE token = ANY($1)', [invalid]); } catch { /* ignore */ }
     }
@@ -212,6 +304,7 @@ export async function nativePushDiag() {
         envEnabled,
         serviceAccountLoaded: Boolean(serviceAccount),
         projectId: serviceAccount ? serviceAccount.project_id : null,
+        apnsConfigured: apnsConfigured(),
         tokens: null,
     };
     try {
