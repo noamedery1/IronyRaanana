@@ -135,6 +135,34 @@ export async function deleteMember(slug, { name, team }) {
     return { ok: true, removed: r.rowCount };
 }
 
+// Self-service account deletion (App Store Guideline 5.1.1(v)): a registered user removes their own
+// account and personal data. Proven by possessing the account token(s) — no manager auth. Removes the
+// app_users record(s), any email-list signups for those accounts, and native push tokens registered
+// under them. (Web-push device subscriptions are removed on the client via unsubscribeFromPush.)
+export async function deleteAccount(slug, { tokens, token, email } = {}) {
+    const cid = await clubId(slug);
+    const toks = (Array.isArray(tokens) ? tokens : [tokens, token]).filter(Boolean);
+    const emails = [];
+    let removedUsers = 0;
+    if (toks.length) {
+        const er = await pool.query(
+            `SELECT DISTINCT email FROM app_users WHERE club_id=$1 AND token = ANY($2) AND email IS NOT NULL AND email <> ''`,
+            [cid, toks],
+        );
+        er.rows.forEach((r) => emails.push(r.email));
+        const dr = await pool.query(`DELETE FROM app_users WHERE club_id=$1 AND token = ANY($2)`, [cid, toks]);
+        removedUsers = dr.rowCount;
+        try { await pool.query(`DELETE FROM native_push_tokens WHERE club_id=$1 AND user_token = ANY($2)`, [cid, toks]); } catch { /* table may lack column on old DB */ }
+    }
+    if (email) emails.push(email);
+    let removedEmails = 0;
+    for (const em of [...new Set(emails.filter(Boolean))]) {
+        const r = await pool.query(`DELETE FROM email_subscribers WHERE club_id=$1 AND lower(email)=lower($2)`, [cid, em]);
+        removedEmails += r.rowCount;
+    }
+    return { ok: true, removedUsers, removedEmails };
+}
+
 export async function authUser(slug, { token }) {
     if (!token) return { valid: false };
     const cid = await clubId(slug);

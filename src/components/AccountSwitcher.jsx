@@ -57,6 +57,7 @@ export default function AccountSwitcher() {
             {showSwitch && hasOperator && (
                 <button style={chip(role === 'operator')} onClick={() => go(switchToOperator)}>🛠️ מפעיל</button>
             )}
+            <a href={`/${slug}/account`} style={{ ...chip(false), textDecoration: 'none' }}>👤 חשבון</a>
             <button
                 onClick={exit}
                 style={{ border: 'none', cursor: 'pointer', fontFamily: 'Rubik, sans-serif', padding: '0.3rem 0.7rem', borderRadius: 8, fontWeight: 700, fontSize: '0.78rem', color: '#fecaca', background: 'rgba(239,68,68,0.18)', whiteSpace: 'nowrap' }}
