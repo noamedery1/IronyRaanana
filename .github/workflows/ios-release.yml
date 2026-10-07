@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 4 (appendUserAgent=SquadioApp; iPhone-only; export-compliance)
+  # rebuild: 5 (Push Notifications entitlement → iOS APNs; launcher code-join + delete; account deletion via live)
   push:
     branches: [feat/native-app]
     paths:
