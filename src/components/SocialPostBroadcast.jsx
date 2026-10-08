@@ -11,6 +11,7 @@ export default function SocialPostBroadcast() {
     const [headline, setHeadline] = useState('');
     const [msg, setMsg] = useState('');
     const [busy, setBusy] = useState(false);
+    const [nativeOnly, setNativeOnly] = useState(false); // send only to the store apps (FCM/APNs), not web
 
     const slug = getActiveClub().slug;
 
@@ -38,6 +39,7 @@ export default function SocialPostBroadcast() {
                     url,
                     icon: '/social-push-192.png',
                     tag: 'club-post',
+                    channel: nativeOnly ? 'native' : 'all',
                 }),
             });
             const d = await r.json().catch(() => ({ error: 'x' }));
@@ -61,8 +63,13 @@ export default function SocialPostBroadcast() {
             <input type="text" value={headline} onChange={(e) => setHeadline(e.target.value)}
                 placeholder={`לדוגמה: תמונות מהמשחק אתמול! ${sportEmoji()}`} style={input} />
 
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.8rem', padding: '0.6rem 0.8rem', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, cursor: 'pointer', fontSize: '0.9rem' }}>
+                <input type="checkbox" checked={nativeOnly} onChange={(e) => setNativeOnly(e.target.checked)} />
+                <span>📱 שליחה <b>רק לאפליקציות</b> (Android/iOS) — לא לדפדפן/ווב-פוש</span>
+            </label>
+
             <button onClick={send} disabled={busy} style={{ marginTop: '1rem', background: '#ff7a18', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: busy ? 'wait' : 'pointer' }}>
-                {busy ? 'שולח...' : '🔔 שלח לכל ההורים'}
+                {busy ? 'שולח...' : (nativeOnly ? '📱 שלח לאפליקציות' : '🔔 שלח לכל ההורים')}
             </button>
             {msg && <div style={{ marginTop: '1rem', fontWeight: 'bold', color: msg.startsWith('✓') ? '#10b981' : '#ef4444' }}>{msg}</div>}
         </div>
