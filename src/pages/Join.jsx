@@ -20,7 +20,6 @@ export default function Join() {
 
     const [name, setName] = useState(getIdentity().name || ''); // prefill for a returning parent adding another team
     const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -70,8 +69,8 @@ export default function Join() {
 
     const submit = async (e) => {
         e.preventDefault();
-        if (!name.trim() || (!email.trim() && !phone.trim())) {
-            setError('מלאו שם ולפחות מייל או טלפון');
+        if (!name.trim() || !email.trim()) {
+            setError('מלאו שם וכתובת מייל');
             return;
         }
         setLoading(true);
@@ -80,7 +79,7 @@ export default function Join() {
             const res = await fetch(`/api/${slug}/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role, team, name, email, phone }),
+                body: JSON.stringify({ role, team, name, email }),
             });
             const data = await res.json();
             if (!data.valid) { setError(data.error || 'הרשמה נכשלה'); return; }
@@ -130,7 +129,6 @@ export default function Join() {
                 <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם מלא" style={inp} />
                     <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="אימייל" style={{ ...inp, direction: 'ltr', textAlign: 'right' }} />
-                    <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" placeholder="טלפון" style={{ ...inp, direction: 'ltr', textAlign: 'right' }} />
                     <button type="submit" disabled={loading} style={{ background: 'linear-gradient(135deg,#3b82f6,#0891b2)', color: '#fff', border: 'none', padding: '0.85rem', borderRadius: '12px', fontWeight: 800, fontFamily: 'inherit', fontSize: '1rem', cursor: loading ? 'wait' : 'pointer', marginTop: '0.3rem' }}>
                         {loading ? 'נרשם...' : 'הצטרפות'}
                     </button>
