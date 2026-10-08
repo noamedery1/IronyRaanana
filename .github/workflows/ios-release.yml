@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 9 (fix smart-link open loop: process launch URL once per run; incl. /s/ code resolve + clipboard + cosmetic + push)
+  # rebuild: 10 (push tap opens the notification's link: external post → system browser, schedule → in-app; incl. smart-link + clipboard + cosmetic)
   push:
     branches: [feat/native-app]
     paths:

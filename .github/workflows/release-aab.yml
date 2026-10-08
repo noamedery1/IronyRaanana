@@ -37,8 +37,8 @@ on:
   # Build a signed AAB on feat/native-app whenever this workflow file changes (bump the rebuild
   # counter below to trigger a fresh build) — workflow_dispatch only works from the default branch,
   # and no workflows live on main by design. versionCode = github.run_number, so each run increments.
-  # rebuild: 8 (fix smart-link open loop: process launch URL once per run;
-  #            incl. /s/ code resolve + clipboard deferred-join + cosmetic)
+  # rebuild: 9 (push tap opens the notification's link: external post → browser, schedule → in-app;
+  #            incl. smart-link open-loop fix + /s/ code resolve + clipboard + cosmetic)
   push:
     branches: [feat/native-app]
     paths:

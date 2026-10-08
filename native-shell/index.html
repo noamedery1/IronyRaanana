@@ -105,6 +105,23 @@
       } catch (e) { /* non-fatal */ }
     }
 
+    // Tapping a native push: open its link (the server puts it in the payload's `url`). A squadio link
+    // or path opens INSIDE the app (e.g. a schedule-update push → the club/schedule); an external link
+    // (an Instagram/Facebook/TikTok post from the manager) opens in the system browser. Without this,
+    // tapping a push just launched the app and dropped the link.
+    function openPushTarget(url) {
+      if (!url) return;
+      var full = /^https?:\/\//i.test(url) ? url : (BASE + (url.charAt(0) === '/' ? '' : '/') + url);
+      var host = '';
+      try { host = new URL(full).hostname.toLowerCase(); } catch (e) {}
+      if (/(^|\.)squadio\.techbynoam\.com$/i.test(host)) {
+        var slug = slugFromUrl(full); if (slug) saveRecent(slug);
+        window.location.href = full; // in-app: schedule / club page
+      } else {
+        try { window.open(full, '_system'); } catch (e) { window.location.href = full; } // external → system browser
+      }
+    }
+
     // Always use the APEX path — only some clubs have a subdomain. The server serves every club on the
     // apex and 302-redirects the ones that do have a subdomain (kept in-app by allowNavigation), so this
     // works for all clubs. Building "<slug>.squadio…" directly fails for clubs without a subdomain.
@@ -396,6 +413,14 @@
       // Deep link: if the app was launched by tapping a Squadio link (cold start), or one arrives while
       // the launcher is showing (warm), open it directly instead of the normal chooser flow.
       try {
+        // Push tap: when the user taps a notification, open its link (external post → system browser,
+        // schedule update → in-app). Registered first so a cold start from a tap is caught.
+        var PN = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.PushNotifications;
+        if (PN) {
+          PN.addListener('pushNotificationActionPerformed', function (a) {
+            try { var d = (a && a.notification && a.notification.data) || {}; openPushTarget(d.url || d.link || ''); } catch (e) {}
+          });
+        }
         var App = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App;
         if (App) {
           App.addListener('appUrlOpen', function (d) { handleDeepLink(d && d.url); });
