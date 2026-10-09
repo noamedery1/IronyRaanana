@@ -5,7 +5,7 @@ export default function ErrorPage({ mode = 'notFound' }) {
     const isError = mode === 'error';
     return (
         <div dir="rtl" style={{
-            minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Assistant, Heebo, Arial, sans-serif', padding: '1.5rem',
         }}>
             {/* Product logo on a light chip so the dark wordmark stays readable */}

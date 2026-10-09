@@ -124,6 +124,7 @@ body {
   /* direction is driven by the <html dir> attribute (set per language); don't hardcode here */
   color: var(--text-light);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   background:
@@ -150,6 +151,7 @@ body::before {
   z-index: 1;
   width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: transparent;

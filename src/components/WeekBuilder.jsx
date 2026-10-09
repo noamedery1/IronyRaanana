@@ -254,6 +254,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                 </label>
             </div>
 
+            <div style={{ overflowX: 'auto' }}>
             <div style={{ minWidth: 620, display: 'grid', gridTemplateColumns: 'minmax(160px, 1.5fr) 60px 100px 150px 3fr', gap: '1rem', paddingBottom: '0.8rem', borderBottom: '2px solid #eee', fontWeight: '600', color: '#444' }}>
                 <div>קבוצה</div>
                 <div style={{ textAlign: 'center' }}>מגדר</div>
@@ -262,7 +263,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                 <div>אילוצים ושריון מגרשים</div>
             </div>
 
-            <div style={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
+            <div style={{ maxHeight: 'calc(100dvh - 250px)', overflowY: 'auto' }}>
                 {sortTeams(teamConfig.map((t, i) => ({ ...t, _idx: i })), sortMode).map((team) => {
                     const index = team._idx; // original teamConfig index — handlers mutate by this
                     return (
@@ -396,14 +397,15 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
                     );
                 })}
             </div>
+            </div>
 
             {/* Modal */}
             {isModalOpen && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem'
                 }}>
-                    <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
+                    <div style={{ background: 'white', padding: '2rem', borderRadius: '8px', width: '400px', maxWidth: '90%', maxHeight: '90dvh', overflowY: 'auto' }}>
                         <h4 style={{ marginTop: 0 }}>{editingConstraintIndex !== null ? 'עריכת אילוץ' : 'הוספת אילוץ'} - {teamConfig[selectedTeamIndex]?.name}</h4>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

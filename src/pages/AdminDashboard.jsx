@@ -888,10 +888,13 @@ const AdminDashboard = () => {
         }
     };
 
+    // Sidebar section header — groups the menu so daily tasks and rare config are visually separated.
+    const navHdr = { color: 'var(--text-dim)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.03em', padding: '0.95rem 1.4rem 0.3rem', opacity: 0.7 };
+
     return (
-        <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent', fontFamily: 'Rubik, sans-serif', color: 'var(--text)' }}>
+        <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: 'transparent', fontFamily: 'Rubik, sans-serif', color: 'var(--text)' }}>
             {/* Header */}
-            <header style={{ background: 'var(--chrome-bg)', backdropFilter: 'blur(20px) saturate(1.4)', padding: isMobile ? '0.6rem 0.8rem' : '0.9rem 2rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+            <header style={{ background: 'var(--chrome-bg)', backdropFilter: 'blur(20px) saturate(1.4)', padding: isMobile ? 'calc(env(safe-area-inset-top) + 0.6rem) max(0.8rem, env(safe-area-inset-right)) 0.6rem max(0.8rem, env(safe-area-inset-left))' : 'calc(env(safe-area-inset-top) + 0.9rem) 2rem 0.9rem', borderBottom: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.6rem' : '1.2rem', minWidth: 0 }}>
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                         <button
@@ -948,14 +951,12 @@ const AdminDashboard = () => {
                 )}
                 {/* Sidebar — inline column on desktop, fixed drawer on mobile */}
                 {sidebarOpen && <aside style={isMobile
-                    ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: '1.2rem 0', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
-                    : { width: '230px', flexShrink: 0, background: 'var(--chrome-bg-2)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0', overflowY: 'auto', maxHeight: '100%' }}>
+                    ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: 'calc(env(safe-area-inset-top) + 1.2rem) 0 calc(env(safe-area-inset-bottom) + 1.2rem)', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
+                    : { width: '230px', flexShrink: 0, background: 'var(--chrome-bg-2)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0 calc(env(safe-area-inset-bottom) + 1rem)', overflowY: 'auto', maxHeight: '100%' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
+                        <div style={navHdr}>📅 לו"ז</div>
                         <button style={menuButtonStyle(activeTab === 'quickStart')} onClick={() => selectTab('quickStart')}>
                             🚀 התחלה מהירה
-                        </button>
-                        <button style={menuButtonStyle(activeTab === 'teamsAdmin')} onClick={() => selectTab('teamsAdmin')}>
-                            👥 ניהול קבוצות
                         </button>
                         <button style={menuButtonStyle(activeTab === 'preview')} onClick={() => selectTab('preview')}>
                             👁️ בניית הלו"ז (טיוטה)
@@ -974,14 +975,16 @@ const AdminDashboard = () => {
                         <button style={menuButtonStyle(activeTab === 'weekBuilder')} onClick={() => selectTab('weekBuilder')}>
                             📅 חוקי שיבוץ
                         </button>
-                        <button style={menuButtonStyle(activeTab === 'halls')} onClick={() => selectTab('halls')}>
-                            🏟️ {venues()}
+
+                        <div style={navHdr}>📣 הודעות ופרסום</div>
+                        <button style={menuButtonStyle(activeTab === 'trainerPush')} onClick={() => selectTab('trainerPush')}>
+                            📢 הודעות
                         </button>
                         <button style={menuButtonStyle(activeTab === 'messages')} onClick={() => selectTab('messages')}>
                             📣 באנרים
                         </button>
-                        <button style={menuButtonStyle(activeTab === 'trainerPush')} onClick={() => selectTab('trainerPush')}>
-                            📢 הודעות
+                        <button style={menuButtonStyle(activeTab === 'socialPost')} onClick={() => selectTab('socialPost')}>
+                            📱 פרסום ברשתות
                         </button>
                         <button style={menuButtonStyle(activeTab === 'archive')} onClick={() => selectTab('archive')}>
                             🗂️ ארכיון הודעות
@@ -989,17 +992,24 @@ const AdminDashboard = () => {
                         <button style={menuButtonStyle(activeTab === 'pushSubs')} onClick={() => selectTab('pushSubs')}>
                             🔔 מנויי פוש
                         </button>
-                        <button style={menuButtonStyle(activeTab === 'socialPost')} onClick={() => selectTab('socialPost')}>
-                            📱 פרסום ברשתות
-                        </button>
-                        <button style={menuButtonStyle(activeTab === 'invites')} onClick={() => selectTab('invites')}>
-                            🔗 לינקי הזמנה
-                        </button>
+
+                        <div style={navHdr}>👥 אנשים</div>
                         <button style={menuButtonStyle(activeTab === 'members')} onClick={() => selectTab('members')}>
                             👪 רשומים
                         </button>
                         <button style={menuButtonStyle(activeTab === 'trainersAdmin')} onClick={() => selectTab('trainersAdmin')}>
                             👤 ניהול מאמנים
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'invites')} onClick={() => selectTab('invites')}>
+                            🔗 לינקי הזמנה
+                        </button>
+
+                        <div style={navHdr}>⚙️ הגדרות</div>
+                        <button style={menuButtonStyle(activeTab === 'teamsAdmin')} onClick={() => selectTab('teamsAdmin')}>
+                            👥 ניהול קבוצות
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'halls')} onClick={() => selectTab('halls')}>
+                            🏟️ {venues()}
                         </button>
                         <button style={menuButtonStyle(activeTab === 'setup')} onClick={() => selectTab('setup')}>
                             ⚙️ הגדרות וייבוא
@@ -1008,7 +1018,7 @@ const AdminDashboard = () => {
                 </aside>}
 
                 {/* Content Area */}
-                <main style={{ flex: 1, minWidth: 0, padding: '1rem', overflowY: 'auto' }}>
+                <main style={{ flex: 1, minWidth: 0, padding: '1rem 1rem calc(env(safe-area-inset-bottom) + 1.5rem)', overflowY: 'auto' }}>
                     {renderContent()}
                 </main>
             </div>

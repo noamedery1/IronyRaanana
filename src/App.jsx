@@ -103,8 +103,8 @@ function App() {
         onClick={() => setIsFeedbackOpen(true)}
         style={{
           position: 'fixed',
-          bottom: '20px',
-          left: '20px', // LTR public site? or RTL? Using left for now to avoid clash with chat widgets often on right
+          bottom: 'max(20px, env(safe-area-inset-bottom))',
+          left: 'max(20px, env(safe-area-inset-left))', // keep clear of the phone's home indicator / gesture bar
           zIndex: 999,
           background: '#3b82f6', // Amber/Yellow
           color: '#ffffff',

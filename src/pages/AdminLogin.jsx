@@ -39,7 +39,7 @@ const AdminLogin = () => {
     };
 
     return (
-        <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="app-container" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div className="login-card" style={{
                 background: 'var(--glass-bg)',
                 border: '1px solid var(--glass-border)',

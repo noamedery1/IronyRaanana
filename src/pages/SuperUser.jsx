@@ -167,7 +167,7 @@ export default function SuperUser() {
         setTimeout(() => setDelMsg(''), 5000);
     };
 
-    const wrap = { minHeight: '100vh', background: '#070b16', color: '#e2e8f0', fontFamily: 'Rubik, sans-serif', direction: 'rtl', padding: '2rem 1rem' };
+    const wrap = { minHeight: '100dvh', background: '#070b16', color: '#e2e8f0', fontFamily: 'Rubik, sans-serif', direction: 'rtl', padding: '2rem 1rem' };
     const card = { maxWidth: '640px', margin: '0 auto', background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '1.5rem' };
 
     if (!token) {

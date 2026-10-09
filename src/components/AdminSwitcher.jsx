@@ -23,7 +23,7 @@ export default function AdminSwitcher() {
 
     return (
         <div style={{
-            position: 'fixed', bottom: '14px', left: '50%', transform: 'translateX(-50%)', zIndex: 1400,
+            position: 'fixed', bottom: 'max(14px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 1400,
             display: 'flex', alignItems: 'center', gap: '0.35rem', fontFamily: 'Rubik, sans-serif',
             background: 'rgba(10,17,32,0.94)', backdropFilter: 'blur(12px)',
             border: '1px solid rgba(255,255,255,0.16)', borderRadius: '30px', padding: '0.35rem 0.5rem',

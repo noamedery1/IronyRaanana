@@ -366,7 +366,7 @@ const TrainerPortal = () => {
             fontSize: '0.95rem', textAlign: 'center',
         };
         return (
-            <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Assistant, sans-serif', padding: '1rem' }}>
+            <div dir="rtl" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100dvh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 70%)', fontFamily: 'Assistant, sans-serif', padding: 'max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom))' }}>
                 <div style={{ background: 'rgba(12,19,36,0.96)', backdropFilter: 'blur(20px)', padding: '2rem 1.6rem', borderRadius: '20px', boxShadow: '0 30px 70px -20px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.08)', width: '90%', maxWidth: '360px', textAlign: 'center' }}>
                     <BrandMark size={64} />
                     <h2 style={{ color: '#fff', margin: '0 0 0.3rem', fontSize: '1.4rem', fontWeight: 800 }}>פורטל מאמנים</h2>
@@ -401,16 +401,16 @@ const TrainerPortal = () => {
     }
 
     return (
-        <div dir="rtl" style={{ fontFamily: 'Assistant, sans-serif', minHeight: '100vh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 60%)', color: '#e8edf7', paddingBottom: '2rem' }}>
+        <div dir="rtl" style={{ fontFamily: 'Assistant, sans-serif', minHeight: '100dvh', background: 'radial-gradient(circle at 50% 0%, #0d1530, #070b16 60%)', color: '#e8edf7', paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}>
             {/* Header */}
-            <header style={{ background: 'rgba(12,19,36,0.96)', padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <header style={{ background: 'rgba(12,19,36,0.96)', padding: 'calc(env(safe-area-inset-top) + 1rem) max(1rem, env(safe-area-inset-right)) 1rem max(1rem, env(safe-area-inset-left))', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {trainer.color && <span style={{ width: 16, height: 16, borderRadius: 4, background: trainer.color, border: '1px solid rgba(255,255,255,0.3)' }} />}
                     שלום, {trainer.name}
                 </h3>
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
-                    <a href={`/${getActiveClub().slug}?view=parent`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', textDecoration: 'none' }}>👁️ לוח מלא / {venues()}</a>
-                    <button onClick={logout} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>יציאה</button>
+                    <a href={`/${getActiveClub().slug}?view=parent`} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0 0.9rem', minHeight: 44, display: 'inline-flex', alignItems: 'center', borderRadius: '10px', fontSize: '0.82rem', textDecoration: 'none' }}>👁️ לוח מלא / {venues()}</a>
+                    <button onClick={logout} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.16)', color: '#cbd5e1', padding: '0 0.9rem', minHeight: 44, display: 'inline-flex', alignItems: 'center', borderRadius: '10px', fontSize: '0.82rem', cursor: 'pointer' }}>יציאה</button>
                 </div>
             </header>
 
@@ -472,7 +472,7 @@ const TrainerPortal = () => {
                                 onClick={() => handleEditClick(session)}
                                 style={{
                                     background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-                                    borderRadius: '50%', width: '40px', height: '40px',
+                                    borderRadius: '50%', width: '44px', height: '44px', flex: '0 0 auto',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', color: '#e8edf7'
                                 }}

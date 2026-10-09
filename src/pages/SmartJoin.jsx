@@ -45,7 +45,7 @@ export default function SmartJoin() {
     }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const wrap = {
-        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '1.2rem', direction: 'rtl', fontFamily: 'Rubik, sans-serif',
         background: 'var(--bg, #070b16)', color: 'var(--text, #e8edf7)',
     };
