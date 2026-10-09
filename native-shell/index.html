@@ -248,10 +248,21 @@
         if (!res.ok) { err.textContent = 'קוד לא קיים. בדקו עם המאמן או המנהל.'; return false; }
         var d = await res.json();
         var origin = (d.inviteOrigin || BASE).replace(/\/+$/, ''); // subdomain club → its own origin
-        if (d.clubSlug) saveMember(d.clubSlug, 'member', d.team);
-        await registerPushForMember(d.clubSlug, 'member', d.team);
+        var slug = d.clubSlug;
         err.textContent = '';
-        go(origin + '/' + d.clubSlug + '/join/member/' + encodeURIComponent(d.team), d.clubSlug);
+        // Route by role: a team (member) code → that team's registration; the club's operator code →
+        // the operator board join; the club's coach code → the trainer login (name + personal code).
+        if (d.role === 'operator') {
+          saveMember(slug, 'operator', '');
+          go(origin + '/' + slug + '/join/operator', slug);
+        } else if (d.role === 'coach') {
+          saveRecent(slug);
+          go(origin + '/' + slug + '/trainer', slug);
+        } else {
+          if (slug) saveMember(slug, 'member', d.team);
+          await registerPushForMember(slug, 'member', d.team);
+          go(origin + '/' + slug + '/join/member/' + encodeURIComponent(d.team), slug);
+        }
         return true;
       } catch (e) { err.textContent = 'שגיאת תקשורת, נסו שוב.'; return false; }
     }
