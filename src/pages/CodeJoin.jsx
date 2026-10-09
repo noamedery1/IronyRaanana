@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { encodePathSeg } from '../encodeSeg.js';
 import { getActiveClub } from '../clubConfig.js';
 import { getMemberships, setActiveTeam } from '../userIdentity.js';
+import { joinPathForCode } from '../joinRoute.js';
 
 // Join by CODE. A parent types the short 5-digit code their coach/manager gave them instead of
 // following an invite link (links are fragile across in-app browsers / iOS PWAs). We resolve the
@@ -24,10 +24,11 @@ export default function CodeJoin() {
             const res = await fetch(`/api/join/${encodeURIComponent(c)}`);
             if (!res.ok) { setError('קוד לא קיים. בדקו שוב עם המאמן או המנהל.'); setLoading(false); return; }
             const d = await res.json();
-            const already = getMemberships().some((m) => m.team === d.team);
+            // A member already registered to this team → straight to the schedule. Operator/coach codes
+            // route to their own flow (operator board / trainer login) via the shared helper.
+            const already = d.role !== 'operator' && d.role !== 'coach' && getMemberships().some((m) => m.team === d.team);
             if (already) setActiveTeam(d.team);
-            // Already registered → the schedule; otherwise the normal registration flow (Join page).
-            const path = already ? `/${d.clubSlug}` : `/${d.clubSlug}/join/member/${encodePathSeg(d.team)}`;
+            const path = already ? `/${d.clubSlug}` : joinPathForCode(d);
             const origin = (d.inviteOrigin || '').replace(/\/$/, '');
             // A subdomain club lives on its own origin — land there with a FULL navigation so identity
             // and PWA state are stored on the right origin and the club always resolves server-side

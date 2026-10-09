@@ -251,7 +251,59 @@ export async function ensureJoinCodes() {
     } catch (e) { console.error('[join-code] ensure failed (non-fatal):', e.message); return 0; }
 }
 
-// Resolve a join code to its club + team. Public (code-entry screen). null if unknown/inactive.
+// ===== Club-level role codes (operator / coach) =====
+// Members get a per-TEAM code (teams.join_code). Operators and coaches instead get ONE code each per
+// CLUB (stored in clubs.config as operatorCode / coachCode), so a manager can hand out a single code
+// for the whole club. Entering an operator code → joins as operator (full board); a coach code →
+// opens the trainer login (name + personal code, as today).
+
+// Is this 5-digit code already taken anywhere (a team code, or another club's role code)?
+async function codeInUse(code) {
+    const t = await pool.query('SELECT 1 FROM teams WHERE join_code=$1 LIMIT 1', [code]);
+    if (t.rows.length) return true;
+    const c = await pool.query(
+        `SELECT 1 FROM clubs WHERE config->>'operatorCode'=$1 OR config->>'coachCode'=$1 LIMIT 1`, [code],
+    );
+    return c.rows.length > 0;
+}
+
+async function uniqueRoleCode() {
+    for (let i = 0; i < 60; i++) { const code = randomJoinCode(); if (!(await codeInUse(code))) return code; }
+    return null;
+}
+
+// Give every club an operatorCode + coachCode if missing. Idempotent, collision-safe — safe on boot.
+export async function ensureClubCodes() {
+    try {
+        const clubs = await pool.query('SELECT id, config FROM clubs');
+        let n = 0;
+        for (const row of clubs.rows) {
+            const cfg = row.config || {};
+            const add = {};
+            if (!cfg.operatorCode) { const c = await uniqueRoleCode(); if (c) add.operatorCode = c; }
+            if (!cfg.coachCode) { const c = await uniqueRoleCode(); if (c) add.coachCode = c; }
+            if (Object.keys(add).length) {
+                await pool.query(`UPDATE clubs SET config = COALESCE(config,'{}'::jsonb) || $1::jsonb WHERE id=$2`,
+                    [JSON.stringify(add), row.id]);
+                n++;
+            }
+        }
+        if (n) console.log(`[join-code] assigned club role codes to ${n} club(s)`);
+        return n;
+    } catch (e) { console.error('[club-code] ensure failed (non-fatal):', e.message); return 0; }
+}
+
+// Manager-only: the club's operator + coach codes (to share).
+export async function listClubCodes(slug) {
+    const cid = await clubId(slug);
+    await ensureClubCodes();
+    const r = await pool.query('SELECT config FROM clubs WHERE id=$1', [cid]);
+    const cfg = r.rows[0]?.config || {};
+    return { operatorCode: cfg.operatorCode || '', coachCode: cfg.coachCode || '' };
+}
+
+// Resolve a join code to its club + role. Public (code-entry screen). null if unknown/inactive.
+// role: 'member' (a team code) | 'operator' | 'coach' (club-level codes).
 export async function resolveJoinCode(code) {
     const c = (code || '').toString().trim();
     if (!/^\d{4,6}$/.test(c)) return null;
@@ -261,11 +313,23 @@ export async function resolveJoinCode(code) {
           WHERE t.join_code=$1 AND t.active=true LIMIT 1`,
         [c],
     );
-    if (!r.rows.length) return null;
-    const row = r.rows[0];
-    // The endpoint annotates inviteOrigin (a subdomain club lives on its own origin) — it owns the
-    // SUBDOMAIN_CLUBS source of truth, same as /api/clubs.
-    return { clubSlug: row.club_slug, clubName: row.club_name, team: row.team, gender: row.gender };
+    if (r.rows.length) {
+        const row = r.rows[0];
+        // The endpoint annotates inviteOrigin (a subdomain club lives on its own origin) — it owns the
+        // SUBDOMAIN_CLUBS source of truth, same as /api/clubs.
+        return { clubSlug: row.club_slug, clubName: row.club_name, team: row.team, gender: row.gender, role: 'member' };
+    }
+    // Not a team code — try the club-level operator / coach codes.
+    const cc = await pool.query(
+        `SELECT slug, name, config->>'operatorCode' AS op, config->>'coachCode' AS coach
+           FROM clubs WHERE config->>'operatorCode'=$1 OR config->>'coachCode'=$1 LIMIT 1`, [c],
+    );
+    if (cc.rows.length) {
+        const row = cc.rows[0];
+        const role = row.op === c ? 'operator' : 'coach';
+        return { clubSlug: row.slug, clubName: row.name, team: '', role };
+    }
+    return null;
 }
 
 // Manager-only: every active team with its join code, so the manager can share it.

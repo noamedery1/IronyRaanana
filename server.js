@@ -9,7 +9,7 @@ import {
     listTrainers, saveTrainer, deleteTrainer, authTrainer,
     registerUser, authUser, listMembers, deleteMember, deleteAccount, listTeams, upsertTeam, deleteTeam,
     createManager, authManager, listManagers, changeManagerPassword, resetManagerPassword,
-    resolveJoinCode, listTeamJoinCodes, ensureJoinCodes,
+    resolveJoinCode, listTeamJoinCodes, ensureJoinCodes, ensureClubCodes, listClubCodes,
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
@@ -106,6 +106,7 @@ app.use((req, res, next) => {
 try {
     await ensureStore();
     await ensureJoinCodes(); // backfill a 5-digit join code for every team (deploys skip migrations)
+    await ensureClubCodes(); // backfill a per-club operator + coach code
 } catch (e) {
     // Don't let a storage/volume hiccup take down the whole server — club features
     // degrade to the client's built-in fallback; push & schedule keep working.
@@ -364,6 +365,11 @@ app.delete('/api/:club/teams/:id', requireManager, async (req, res) => {
 // Manager-only: each team with its shareable 5-digit join code.
 app.get('/api/:club/teams/join-codes', requireManager, async (req, res) => {
     try { ok(res, { teams: await listTeamJoinCodes(req.params.club) }); } catch (e) { fail(res, e); }
+});
+
+// Manager-only: the club's single operator + coach codes (one each, club-wide).
+app.get('/api/:club/role-codes', requireManager, async (req, res) => {
+    try { ok(res, await listClubCodes(req.params.club)); } catch (e) { fail(res, e); }
 });
 
 // Public: resolve a 5-digit join code → { clubSlug, team }. Lets a parent type a code instead of

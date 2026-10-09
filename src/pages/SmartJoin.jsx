@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { isNativeApp } from '../native.js';
 import { isIOS } from '../inAppBrowser.js';
-import { encodePathSeg } from '../encodeSeg.js';
 import { playStoreUrl, appStoreUrl } from '../appStores.js';
 import { getMemberships, setActiveTeam } from '../userIdentity.js';
+import { joinPathForCode } from '../joinRoute.js';
 
 const isMobile = () => /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
 
@@ -26,9 +26,10 @@ export default function SmartJoin() {
             .then((d) => {
                 if (!alive) return;
                 if (!d) { setState({ loading: false, error: true }); return; }
-                // Already registered to this team on this device → straight to the schedule.
-                const alreadyMember = getMemberships().some((m) => m.team === d.team);
-                const path = alreadyMember ? `/${d.clubSlug}` : `/${d.clubSlug}/join/member/${encodePathSeg(d.team)}`;
+                // Already registered to this team on this device → straight to the schedule. (Member
+                // codes only; operator/coach codes always route to their own flow.)
+                const alreadyMember = d.role !== 'operator' && d.role !== 'coach' && getMemberships().some((m) => m.team === d.team);
+                const path = alreadyMember ? `/${d.clubSlug}` : joinPathForCode(d);
                 if (alreadyMember) setActiveTeam(d.team);
                 // A subdomain club lives on its own origin — land the parent there (full nav) so identity
                 // and PWA state live on the right origin and the club always resolves server-side.
@@ -105,7 +106,9 @@ export default function SmartJoin() {
         <div style={wrap}>
             <div style={card}>
                 <div style={{ fontSize: '2.2rem', marginBottom: '0.2rem' }}>📲</div>
-                <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.35rem' }}>הצטרפות ל{state.team}</h2>
+                <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.35rem' }}>
+                    {state.role === 'operator' ? 'הצטרפות כמפעיל' : state.role === 'coach' ? 'כניסת מאמן' : `הצטרפות ל${state.team}`}
+                </h2>
                 <p style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.9rem', margin: '0 0 1rem' }}>
                     {state.clubName || ''}
                 </p>

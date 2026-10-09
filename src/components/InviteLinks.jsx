@@ -12,6 +12,7 @@ import { smartLink } from '../appStores.js';
 export default function InviteLinks() {
     const [teams, setTeams] = useState([]); // full team objects from the DB (name/gender/age/grade)
     const [codes, setCodes] = useState({}); // team name -> 5-digit join code
+    const [roleCodes, setRoleCodes] = useState({ operatorCode: '', coachCode: '' }); // club-wide operator/coach codes
     const [teamSort, setTeamSort] = useState('name');
     const [copied, setCopied] = useState('');
 
@@ -41,6 +42,10 @@ export default function InviteLinks() {
                 }
             })
             .catch(() => { /* non-fatal */ });
+        // The club's single operator + coach codes (manager-only).
+        fetch(`/api/${club.slug}/role-codes`, { headers: authHeaders(club.slug) }).then((r) => r.json())
+            .then((d) => { if (d && (d.operatorCode || d.coachCode)) setRoleCodes({ operatorCode: d.operatorCode || '', coachCode: d.coachCode || '' }); })
+            .catch(() => { /* non-fatal */ });
     }, [club.slug]);
 
     const teamLink = (name) => `${base}/join/member/${encodePathSeg(name)}`;
@@ -62,6 +67,17 @@ export default function InviteLinks() {
         </div>
     );
 
+    // A club-wide role code (operator / coach): the 5-digit code + copy + smart-link copy. Same look
+    // as a team code, so a manager can hand out one code for the whole club instead of a link.
+    const codeChip = (codeVal, key) => (codeVal ? (
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', margin: '0 0 0.6rem', flexWrap: 'wrap' }}>
+            <div style={{ minWidth: 130, fontWeight: 600, color: '#0f1b33' }}>קוד להקלדה</div>
+            <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '0.12rem', color: '#0d9488', background: '#ecfdf5', border: '1px solid #99f6e4', borderRadius: 8, padding: '0.25rem 0.6rem' }}>{codeVal}</span>
+            <button onClick={() => copy(codeVal, key)} style={{ background: '#0d9488', color: '#fff', border: 'none', borderRadius: 6, padding: '0.45rem 0.8rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>{copied === key ? '✓' : 'העתק קוד'}</button>
+            <button onClick={() => copy(smartLink(codeVal), 'smart:' + key)} style={{ background: '#1e3a8a', color: '#fff', border: 'none', borderRadius: 6, padding: '0.45rem 0.8rem', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem' }}>{copied === 'smart:' + key ? '✓' : '🔗 לינק חכם'}</button>
+        </div>
+    ) : null);
+
     return (
         <div className="report-panel" style={{ marginTop: 0, color: '#0f1b33' }}>
             <h3 style={{ marginTop: 0 }}>🔗 לינקי הזמנה</h3>
@@ -69,10 +85,12 @@ export default function InviteLinks() {
 
             <h4 style={{ marginBottom: '0.6rem', color: '#9a3412' }}>מפעיל (לוח מלא — כל הקבוצות וה{venues()})</h4>
             {row('מפעיל', operatorLink, 'operator')}
+            {codeChip(roleCodes.operatorCode, 'opcode')}
 
             <h4 style={{ margin: '1.4rem 0 0.3rem', color: '#166534' }}>מאמנים</h4>
-            <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem' }}>לינק אחד לכל המאמנים. כל מאמן מתחבר עם השם והקוד שהוגדרו לו בגיליון <b>Trainers</b>.</p>
+            <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem' }}>לינק/קוד אחד לכל המאמנים — מוביל למסך המאמן, שם כל מאמן מתחבר עם השם והקוד שהוגדרו לו בגיליון <b>Trainers</b>.</p>
             {row('מאמנים', trainerLink, 'trainer')}
+            {codeChip(roleCodes.coachCode, 'coachcode')}
 
             <div style={{ margin: '1.4rem 0 0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <h4 style={{ margin: 0, color: '#1e3a8a' }}>חברי קבוצה (הורים / מתאמנים)</h4>
