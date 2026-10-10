@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getIdentity, getMemberships, getOperatorToken, clearIdentity } from '../userIdentity.js';
+import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership } from '../userIdentity.js';
 import { getActiveClub } from '../clubConfig.js';
 
 // "My account" screen — lets a registered user see what they're signed up for and DELETE their
@@ -14,6 +14,24 @@ export default function Account() {
     const memberships = getMemberships();
     const [confirm, setConfirm] = useState(false);
     const [busy, setBusy] = useState(false);
+
+    // Remove ONE team registration from this device (partial removal), not the whole account. Each team
+    // the user picked gets its own remove button with a confirmation — so a parent of two kids can drop
+    // one team and keep the other. The server account for that team is deleted via its own token.
+    const removeTeam = async (m) => {
+        if (!m || !m.team) return;
+        if (!window.confirm(`להסיר את ההרשמה לקבוצת "${m.team}"? שאר הקבוצות יישארו.`)) return;
+        try {
+            if (m.token) {
+                await fetch(`/api/${slug}/account/delete`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tokens: [m.token], keepEmail: true }),
+                });
+            }
+        } catch { /* still remove locally */ }
+        removeMembership(m.team);
+        window.location.reload();
+    };
 
     const del = async () => {
         setBusy(true);
@@ -53,6 +71,23 @@ export default function Account() {
                 <p style={{ margin: '0 0 1.1rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.9rem' }}>
                     {id.role === 'operator' ? 'מפעיל' : teams.length ? ('קבוצות: ' + teams.join(', ')) : 'לא מחוברים לקבוצה'}
                 </p>
+
+                {/* Per-team removal: drop a single team without deleting the whole account. */}
+                {memberships.length > 1 && (
+                    <div style={{ border: '1px solid var(--bd2, rgba(255,255,255,0.12))', borderRadius: 14, padding: '0.9rem', marginBottom: '1rem' }}>
+                        <div style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>הקבוצות שלי</div>
+                        {memberships.map((m) => (
+                            <div key={m.team} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', padding: '0.4rem 0', borderTop: '1px solid var(--bd2, rgba(255,255,255,0.08))' }}>
+                                <span style={{ fontSize: '0.9rem' }}>{m.team}</span>
+                                <button
+                                    onClick={() => removeTeam(m)}
+                                    style={{ background: 'none', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'inherit' }}
+                                >הסר קבוצה</button>
+                            </div>
+                        ))}
+                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>הסרת קבוצה בודדת לא מוחקת את שאר הקבוצות או את החשבון.</div>
+                    </div>
+                )}
 
                 <div style={{ border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.08)', borderRadius: 14, padding: '1rem' }}>
                     <div style={{ fontWeight: 800, color: '#fca5a5', marginBottom: '0.4rem' }}>🗑️ מחיקת חשבון ונתונים</div>
