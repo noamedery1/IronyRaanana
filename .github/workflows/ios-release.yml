@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 13 (pre-launch: security+UX fixes on live web via develop; launcher copy — manager enters by CODE not link)
+  # rebuild: 14 (launcher: "⚙ ניהול" entry on each managed club's home card — manager returns in one tap; multi-club)
   push:
     branches: [feat/native-app]
     paths:

@@ -178,6 +178,18 @@
       syncNative(trimmed);
     }
 
+    // Clubs this device entered as MANAGER (via the club's manager code). A person can manage several
+    // clubs, so this is a list. It drives a "⚙ ניהול" entry on each such club's home-screen card, so a
+    // returning manager gets back into management in one tap instead of re-typing the manager code.
+    // (The admin screen itself still requires the password; this only surfaces the entry point.)
+    function getManagerClubs() { try { return JSON.parse(localStorage.getItem('managerClubs') || '[]'); } catch (e) { return []; } }
+    function saveManagerClub(slug) {
+      if (!slug) return;
+      var l = getManagerClubs().filter(function (s) { return s !== slug; });
+      l.unshift(slug);
+      try { localStorage.setItem('managerClubs', JSON.stringify(l.slice(0, 10))); } catch (e) {}
+    }
+
     // Memberships {club, team} drive the widget: a parent's team shows only that team; an operator
     // (no team) shows the whole club. Mirrored to native storage so the widget reads them.
     function getMembers() { try { return JSON.parse(localStorage.getItem('members') || '[]'); } catch (e) { return []; } }
@@ -260,6 +272,7 @@
           go(origin + '/' + slug + '/trainer', slug);
         } else if (d.role === 'manager') {
           saveRecent(slug); // shows the club on the home screen; admin login still requires a password
+          saveManagerClub(slug); // remember this is a club the user manages → "⚙ ניהול" entry on its card
           go(origin + '/' + slug + '/admin', slug);
         } else {
           if (slug) saveMember(slug, 'member', d.team);
@@ -341,6 +354,10 @@
         var mem = getMembers().filter(function (m) { return m.club !== slug; });
         localStorage.setItem('members', JSON.stringify(mem)); syncMembers(mem);
       } catch (e) {}
+      try {
+        var mgrs = getManagerClubs().filter(function (s) { return s !== slug; });
+        localStorage.setItem('managerClubs', JSON.stringify(mgrs));
+      } catch (e) {}
       renderRecent(list);
     }
 
@@ -376,9 +393,17 @@
         delBtn.addEventListener('click', function () { removeRecent(slug); });
         var enterBtn = document.createElement('button'); enterBtn.className = 'go'; enterBtn.textContent = 'כניסה';
         enterBtn.addEventListener('click', function () { go(clubUrl(slug), slug); });
-        // Manager entry is no longer a per-club button — a manager enters via the club's manager CODE
-        // (→ admin login). Keeps the home card clean (just כניסה + remove).
-        row.appendChild(info); row.appendChild(delBtn); row.appendChild(enterBtn);
+        row.appendChild(info); row.appendChild(delBtn);
+        // For a club this device manages, surface a one-tap "⚙ ניהול" entry (→ /admin, which skips the
+        // password when the manager token is still saved). A person can manage several clubs, so each
+        // manager-club shows its own button. The club's own logo is already shown on the card above.
+        if (getManagerClubs().indexOf(slug) >= 0) {
+          var mgrBtn = document.createElement('button'); mgrBtn.className = 'go'; mgrBtn.textContent = '⚙ ניהול';
+          mgrBtn.style.cssText = 'background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;font-weight:800;';
+          mgrBtn.addEventListener('click', function () { go(adminUrl(slug), slug); });
+          row.appendChild(mgrBtn);
+        }
+        row.appendChild(enterBtn);
         box.appendChild(row);
       });
       document.getElementById('recentCard').style.display = '';
