@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 11 (launcher routes operator/coach club codes by role; incl. push-tap + smart-link + clipboard + cosmetic)
+  # rebuild: 12 (manager club code -> admin; remove manager button from cards; launcher safe-area; incl. operator/coach codes + push-tap + smart-link)
   push:
     branches: [feat/native-app]
     paths:
