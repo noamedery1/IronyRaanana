@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 16 (launcher simplified to a clean club launcher — roles/teams/removal live on the club screen, not mirrored here)
+  # rebuild: 17 (launcher card shows role+team badges again; ✕ opens manage dialog — remove one registration or whole club, all roles incl operator)
   push:
     branches: [feat/native-app]
     paths:
