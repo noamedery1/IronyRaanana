@@ -448,9 +448,10 @@ function PublicSchedule() {
                             }}
                         >🔢 יש לי קוד הצטרפות</Link>
                     </div>
+                    {/* Deliberately NO trainer/manager entry links here: a parent must not even see that
+                        those roles exist. Coaches and managers enter only via the code they were given
+                        (🔢 above → routed to the trainer/admin login). Keeps guessers away from the gate. */}
                     <div style={{ display: 'flex', gap: '1.2rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '0.4rem' }}>
-                        <Link to={`/${club.slug}/trainer`} className="welcome-admin">{sportEmoji()} כניסת מאמן</Link>
-                        <Link to={`/${club.slug}/admin`} className="welcome-admin">מנהל מועדון? כניסה ⚙</Link>
                         <a className="welcome-admin" href="/sales-landing.html">מה זה Squadio?</a>
                     </div>
                 </div>
@@ -473,7 +474,8 @@ function PublicSchedule() {
                     <ThemeToggle />
                     <LanguageSwitcher />
                     {(memberTeam || identity.role === 'operator') && <Link to={`/${club.slug}/account`} className="admin-gear" title="החשבון שלי">👤</Link>}
-                    {!memberTeam && <Link to={`/${club.slug}/admin`} className="admin-gear" title={t('admin')}>⚙</Link>}
+                    {/* No ⚙ admin link in the public top bar — the manager option stays invisible to
+                        parents/operators. Managers return via the token-gated pill (RoleReturn). */}
                 </div>
             </nav>
 

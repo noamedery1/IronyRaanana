@@ -57,7 +57,7 @@ export default function CodeJoin() {
                 <div style={{ fontSize: '2.4rem', marginBottom: '0.3rem' }}>🔢</div>
                 <h2 style={{ margin: '0 0 0.4rem', fontSize: '1.4rem' }}>הצטרפות עם קוד</h2>
                 <p style={{ color: 'var(--text-dim, #94a3b8)', fontSize: '0.9rem', margin: '0 0 1.2rem', lineHeight: 1.6 }}>
-                    הזינו את הקוד (5 ספרות) שקיבלתם — קוד קבוצה, מפעיל, מאמן או מנהל.
+                    הזינו את הקוד (5 ספרות) שקיבלתם מהמועדון.
                 </p>
 
                 <form onSubmit={submit}>
