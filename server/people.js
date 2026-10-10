@@ -262,7 +262,7 @@ async function codeInUse(code) {
     const t = await pool.query('SELECT 1 FROM teams WHERE join_code=$1 LIMIT 1', [code]);
     if (t.rows.length) return true;
     const c = await pool.query(
-        `SELECT 1 FROM clubs WHERE config->>'operatorCode'=$1 OR config->>'coachCode'=$1 LIMIT 1`, [code],
+        `SELECT 1 FROM clubs WHERE config->>'operatorCode'=$1 OR config->>'coachCode'=$1 OR config->>'managerCode'=$1 LIMIT 1`, [code],
     );
     return c.rows.length > 0;
 }
@@ -282,6 +282,7 @@ export async function ensureClubCodes() {
             const add = {};
             if (!cfg.operatorCode) { const c = await uniqueRoleCode(); if (c) add.operatorCode = c; }
             if (!cfg.coachCode) { const c = await uniqueRoleCode(); if (c) add.coachCode = c; }
+            if (!cfg.managerCode) { const c = await uniqueRoleCode(); if (c) add.managerCode = c; }
             if (Object.keys(add).length) {
                 await pool.query(`UPDATE clubs SET config = COALESCE(config,'{}'::jsonb) || $1::jsonb WHERE id=$2`,
                     [JSON.stringify(add), row.id]);
@@ -299,7 +300,7 @@ export async function listClubCodes(slug) {
     await ensureClubCodes();
     const r = await pool.query('SELECT config FROM clubs WHERE id=$1', [cid]);
     const cfg = r.rows[0]?.config || {};
-    return { operatorCode: cfg.operatorCode || '', coachCode: cfg.coachCode || '' };
+    return { operatorCode: cfg.operatorCode || '', coachCode: cfg.coachCode || '', managerCode: cfg.managerCode || '' };
 }
 
 // Resolve a join code to its club + role. Public (code-entry screen). null if unknown/inactive.
@@ -321,12 +322,12 @@ export async function resolveJoinCode(code) {
     }
     // Not a team code — try the club-level operator / coach codes.
     const cc = await pool.query(
-        `SELECT slug, name, config->>'operatorCode' AS op, config->>'coachCode' AS coach
-           FROM clubs WHERE config->>'operatorCode'=$1 OR config->>'coachCode'=$1 LIMIT 1`, [c],
+        `SELECT slug, name, config->>'operatorCode' AS op, config->>'coachCode' AS coach, config->>'managerCode' AS mgr
+           FROM clubs WHERE config->>'operatorCode'=$1 OR config->>'coachCode'=$1 OR config->>'managerCode'=$1 LIMIT 1`, [c],
     );
     if (cc.rows.length) {
         const row = cc.rows[0];
-        const role = row.op === c ? 'operator' : 'coach';
+        const role = row.op === c ? 'operator' : (row.mgr === c ? 'manager' : 'coach');
         return { clubSlug: row.slug, clubName: row.name, team: '', role };
     }
     return null;

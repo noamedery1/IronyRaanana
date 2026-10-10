@@ -12,7 +12,7 @@ import { smartLink } from '../appStores.js';
 export default function InviteLinks() {
     const [teams, setTeams] = useState([]); // full team objects from the DB (name/gender/age/grade)
     const [codes, setCodes] = useState({}); // team name -> 5-digit join code
-    const [roleCodes, setRoleCodes] = useState({ operatorCode: '', coachCode: '' }); // club-wide operator/coach codes
+    const [roleCodes, setRoleCodes] = useState({ operatorCode: '', coachCode: '', managerCode: '' }); // club-wide operator/coach/manager codes
     const [teamSort, setTeamSort] = useState('name');
     const [copied, setCopied] = useState('');
 
@@ -44,7 +44,7 @@ export default function InviteLinks() {
             .catch(() => { /* non-fatal */ });
         // The club's single operator + coach codes (manager-only).
         fetch(`/api/${club.slug}/role-codes`, { headers: authHeaders(club.slug) }).then((r) => r.json())
-            .then((d) => { if (d && (d.operatorCode || d.coachCode)) setRoleCodes({ operatorCode: d.operatorCode || '', coachCode: d.coachCode || '' }); })
+            .then((d) => { if (d && (d.operatorCode || d.coachCode || d.managerCode)) setRoleCodes({ operatorCode: d.operatorCode || '', coachCode: d.coachCode || '', managerCode: d.managerCode || '' }); })
             .catch(() => { /* non-fatal */ });
     }, [club.slug]);
 
@@ -91,6 +91,10 @@ export default function InviteLinks() {
             <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem' }}>לינק/קוד אחד לכל המאמנים — מוביל למסך המאמן, שם כל מאמן מתחבר עם השם והקוד שהוגדרו לו בגיליון <b>Trainers</b>.</p>
             {row('מאמנים', trainerLink, 'trainer')}
             {codeChip(roleCodes.coachCode, 'coachcode')}
+
+            <h4 style={{ margin: '1.4rem 0 0.3rem', color: '#7c3aed' }}>מנהל מערכת</h4>
+            <p style={{ margin: '0 0 0.6rem', color: '#666', fontSize: '0.85rem' }}>הזנת הקוד באפליקציה פותחת את מסך כניסת המנהל — הכניסה עצמה דורשת שם משתמש וסיסמה.</p>
+            {codeChip(roleCodes.managerCode, 'mgrcode')}
 
             <div style={{ margin: '1.4rem 0 0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <h4 style={{ margin: 0, color: '#1e3a8a' }}>חברי קבוצה (הורים / מתאמנים)</h4>

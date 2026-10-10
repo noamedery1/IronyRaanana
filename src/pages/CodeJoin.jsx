@@ -26,7 +26,7 @@ export default function CodeJoin() {
             const d = await res.json();
             // A member already registered to this team → straight to the schedule. Operator/coach codes
             // route to their own flow (operator board / trainer login) via the shared helper.
-            const already = d.role !== 'operator' && d.role !== 'coach' && getMemberships().some((m) => m.team === d.team);
+            const already = d.role !== 'operator' && d.role !== 'coach' && d.role !== 'manager' && getMemberships().some((m) => m.team === d.team);
             if (already) setActiveTeam(d.team);
             const path = already ? `/${d.clubSlug}` : joinPathForCode(d);
             const origin = (d.inviteOrigin || '').replace(/\/$/, '');

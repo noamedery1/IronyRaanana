@@ -28,7 +28,7 @@ export default function SmartJoin() {
                 if (!d) { setState({ loading: false, error: true }); return; }
                 // Already registered to this team on this device → straight to the schedule. (Member
                 // codes only; operator/coach codes always route to their own flow.)
-                const alreadyMember = d.role !== 'operator' && d.role !== 'coach' && getMemberships().some((m) => m.team === d.team);
+                const alreadyMember = d.role !== 'operator' && d.role !== 'coach' && d.role !== 'manager' && getMemberships().some((m) => m.team === d.team);
                 const path = alreadyMember ? `/${d.clubSlug}` : joinPathForCode(d);
                 if (alreadyMember) setActiveTeam(d.team);
                 // A subdomain club lives on its own origin — land the parent there (full nav) so identity
@@ -107,7 +107,7 @@ export default function SmartJoin() {
             <div style={card}>
                 <div style={{ fontSize: '2.2rem', marginBottom: '0.2rem' }}>📲</div>
                 <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.35rem' }}>
-                    {state.role === 'operator' ? 'הצטרפות כמפעיל' : state.role === 'coach' ? 'כניסת מאמן' : `הצטרפות ל${state.team}`}
+                    {state.role === 'operator' ? 'הצטרפות כמפעיל' : state.role === 'coach' ? 'כניסת מאמן' : state.role === 'manager' ? 'כניסת מנהל' : `הצטרפות ל${state.team}`}
                 </h2>
                 <p style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.9rem', margin: '0 0 1rem' }}>
                     {state.clubName || ''}

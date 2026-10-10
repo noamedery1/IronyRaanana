@@ -7,5 +7,6 @@ export function joinPathForCode(d) {
     const slug = d.clubSlug;
     if (d.role === 'operator') return `/${slug}/join/operator`;
     if (d.role === 'coach') return `/${slug}/trainer`;
+    if (d.role === 'manager') return `/${slug}/admin`;
     return `/${slug}/join/member/${encodePathSeg(d.team)}`;
 }
