@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership } from '../userIdentity.js';
+import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership, removeOperator } from '../userIdentity.js';
 import { getActiveClub } from '../clubConfig.js';
 
 // "My account" screen — lets a registered user see what they're signed up for and DELETE their
@@ -30,6 +30,24 @@ export default function Account() {
             }
         } catch { /* still remove locally */ }
         removeMembership(m.team);
+        window.location.reload();
+    };
+
+    // The extra roles this device is signed into for THIS club, read from the real session tokens (these
+    // live on this origin, so clearing them here is a COMPLETE removal — the matching "back to …" pill
+    // disappears and the role must be re-entered to return). This is why removal belongs here, not in the
+    // native launcher (a separate origin that can't see or clear these tokens).
+    const hasCoach = (() => { try { return Boolean(localStorage.getItem('trainerToken')); } catch { return false; } })();
+    const hasManager = (() => { try { return localStorage.getItem('isAdmin') === 'true' && Boolean(localStorage.getItem('mgrToken:' + slug)); } catch { return false; } })();
+    const hasOperator = Boolean(getOperatorToken());
+    const removeRole = (role) => {
+        const label = role === 'coach' ? 'מאמן' : role === 'manager' ? 'מנהל' : 'מפעיל';
+        if (!window.confirm(`להתנתק מתפקיד ${label} במכשיר זה? כדי לחזור תצטרכו להזין שוב את הפרטים.`)) return;
+        try {
+            if (role === 'coach') { localStorage.removeItem('trainerToken'); localStorage.removeItem('trainerInfo'); localStorage.removeItem('trainerPushV2'); }
+            else if (role === 'manager') { localStorage.removeItem('mgrToken:' + slug); localStorage.removeItem('isAdmin'); localStorage.removeItem('managerName'); }
+            else if (role === 'operator') { removeOperator(); }
+        } catch { /* ignore */ }
         window.location.reload();
     };
 
@@ -86,6 +104,25 @@ export default function Account() {
                             </div>
                         ))}
                         <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>הסרת קבוצה בודדת לא מוחקת את שאר הקבוצות או את החשבון.</div>
+                    </div>
+                )}
+
+                {/* Extra roles signed in on this device (coach / manager / operator) — remove = complete logout. */}
+                {(hasCoach || hasManager || hasOperator) && (
+                    <div style={{ border: '1px solid var(--bd2, rgba(255,255,255,0.12))', borderRadius: 14, padding: '0.9rem', marginBottom: '1rem' }}>
+                        <div style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>תפקידים נוספים במכשיר</div>
+                        {[['manager', 'מנהל', hasManager], ['coach', 'מאמן', hasCoach], ['operator', 'מפעיל', hasOperator]].map(([role, label, on]) => (
+                            on ? (
+                                <div key={role} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', padding: '0.4rem 0', borderTop: '1px solid var(--bd2, rgba(255,255,255,0.08))' }}>
+                                    <span style={{ fontSize: '0.9rem' }}>{label}</span>
+                                    <button
+                                        onClick={() => removeRole(role)}
+                                        style={{ background: 'none', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'inherit' }}
+                                    >התנתק</button>
+                                </div>
+                            ) : null
+                        ))}
+                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>ניתוק מסיר את התפקיד מהמכשיר — כדי לחזור צריך להזין שוב את הפרטים.</div>
                     </div>
                 )}
 
