@@ -32,49 +32,50 @@ const RequireClub = ({ children }) => {
   return children;
 };
 
-// A manager who signed in on this device keeps their session (isAdmin flag + per-club mgrToken) in
-// localStorage — but after going "home" to the native launcher and reopening the club, they land on
-// the public schedule with no obvious way back to the dashboard. This persistent pill gives them one
-// from anywhere (welcome gate, schedule, …), scoped to the club they're actually a manager of. It's
-// hidden on the admin routes themselves. ProtectedRoute + the per-club token still gate real access.
-const ManagerReturn = () => {
+// A manager or coach who signed in on this device keeps their session (manager: isAdmin + per-club
+// mgrToken; coach: trainerToken/trainerInfo) in localStorage — but after going "home" to the native
+// launcher and reopening the club they land on the public schedule with no obvious way back to their
+// own screen. These persistent pills give them one from anywhere (welcome gate, schedule, …). One
+// person can hold several roles, so both pills can show at once. Hidden on the admin/trainer routes
+// themselves; the real auth (ProtectedRoute + per-club token, trainer token) still gates access.
+const RoleReturn = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const parts = location.pathname.split('/').filter(Boolean);
   const slug = parts[0];
-  const onAdmin = parts[1] === 'admin';
+  const seg = parts[1];
   let isManager = false;
+  let isCoach = false;
   try {
     isManager = Boolean(slug) && localStorage.getItem('isAdmin') === 'true'
       && Boolean(localStorage.getItem('mgrToken:' + slug));
+    isCoach = Boolean(localStorage.getItem('trainerToken'));
   } catch { /* storage blocked */ }
-  if (!isManager || onAdmin) return null;
+  const showManager = isManager && seg !== 'admin';
+  const showCoach = isCoach && seg !== 'trainer';
+  if (!showManager && !showCoach) return null;
+  const pill = (bg, shadow) => ({
+    border: 'none', color: '#fff', padding: '0.55rem 1.05rem', borderRadius: '30px',
+    background: bg, boxShadow: shadow, cursor: 'pointer', fontWeight: 800, fontSize: '0.88rem',
+    fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '0.4rem',
+  });
   return (
-    <button
-      onClick={() => navigate(`/${slug}/admin/dashboard`)}
-      style={{
-        position: 'fixed',
-        top: 'max(12px, env(safe-area-inset-top))',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-        color: '#fff',
-        border: 'none',
-        padding: '0.6rem 1.15rem',
-        borderRadius: '30px',
-        boxShadow: '0 8px 22px -6px rgba(124,58,237,0.7)',
-        cursor: 'pointer',
-        fontWeight: 800,
-        fontSize: '0.9rem',
-        fontFamily: 'inherit',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.4rem',
-      }}
-    >
-      <span>⚙</span> חזרה לניהול
-    </button>
+    <div style={{
+      position: 'fixed', top: 'max(12px, env(safe-area-inset-top))', left: '50%',
+      transform: 'translateX(-50%)', zIndex: 1000, display: 'flex', gap: '0.5rem', flexWrap: 'wrap',
+      justifyContent: 'center', maxWidth: '96vw',
+    }}>
+      {showManager && (
+        <button onClick={() => navigate(`/${slug}/admin/dashboard`)} style={pill('linear-gradient(135deg,#7c3aed,#4f46e5)', '0 8px 22px -6px rgba(124,58,237,0.7)')}>
+          <span>⚙</span> חזרה לניהול
+        </button>
+      )}
+      {showCoach && (
+        <button onClick={() => navigate(`/${slug}/trainer`)} style={pill('linear-gradient(135deg,#0d9488,#059669)', '0 8px 22px -6px rgba(13,148,136,0.7)')}>
+          <span>🏃</span> חזרה למסך מאמן
+        </button>
+      )}
+    </div>
   );
 };
 
@@ -143,8 +144,8 @@ function App() {
         <Route path="*" element={<ErrorPage mode="notFound" />} />
       </Routes>
 
-      {/* Persistent "back to management" pill for a signed-in manager (hidden on admin routes). */}
-      <ManagerReturn />
+      {/* Persistent "back to my screen" pills for a signed-in manager/coach (hidden on their own routes). */}
+      <RoleReturn />
 
       {/* Floating Feedback Button - Shows on all pages (or conditionally if needed) */}
       <button
