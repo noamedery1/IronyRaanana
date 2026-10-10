@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import PublicSchedule from './pages/PublicSchedule';
 import PublicScheduleWomen from './pages/PublicScheduleWomen';
@@ -30,6 +30,52 @@ const RequireClub = ({ children }) => {
   const { club } = useParams();
   if (!isKnownClub(club)) return <NoClub />;
   return children;
+};
+
+// A manager who signed in on this device keeps their session (isAdmin flag + per-club mgrToken) in
+// localStorage — but after going "home" to the native launcher and reopening the club, they land on
+// the public schedule with no obvious way back to the dashboard. This persistent pill gives them one
+// from anywhere (welcome gate, schedule, …), scoped to the club they're actually a manager of. It's
+// hidden on the admin routes themselves. ProtectedRoute + the per-club token still gate real access.
+const ManagerReturn = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const parts = location.pathname.split('/').filter(Boolean);
+  const slug = parts[0];
+  const onAdmin = parts[1] === 'admin';
+  let isManager = false;
+  try {
+    isManager = Boolean(slug) && localStorage.getItem('isAdmin') === 'true'
+      && Boolean(localStorage.getItem('mgrToken:' + slug));
+  } catch { /* storage blocked */ }
+  if (!isManager || onAdmin) return null;
+  return (
+    <button
+      onClick={() => navigate(`/${slug}/admin/dashboard`)}
+      style={{
+        position: 'fixed',
+        top: 'max(12px, env(safe-area-inset-top))',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+        background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+        color: '#fff',
+        border: 'none',
+        padding: '0.6rem 1.15rem',
+        borderRadius: '30px',
+        boxShadow: '0 8px 22px -6px rgba(124,58,237,0.7)',
+        cursor: 'pointer',
+        fontWeight: 800,
+        fontSize: '0.9rem',
+        fontFamily: 'inherit',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+      }}
+    >
+      <span>⚙</span> חזרה לניהול
+    </button>
+  );
 };
 
 // Manager dashboard guard — must be inside a known club AND logged in.
@@ -96,6 +142,9 @@ function App() {
             separately by RequireClub → NoClub, which gives a "use your link" hint.) */}
         <Route path="*" element={<ErrorPage mode="notFound" />} />
       </Routes>
+
+      {/* Persistent "back to management" pill for a signed-in manager (hidden on admin routes). */}
+      <ManagerReturn />
 
       {/* Floating Feedback Button - Shows on all pages (or conditionally if needed) */}
       <button
