@@ -400,44 +400,20 @@
           logo.onerror = function () { this.style.display = 'none'; };
           row.appendChild(logo);
         }
+        // Just the club name — NO role/team badges or buttons. The launcher is a separate origin from the
+        // club site and can't see the real logins, so any mirrored role/team drifts (missing after a
+        // link-join, stale after an account-screen removal). Per the user's choice, the home screen shows
+        // only the club; all roles/teams/management/removal live on the club site (accurate there).
         var info = document.createElement('div'); info.className = 'name';
         var title = document.createElement('div'); title.textContent = meta.name || slug; title.style.fontWeight = '700';
         info.appendChild(title);
-        // Badges: what this device is registered as in the club (best-effort — what was entered via the
-        // app: manager/coach/operator roles + each team). The accurate, complete view is on the club site.
-        var badges = document.createElement('div');
-        badges.style.cssText = 'display:flex;flex-wrap:wrap;gap:.25rem;margin-top:.22rem;align-items:center;';
-        var addBadge = function (txt, bg) { var b = document.createElement('span'); b.textContent = txt; b.style.cssText = 'font-size:.66rem;font-weight:700;border-radius:8px;padding:.06rem .42rem;background:' + bg + ';color:#fff;'; badges.appendChild(b); };
-        var isMgr = getManagerClubs().indexOf(slug) >= 0;
-        var isCoach = getCoachClubs().indexOf(slug) >= 0;
-        if (isMgr) addBadge('מנהל', '#7c3aed');
-        if (isCoach) addBadge('מאמן', '#0d9488');
-        if (getOperatorClubs().indexOf(slug) >= 0) addBadge('מפעיל', '#b45309');
-        getMembers().filter(function (m) { return m.club === slug && m.team; }).forEach(function (m) { addBadge(m.team, '#334155'); });
-        if (badges.children.length) info.appendChild(badges);
-        // ✕ removes only the home-screen SHORTCUT (with a confirm). Removing an actual registration/role
-        // must clear the real token on the SITE origin, which this launcher can't reach — so complete
-        // removal lives on the club's "👤 החשבון שלי" screen. Keeping deletion here would be incomplete
-        // (e.g. a coach "removed" in the launcher still showed the coach pill on the site).
+        // ✕ removes only the home-screen shortcut (with a confirm) — never the registrations themselves.
         var delBtn = document.createElement('button'); delBtn.className = 'go del'; delBtn.textContent = '✕'; delBtn.title = 'הסרה ממסך הבית';
         delBtn.style.background = 'none'; delBtn.style.color = '#94a3b8'; delBtn.style.border = 'none'; delBtn.style.fontWeight = '800';
         delBtn.addEventListener('click', function () { confirmRemoveShortcut(slug, meta.name || slug); });
         var enterBtn = document.createElement('button'); enterBtn.className = 'go'; enterBtn.textContent = 'כניסה';
         enterBtn.addEventListener('click', function () { go(clubUrl(slug), slug); });
-        row.appendChild(info); row.appendChild(delBtn);
-        if (isMgr) {
-          var mgrBtn = document.createElement('button'); mgrBtn.className = 'go'; mgrBtn.textContent = '⚙ ניהול';
-          mgrBtn.style.cssText = 'background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;font-weight:800;';
-          mgrBtn.addEventListener('click', function () { go(adminUrl(slug), slug); });
-          row.appendChild(mgrBtn);
-        }
-        if (isCoach) {
-          var coachBtn = document.createElement('button'); coachBtn.className = 'go'; coachBtn.textContent = '🏃 מאמן';
-          coachBtn.style.cssText = 'background:linear-gradient(135deg,#0d9488,#059669);color:#fff;border:none;font-weight:800;';
-          coachBtn.addEventListener('click', function () { go(trainerUrl(slug), slug); });
-          row.appendChild(coachBtn);
-        }
-        row.appendChild(enterBtn);
+        row.appendChild(info); row.appendChild(delBtn); row.appendChild(enterBtn);
         box.appendChild(row);
       });
       document.getElementById('recentCard').style.display = '';

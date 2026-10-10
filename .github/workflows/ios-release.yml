@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 18 (launcher ✕ removes only the home-screen shortcut; complete role/team removal moved to the site account screen)
+  # rebuild: 19 (launcher shows ONLY the club name — no role/team mirror; all roles/teams/removal on the club site)
   push:
     branches: [feat/native-app]
     paths:
