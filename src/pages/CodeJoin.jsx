@@ -18,7 +18,7 @@ export default function CodeJoin() {
     const submit = async (e) => {
         if (e) e.preventDefault();
         const c = code.trim();
-        if (!/^\d{4,6}$/.test(c)) { setError('הקוד הוא 5 ספרות'); return; }
+        if (!/^\d{5}$/.test(c)) { setError('הקוד הוא 5 ספרות'); return; }
         setLoading(true); setError('');
         try {
             const res = await fetch(`/api/join/${encodeURIComponent(c)}`);
@@ -57,7 +57,7 @@ export default function CodeJoin() {
                 <div style={{ fontSize: '2.4rem', marginBottom: '0.3rem' }}>🔢</div>
                 <h2 style={{ margin: '0 0 0.4rem', fontSize: '1.4rem' }}>הצטרפות עם קוד</h2>
                 <p style={{ color: 'var(--text-dim, #94a3b8)', fontSize: '0.9rem', margin: '0 0 1.2rem', lineHeight: 1.6 }}>
-                    הזינו את קוד הקבוצה (5 ספרות) שקיבלתם מהמאמן או מהמנהל.
+                    הזינו את הקוד (5 ספרות) שקיבלתם — קוד קבוצה, מפעיל, מאמן או מנהל.
                 </p>
 
                 <form onSubmit={submit}>
@@ -66,7 +66,7 @@ export default function CodeJoin() {
                         inputMode="numeric"
                         autoComplete="one-time-code"
                         value={code}
-                        onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }}
+                        onChange={(e) => { setCode(e.target.value.replace(/\D/g, '').slice(0, 5)); setError(''); }}
                         placeholder="12345"
                         autoFocus
                         style={{
@@ -81,11 +81,11 @@ export default function CodeJoin() {
                     )}
                     <button
                         type="submit"
-                        disabled={loading || code.length < 4}
+                        disabled={loading || code.length < 5}
                         style={{
                             width: '100%', marginTop: '1rem', padding: '0.85rem', borderRadius: 12, border: 'none',
-                            fontWeight: 800, fontSize: '1rem', cursor: loading || code.length < 4 ? 'not-allowed' : 'pointer',
-                            opacity: loading || code.length < 4 ? 0.6 : 1,
+                            fontWeight: 800, fontSize: '1rem', cursor: loading || code.length < 5 ? 'not-allowed' : 'pointer',
+                            opacity: loading || code.length < 5 ? 0.6 : 1,
                             background: 'linear-gradient(135deg,#34d399,#0d9488)', color: '#06281f',
                         }}
                     >

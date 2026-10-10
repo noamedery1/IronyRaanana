@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getActiveClub } from '../clubConfig.js';
 import BrandMark from '../components/BrandMark';
@@ -9,6 +9,18 @@ const AdminLogin = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+
+    // A manager who already signed in on this device shouldn't have to retype the password every time:
+    // if the admin flag is present, go straight to the dashboard. ProtectedRoute still guards it and the
+    // dashboard's API calls still need the persisted manager token, so a cleared/forged flag grants nothing.
+    useEffect(() => {
+        try {
+            const slug = getActiveClub().slug;
+            if (localStorage.getItem('isAdmin') === 'true') {
+                navigate(`/${slug}/admin/dashboard`, { replace: true });
+            }
+        } catch { /* storage blocked → just show the form */ }
+    }, [navigate]);
 
     const handleLogin = async (e) => {
         e.preventDefault();

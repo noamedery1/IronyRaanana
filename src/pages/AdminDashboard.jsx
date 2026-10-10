@@ -719,9 +719,9 @@ const AdminDashboard = () => {
                                 <input type="file" accept=".pdf,.docx,.xlsx,.xls,.csv" style={{ display: 'none' }}
                                     onChange={(e) => { handleImportFile(e.target.files[0]); e.target.value = ''; }} />
                             </label>
-                            <span style={{ color: '#94a3b8' }}>או</span>
+                            <span style={{ color: '#475569' }}>או</span>
                         </div>
-                        <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: '#94a3b8' }}>
+                        <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', color: '#475569' }}>
                             נדרשת טבלה עם עמודת קבוצה ועמודות ימים (ראשון–שבת). לאחר הטעינה עוברים ל<b>תצוגה מקדימה</b> לעריכה ופרסום.
                         </div>
 

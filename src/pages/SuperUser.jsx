@@ -35,6 +35,7 @@ export default function SuperUser() {
     const [mgr, setMgr] = useState({ slug: '', username: '', password: '', name: '' });
     const [mgrMsg, setMgrMsg] = useState('');
     const [clubManagers, setClubManagers] = useState([]);
+    const [roleCodes, setRoleCodes] = useState(null); // { operatorCode, coachCode, managerCode } for mgr.slug
 
     // Load the managers of the selected club (for the reset-password list).
     useEffect(() => {
@@ -42,6 +43,14 @@ export default function SuperUser() {
         fetch(`/api/superuser/clubs/${mgr.slug}/managers`, { headers: { 'x-superuser-token': token } })
             .then((r) => r.json()).then((d) => setClubManagers(d.managers || [])).catch(() => setClubManagers([]));
     }, [mgr.slug, token, mgrMsg]);
+
+    // The selected club's join codes (operator/coach/manager) — so the person onboarding a manager can
+    // copy the manager code to hand over for the native "enter code" entry path.
+    useEffect(() => {
+        if (!token || !mgr.slug) { setRoleCodes(null); return; }
+        fetch(`/api/superuser/clubs/${mgr.slug}/role-codes`, { headers: { 'x-superuser-token': token } })
+            .then((r) => (r.ok ? r.json() : null)).then((d) => setRoleCodes(d || null)).catch(() => setRoleCodes(null));
+    }, [mgr.slug, token]);
 
     const resetManagerPw = async (username) => {
         const np = prompt(`סיסמה חדשה למנהל "${username}":`);
@@ -261,6 +270,23 @@ export default function SuperUser() {
                 <p style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '0.5rem', lineHeight: 1.5 }}>
                     המנהל יתחבר ב-<code>/&lt;slug&gt;/admin</code> (הכתובת של המועדון שלו) עם הפרטים, וילחץ "🔔 התראות מנהל" כדי לקבל בקשות שינוי ולאשר ישירות מההתראה.
                 </p>
+
+                {mgr.slug && roleCodes && (roleCodes.operatorCode || roleCodes.coachCode || roleCodes.managerCode) && (
+                    <div style={{ marginTop: '1rem', background: '#0b1220', border: '1px solid #1e293b', borderRadius: 8, padding: '0.7rem 0.8rem' }}>
+                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.5rem' }}>קודי הצטרפות ל-/{mgr.slug} (למסירה ידנית):</div>
+                        <div style={{ display: 'grid', gap: '0.4rem' }}>
+                            {[['מנהל מערכת', roleCodes.managerCode, '#a78bfa'], ['מפעיל', roleCodes.operatorCode, '#fbbf24'], ['מאמן', roleCodes.coachCode, '#34d399']].map(([lbl, val, col]) => (
+                                val ? (
+                                    <div key={lbl} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem' }}>
+                                        <span style={{ color: '#cbd5e1', fontSize: '0.85rem' }}>{lbl}</span>
+                                        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', letterSpacing: '0.1rem', color: col }}>{val}</span>
+                                    </div>
+                                ) : null
+                            ))}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: '0.72rem', marginTop: '0.5rem' }}>קוד המנהל פותח את מסך הכניסה — ההתחברות עצמה עדיין דורשת שם משתמש וסיסמה.</div>
+                    </div>
+                )}
 
                 {mgr.slug && clubManagers.length > 0 && (
                     <div style={{ marginTop: '1rem' }}>

@@ -153,7 +153,7 @@ export default function InstallPrompt() {
 
     // ===== Persistent pill (always, until installed) =====
     return (
-        <div dir="rtl" style={{ position: 'fixed', right: '16px', bottom: '72px', zIndex: 1401, fontFamily: 'Rubik, sans-serif' }}>
+        <div dir="rtl" style={{ position: 'fixed', right: 'max(16px, env(safe-area-inset-right))', bottom: 'calc(72px + env(safe-area-inset-bottom))', zIndex: 1401, fontFamily: 'Rubik, sans-serif' }}>
             {showTip && (
                 <div style={{
                     maxWidth: 240, marginBottom: 8, background: 'rgba(10,17,32,0.95)', color: '#fff',

@@ -426,8 +426,8 @@ const TrainerPortal = () => {
 
             {/* Tabs */}
             <div style={{ maxWidth: 600, margin: '1rem auto 0', padding: '0 1rem', display: 'flex', gap: '0.4rem' }}>
-                <button onClick={() => setTab('requests')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'requests' ? '#22d3ee' : '#94a3b8' }}>האימונים שלי</button>
-                <button onClick={() => setTab('propose')} style={{ flex: 1, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'propose' ? '#22d3ee' : '#94a3b8' }}>הזנת לו&quot;ז</button>
+                <button onClick={() => setTab('requests')} style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'requests' ? '#22d3ee' : '#94a3b8' }}>האימונים שלי</button>
+                <button onClick={() => setTab('propose')} style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'propose' ? '#22d3ee' : '#94a3b8' }}>הזנת לו&quot;ז</button>
             </div>
 
             {/* Schedule List */}
@@ -549,19 +549,19 @@ const TrainerPortal = () => {
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 <button
                                     onClick={() => setEditType('CHANGE')}
-                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'CHANGE' ? '2px solid #3b82f6' : '1px solid #ddd', background: editType === 'CHANGE' ? '#fff7ed' : 'white', color: editType === 'CHANGE' ? '#3b82f6' : '#64748b' }}
+                                    style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, border: editType === 'CHANGE' ? '2px solid #3b82f6' : '1px solid #243049', background: editType === 'CHANGE' ? 'rgba(59,130,246,0.18)' : 'rgba(255,255,255,0.05)', color: editType === 'CHANGE' ? '#93c5fd' : '#94a3b8' }}
                                 >
                                     שינוי פרטים
                                 </button>
                                 <button
                                     onClick={() => setEditType('MOVE')}
-                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'MOVE' ? '2px solid #7C3AED' : '1px solid #ddd', background: editType === 'MOVE' ? '#f5f3ff' : 'white', color: editType === 'MOVE' ? '#7C3AED' : '#64748b' }}
+                                    style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, border: editType === 'MOVE' ? '2px solid #a78bfa' : '1px solid #243049', background: editType === 'MOVE' ? 'rgba(167,139,250,0.18)' : 'rgba(255,255,255,0.05)', color: editType === 'MOVE' ? '#c4b5fd' : '#94a3b8' }}
                                 >
                                     החלפת יום
                                 </button>
                                 <button
                                     onClick={() => setEditType('CANCEL')}
-                                    style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: editType === 'CANCEL' ? '2px solid #ef4444' : '1px solid #ddd', background: editType === 'CANCEL' ? '#fef2f2' : 'white', color: editType === 'CANCEL' ? '#ef4444' : '#64748b' }}
+                                    style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, border: editType === 'CANCEL' ? '2px solid #ef4444' : '1px solid #243049', background: editType === 'CANCEL' ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.05)', color: editType === 'CANCEL' ? '#fca5a5' : '#94a3b8' }}
                                 >
                                     ביטול אימון
                                 </button>
@@ -576,7 +576,7 @@ const TrainerPortal = () => {
                                         <select
                                             value={newDay}
                                             onChange={(e) => setNewDay(e.target.value)}
-                                            style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                                            style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #243049', background: '#0b1220', color: '#e8edf7', fontFamily: 'inherit', fontSize: '16px', boxSizing: 'border-box' }}
                                         >
                                             <option value="">בחר יום...</option>
                                             {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map(d => (
@@ -587,7 +587,7 @@ const TrainerPortal = () => {
                                 )}
                                 <div style={{ marginBottom: '1rem' }}>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>שעה חדשה</label>
-                                    <input type="text" value={newTime} onChange={(e) => setNewTime(e.target.value)} placeholder="לדוגמה: 18:00-19:30" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }} />
+                                    <input type="text" value={newTime} onChange={(e) => setNewTime(e.target.value)} placeholder="לדוגמה: 18:00-19:30" style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #243049', background: '#0b1220', color: '#e8edf7', fontFamily: 'inherit', fontSize: '16px', boxSizing: 'border-box' }} />
                                 </div>
                                 <div style={{ marginBottom: '1rem' }}>
                                     <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>מיקום חדש (אופציונלי)</label>
@@ -604,7 +604,7 @@ const TrainerPortal = () => {
                                                         setNewLocation(e.target.value);
                                                     }
                                                 }}
-                                                style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }}
+                                                style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #243049', background: '#0b1220', color: '#e8edf7', fontFamily: 'inherit', fontSize: '16px', boxSizing: 'border-box' }}
                                             >
                                                 <option value="">בחר אולם...</option>
                                                 {locations.map(loc => (
@@ -618,13 +618,13 @@ const TrainerPortal = () => {
                                                     value={newLocation}
                                                     onChange={(e) => setNewLocation(e.target.value)}
                                                     placeholder="הקלד שם אולם חדש..."
-                                                    style={{ width: '100%', marginTop: '0.5rem', padding: '0.6rem', borderRadius: '6px', border: '1px solid #3b82f6', background: '#fff7ed' }}
+                                                    style={{ width: '100%', marginTop: '0.5rem', padding: '0.7rem', borderRadius: '8px', border: '1px solid #3b82f6', background: '#0b1220', color: '#e8edf7', fontFamily: 'inherit', fontSize: '16px', boxSizing: 'border-box' }}
                                                     autoFocus
                                                 />
                                             )}
                                         </>
                                     ) : (
-                                        <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="שם אולם" style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }} />
+                                        <input type="text" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="שם אולם" style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #243049', background: '#0b1220', color: '#e8edf7', fontFamily: 'inherit', fontSize: '16px', boxSizing: 'border-box' }} />
                                     )}
                                 </div>
                             </>
@@ -632,7 +632,7 @@ const TrainerPortal = () => {
 
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.9rem' }}>סיבה / הערות למנהל *</label>
-                            <textarea value={changeReason} onChange={(e) => setChangeReason(e.target.value)} rows={3} style={{ width: '100%', padding: '0.6rem', borderRadius: '6px', border: '1px solid #ddd' }} placeholder="חובה למלא..." />
+                            <textarea value={changeReason} onChange={(e) => setChangeReason(e.target.value)} rows={3} style={{ width: '100%', padding: '0.7rem', borderRadius: '8px', border: '1px solid #243049', background: '#0b1220', color: '#e8edf7', fontFamily: 'inherit', fontSize: '16px', boxSizing: 'border-box' }} placeholder="חובה למלא..." />
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>

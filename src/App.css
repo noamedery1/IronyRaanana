@@ -1048,7 +1048,7 @@
 
 /* unregistered-visitor welcome gate */
 .app-container .welcome-gate{
-  min-height:80vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:80dvh; display:flex; flex-direction:column; align-items:center; justify-content:center;
   text-align:center; gap:1.1rem; padding:3rem 1.5rem; max-width:560px; margin:0 auto;
 }
 .app-container .welcome-logo{ width:96px; height:96px; object-fit:contain; filter:drop-shadow(0 8px 24px rgba(34,211,238,.35)); }

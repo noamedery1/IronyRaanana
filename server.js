@@ -150,6 +150,34 @@ app.use((req, res, next) => {
     next();
 });
 
+// ---- Simple in-memory rate limiter ---------------------------------------------
+// Throttles the auth + code-lookup endpoints to blunt password brute-force and 5-digit-code
+// enumeration. Single-instance, best-effort: keyed by client IP (req.ip; trust-proxy is on so this
+// is the real Cloudflare client IP) within a sliding window, pruned opportunistically. It never
+// throws and fails OPEN — a limiter hiccup must never block a legitimate login or join.
+const _rlHits = new Map();
+// Prefer Cloudflare's CF-Connecting-IP (it sets this to the real client and OVERWRITES any client
+// value) over req.ip — with trust-proxy on, req.ip is the left-most X-Forwarded-For, which a client
+// can spoof and rotate per request to evade a per-IP limit. Fall back to req.ip for local/non-CF.
+const clientIp = (req) => (req.headers['cf-connecting-ip'] || '').toString().trim() || req.ip;
+function rateLimit({ windowMs = 60000, max = 20, key = 'rl' } = {}) {
+    return (req, res, next) => {
+        try {
+            const id = `${key}:${clientIp(req)}`;
+            const now = Date.now();
+            let e = _rlHits.get(id);
+            if (!e || now > e.reset) { e = { count: 0, reset: now + windowMs }; _rlHits.set(id, e); }
+            e.count++;
+            if (_rlHits.size > 5000) { for (const [k, v] of _rlHits) if (now > v.reset) _rlHits.delete(k); }
+            if (e.count > max) {
+                res.set('Retry-After', String(Math.max(1, Math.ceil((e.reset - now) / 1000))));
+                return res.status(429).json({ error: 'יותר מדי נסיונות, נסו שוב בעוד דקה.' });
+            }
+        } catch { /* fail-open: never block a real user on limiter error */ }
+        next();
+    };
+}
+
 // Android App Links / Digital Asset Links. Served on EVERY host (apex + club subdomains) so tapping a
 // Squadio https invite link opens the native app directly instead of the browser. Lists the Play App
 // Signing cert (apps installed from Play are re-signed by Google) AND the upload-key cert (sideload).
@@ -201,7 +229,7 @@ function requireSuperuser(req, res, next) {
     next();
 }
 
-app.post('/api/superuser/login', (req, res) => {
+app.post('/api/superuser/login', rateLimit({ max: 10, key: 'su-login' }), (req, res) => {
     if (!SUPERUSER_PASSWORD) return res.status(503).json({ error: 'superuser not configured' });
     const { password } = req.body || {};
     if (password !== SUPERUSER_PASSWORD) return res.status(403).json({ error: 'wrong password' });
@@ -315,7 +343,7 @@ app.post('/api/:club/trainers', requireManager, async (req, res) => {
 app.delete('/api/:club/trainers/:name', requireManager, async (req, res) => {
     try { ok(res, await deleteTrainer(req.params.club, req.params.name)); } catch (e) { fail(res, e); }
 });
-app.post('/api/:club/trainers/auth', async (req, res) => {
+app.post('/api/:club/trainers/auth', rateLimit({ max: 20, key: 'trainer-auth' }), async (req, res) => {
     try { ok(res, await authTrainer(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 
@@ -341,7 +369,7 @@ app.delete('/api/:club/members', requireManager, async (req, res) => {
 });
 
 // Manager-app login (per club).
-app.post('/api/:club/managers/auth', async (req, res) => {
+app.post('/api/:club/managers/auth', rateLimit({ max: 10, key: 'mgr-auth' }), async (req, res) => {
     try { ok(res, await authManager(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
 });
 // Self-service: logged-in manager changes their own password (username from the token).
@@ -376,14 +404,16 @@ app.get('/api/:club/role-codes', requireManager, async (req, res) => {
 // following an invite link; the code-entry screen then opens that team's normal join flow. The code
 // alone only reveals a club+team name (same as a shareable invite), and joining still needs the
 // regular registration — so this is safe to expose unauthenticated. 404 for an unknown code.
-app.get('/api/join/:code', async (req, res) => {
+app.get('/api/join/:code', rateLimit({ max: 20, key: 'join' }), async (req, res) => {
     try {
         const r = await resolveJoinCode(req.params.code);
         if (!r) return res.status(404).json({ error: 'קוד לא קיים' });
         // A subdomain club lives on its own origin — tell the code-entry screen so it lands the parent
         // there (storage/PWA isolation). Same source of truth as /api/clubs' inviteOrigin.
         const inviteOrigin = SUBDOMAIN_CLUBS.has(r.clubSlug) ? clubSubOrigin(r.clubSlug) : '';
-        res.json({ ...r, inviteOrigin });
+        // Echo the code back so the smart-link screen can always show it as the manual fallback
+        // ("after install, type this code") — critical on iOS, which has no install referrer.
+        res.json({ ...r, code: req.params.code, inviteOrigin });
     } catch (e) { fail(res, e); }
 });
 
@@ -458,10 +488,19 @@ app.put('/api/:club/halls', requireManager, async (req, res) => {
     try { ok(res, await saveHalls(req.params.club, (req.body || {}).config || {})); } catch (e) { fail(res, e); }
 });
 
-// Generic per-club settings (e.g. floatingMessage)
+// Generic per-club settings (e.g. floatingMessage).
+// READ: only a short whitelist of non-sensitive keys is public (the ticker/banners the public
+// schedule shows, and the WeekBuilder rules the dashboard loads before auth). Every other key —
+// e.g. signupEmail (secretary's address) or pushLog (broadcast archive) — needs a manager token,
+// so the generic reader can't be used to harvest club PII.
+const PUBLIC_SETTING_KEYS = new Set(['floatingMessage', 'teamBanners', 'teamRules']);
 app.get('/api/:club/settings/:key', async (req, res) => {
-    try { ok(res, { value: await getSetting(req.params.club, req.params.key) }); } catch (e) { fail(res, e); }
+    if (!PUBLIC_SETTING_KEYS.has(req.params.key)) return requireManager(req, res, () => readSetting(req, res));
+    return readSetting(req, res);
 });
+async function readSetting(req, res) {
+    try { ok(res, { value: await getSetting(req.params.club, req.params.key) }); } catch (e) { fail(res, e); }
+}
 app.put('/api/:club/settings/:key', requireManager, async (req, res) => {
     try { ok(res, await setSetting(req.params.club, req.params.key, (req.body || {}).value)); } catch (e) { fail(res, e); }
 });
@@ -508,10 +547,14 @@ app.post('/api/:club/requests/:id/reject', requireManager, async (req, res) => {
 });
 
 // Signed one-click approve/reject from the manager's email link (runs the server command).
+// Both title and sub can carry attacker-controlled request fields (team / reason / trainer name,
+// surfaced via approveRequest's message). HTML-escape everything interpolated so a crafted change
+// request can't inject script into this page — which is served on the canonical origin where the
+// manager's token lives. (esc() is defined below; it's only called here at request time.)
 const resultPage = (title, sub = '') => `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">`
     + `<meta name="viewport" content="width=device-width,initial-scale=1"></head>`
     + `<body style="font-family:Arial,sans-serif;text-align:center;padding:48px;background:#0b1220;color:#e8edf7">`
-    + `<h2>${title}</h2><p style="color:#94a3b8">${sub}</p></body></html>`;
+    + `<h2>${esc(title)}</h2><p style="color:#94a3b8">${esc(sub)}</p></body></html>`;
 app.get('/api/:club/requests/:id/approve', async (req, res) => {
     if (!verifyId(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
     try { const r = await approveRequest(req.params.club, req.params.id); res.send(resultPage('✅ הבקשה אושרה', r.message || '')); }
@@ -599,6 +642,13 @@ app.post('/api/superuser/clubs/:slug/managers', requireSuperuser, async (req, re
 });
 app.get('/api/superuser/clubs/:slug/managers', requireSuperuser, async (req, res) => {
     try { res.json({ managers: await listManagers(req.params.slug) }); }
+    catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Superuser-scoped view of a club's operator/coach/manager codes, so whoever onboards a manager can
+// hand them the manager code for the native "enter code" path (the manager-only /role-codes needs a
+// manager token the superuser doesn't hold).
+app.get('/api/superuser/clubs/:slug/role-codes', requireSuperuser, async (req, res) => {
+    try { res.json(await listClubCodes(req.params.slug)); }
     catch (e) { res.status(500).json({ error: e.message }); }
 });
 // Superuser resets a manager's password (recovery when a manager is locked out).

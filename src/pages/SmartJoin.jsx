@@ -121,13 +121,15 @@ export default function SmartJoin() {
                     style={{ ...btn, background: 'var(--glass-2, rgba(255,255,255,0.08))', color: 'var(--text,#e8edf7)', border: '1px solid var(--bd2, rgba(255,255,255,0.18))' }}
                 >המשך בדפדפן (בלי התקנה)</button>
 
-                {state.code && (
+                {/* Member + operator codes are re-typed after install to reach their join flow, so show the
+                    code. Coach/manager route to a login screen (personal credentials, not this code) → hide. */}
+                {codeVal && state.role !== 'coach' && state.role !== 'manager' && (
                     <div style={{ marginTop: '1.3rem', paddingTop: '1rem', borderTop: '1px dashed var(--bd2, rgba(255,255,255,0.18))' }}>
                         <div style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.82rem', marginBottom: '0.4rem' }}>
                             אחרי ההתקנה, פתחו את האפליקציה והקלידו את הקוד:
                         </div>
                         <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '2rem', letterSpacing: '0.4rem', color: '#34d399' }}>
-                            {state.code}
+                            {codeVal}
                         </div>
                     </div>
                 )}

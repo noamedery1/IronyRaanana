@@ -287,6 +287,7 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
 
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                             <button
+                                className="icon-sm"
                                 onClick={() => handleTypeChange(index)}
                                 style={{
                                     border: 'none',
@@ -324,16 +325,19 @@ const WeekBuilder = ({ teams, headers, teamConfig, setTeamConfig, onTeamUpdate, 
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                             <button
+                                className="icon-sm"
                                 onClick={() => handleSessionCountChange(index, -1)}
                                 style={circleBtnStyle}
                             >-</button>
                             <span style={{ width: '20px', textAlign: 'center', fontWeight: 'bold' }}>{team.sessionsPerWeek}</span>
                             <button
+                                className="icon-sm"
                                 onClick={() => handleSessionCountChange(index, 1)}
                                 style={circleBtnStyle}
                             >+</button>
 
                             <button
+                                className="icon-sm"
                                 onClick={() => openSettingsModal(index)}
                                 title="הגדרות שעות (מגבלת שעת סיום)"
                                 style={{

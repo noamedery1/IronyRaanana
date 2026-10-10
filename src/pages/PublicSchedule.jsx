@@ -423,7 +423,7 @@ function PublicSchedule() {
     if (isAnonymous) {
         return (
             <div className="app-container">
-                <div style={{ position: 'fixed', top: 14, insetInlineStart: 14, zIndex: 20 }}><ThemeToggle /></div>
+                <div style={{ position: 'fixed', top: 'max(14px, env(safe-area-inset-top))', insetInlineStart: 'max(14px, env(safe-area-inset-left))', zIndex: 20 }}><ThemeToggle /></div>
                 <div className="welcome-gate">
                     <img src={clubLogo} alt={club.name} className="welcome-logo" />
                     <h1 className="welcome-title">{club.name}</h1>

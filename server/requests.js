@@ -25,16 +25,19 @@ async function notifyManager(slug, id, p) {
     const tok = signId(id);
     const approve = `${base}/api/${slug}/requests/${id}/approve?token=${tok}`;
     const reject = `${base}/api/${slug}/requests/${id}/reject?token=${tok}`;
+    // The request fields are attacker-controllable (anyone can POST a change request) and this HTML
+    // lands in the manager's inbox + is echoed on the approve/reject result page — so escape them all.
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const change = p.type === 'cancel' ? 'ביטול'
-        : p.type === 'move' ? `העברה ליום ${p.newDay} ${p.newTime || ''} ${p.newLocation || ''}`
-            : `שינוי ל-${p.newTime || ''} ${p.newLocation || ''}`;
+        : p.type === 'move' ? `העברה ליום ${esc(p.newDay)} ${esc(p.newTime || '')} ${esc(p.newLocation || '')}`
+            : `שינוי ל-${esc(p.newTime || '')} ${esc(p.newLocation || '')}`;
     const html = `
       <div dir="rtl" style="font-family:Arial,sans-serif">
         <h3>בקשת שינוי לו"ז</h3>
-        <p><b>מאמן:</b> ${p.trainerName || ''} · <b>קבוצה:</b> ${p.team || ''}</p>
-        <p><b>אימון:</b> ${p.day || ''} ${p.time || ''}</p>
+        <p><b>מאמן:</b> ${esc(p.trainerName || '')} · <b>קבוצה:</b> ${esc(p.team || '')}</p>
+        <p><b>אימון:</b> ${esc(p.day || '')} ${esc(p.time || '')}</p>
         <p><b>מבוקש:</b> ${change}</p>
-        <p><b>סיבה:</b> ${p.reason || ''}</p>
+        <p><b>סיבה:</b> ${esc(p.reason || '')}</p>
         <p style="margin-top:18px">
           <a href="${approve}" style="background:#16a34a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">✅ אשר</a>
           &nbsp;&nbsp;
