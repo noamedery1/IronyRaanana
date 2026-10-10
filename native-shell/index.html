@@ -49,7 +49,7 @@
 
     <div class="card">
       <label for="inp">כניסה עם קוד קבוצה, קישור הזמנה או קוד מועדון</label>
-      <div class="hint">הקלידו את <b>הקוד</b> (5 ספרות) שקיבלתם — קוד קבוצה, מפעיל, מאמן או מנהל. אפשר גם להדביק קישור הזמנה, או קוד מועדון (למשל fcraanana).</div>
+      <div class="hint">הקלידו את <b>הקוד</b> (5 ספרות) שקיבלתם מהמועדון, או הדביקו קישור הזמנה. (אפשר גם קוד מועדון, למשל fcraanana.)</div>
       <input id="inp" inputmode="text" placeholder="קוד קבוצה (5 ספרות), קישור, או קוד מועדון" autocapitalize="off" autocomplete="off" spellcheck="false" />
       <button class="primary" id="enter">כניסה ←</button>
       <div class="err" id="err"></div>
@@ -125,8 +125,9 @@
     // Always use the APEX path — only some clubs have a subdomain. The server serves every club on the
     // apex and 302-redirects the ones that do have a subdomain (kept in-app by allowNavigation), so this
     // works for all clubs. Building "<slug>.squadio…" directly fails for clubs without a subdomain.
-    function clubUrl(slug)  { return BASE + '/' + slug; }
-    function adminUrl(slug) { return BASE + '/' + slug + '/admin'; }
+    function clubUrl(slug)    { return BASE + '/' + slug; }
+    function adminUrl(slug)   { return BASE + '/' + slug + '/admin'; }
+    function trainerUrl(slug) { return BASE + '/' + slug + '/trainer'; }
 
     function slugFromUrl(u) {
       try {
@@ -188,6 +189,16 @@
       var l = getManagerClubs().filter(function (s) { return s !== slug; });
       l.unshift(slug);
       try { localStorage.setItem('managerClubs', JSON.stringify(l.slice(0, 10))); } catch (e) {}
+    }
+
+    // Clubs this device entered as COACH (via the club's coach code). Same idea as managerClubs: drives
+    // a "🏃 מאמן" entry on the club's card so a returning coach reopens the trainer screen in one tap.
+    function getCoachClubs() { try { return JSON.parse(localStorage.getItem('coachClubs') || '[]'); } catch (e) { return []; } }
+    function saveCoachClub(slug) {
+      if (!slug) return;
+      var l = getCoachClubs().filter(function (s) { return s !== slug; });
+      l.unshift(slug);
+      try { localStorage.setItem('coachClubs', JSON.stringify(l.slice(0, 10))); } catch (e) {}
     }
 
     // Memberships {club, team} drive the widget: a parent's team shows only that team; an operator
@@ -269,6 +280,7 @@
           go(origin + '/' + slug + '/join/operator', slug);
         } else if (d.role === 'coach') {
           saveRecent(slug);
+          saveCoachClub(slug); // remember this is a club the user coaches → "🏃 מאמן" entry on its card
           go(origin + '/' + slug + '/trainer', slug);
         } else if (d.role === 'manager') {
           saveRecent(slug); // shows the club on the home screen; admin login still requires a password
@@ -345,7 +357,8 @@
       } catch (e) { /* offline — fall back to the slug */ }
     }
 
-    // Remove one entry from the recent list (and any membership for it), then re-render.
+    // Remove the WHOLE club — the recent entry plus every registration for it (all teams + the manager
+    // and coach entries). Called only after an explicit confirmation in the manage dialog.
     function removeRecent(slug) {
       var list = getRecent().filter(function (s) { return s !== slug; });
       try { localStorage.setItem('recentClubs', JSON.stringify(list)); } catch (e) {}
@@ -354,11 +367,38 @@
         var mem = getMembers().filter(function (m) { return m.club !== slug; });
         localStorage.setItem('members', JSON.stringify(mem)); syncMembers(mem);
       } catch (e) {}
+      try { localStorage.setItem('managerClubs', JSON.stringify(getManagerClubs().filter(function (s) { return s !== slug; }))); } catch (e) {}
+      try { localStorage.setItem('coachClubs', JSON.stringify(getCoachClubs().filter(function (s) { return s !== slug; }))); } catch (e) {}
+      renderRecent(getRecent());
+    }
+
+    // Remove ONE team registration from a club (not the whole club). If nothing is left registered for
+    // that club (no teams, not a manager, not a coach), drop the club card too.
+    function removeOneTeam(slug, team) {
       try {
-        var mgrs = getManagerClubs().filter(function (s) { return s !== slug; });
-        localStorage.setItem('managerClubs', JSON.stringify(mgrs));
+        var mem = getMembers().filter(function (m) { return !(m.club === slug && m.team === team); });
+        localStorage.setItem('members', JSON.stringify(mem)); syncMembers(mem);
       } catch (e) {}
-      renderRecent(list);
+      pruneClubIfEmpty(slug);
+    }
+    function removeRole(slug, which) { // which: 'manager' | 'coach'
+      try {
+        var key = which === 'manager' ? 'managerClubs' : 'coachClubs';
+        var cur = which === 'manager' ? getManagerClubs() : getCoachClubs();
+        localStorage.setItem(key, JSON.stringify(cur.filter(function (s) { return s !== slug; })));
+      } catch (e) {}
+      pruneClubIfEmpty(slug);
+    }
+    // Drop the club from the home screen only when it has no registrations left at all.
+    function pruneClubIfEmpty(slug) {
+      var hasTeam = getMembers().some(function (m) { return m.club === slug; });
+      var isMgr = getManagerClubs().indexOf(slug) >= 0;
+      var isCoach = getCoachClubs().indexOf(slug) >= 0;
+      if (!hasTeam && !isMgr && !isCoach) {
+        var list = getRecent().filter(function (s) { return s !== slug; });
+        try { localStorage.setItem('recentClubs', JSON.stringify(list)); } catch (e) {}
+        syncNative(list);
+      }
     }
 
     function renderRecent(list) {
@@ -388,9 +428,11 @@
           sub.style.cssText = 'color:#94a3b8;font-size:.76rem;font-weight:600;margin-top:.12rem;';
           info.appendChild(sub);
         }
-        var delBtn = document.createElement('button'); delBtn.className = 'go del'; delBtn.textContent = '✕'; delBtn.title = 'הסר';
-        delBtn.style.background = 'none'; delBtn.style.color = '#f87171'; delBtn.style.border = 'none'; delBtn.style.fontWeight = '800';
-        delBtn.addEventListener('click', function () { removeRecent(slug); });
+        // The ✕ no longer deletes on the spot (an accidental tap used to wipe the whole club). It opens
+        // a manage dialog where you remove a single registration or, with a confirmation, the whole club.
+        var delBtn = document.createElement('button'); delBtn.className = 'go del'; delBtn.textContent = '✕'; delBtn.title = 'ניהול / הסרה';
+        delBtn.style.background = 'none'; delBtn.style.color = '#94a3b8'; delBtn.style.border = 'none'; delBtn.style.fontWeight = '800';
+        delBtn.addEventListener('click', function () { openClubManage(slug); });
         var enterBtn = document.createElement('button'); enterBtn.className = 'go'; enterBtn.textContent = 'כניסה';
         enterBtn.addEventListener('click', function () { go(clubUrl(slug), slug); });
         row.appendChild(info); row.appendChild(delBtn);
@@ -403,10 +445,69 @@
           mgrBtn.addEventListener('click', function () { go(adminUrl(slug), slug); });
           row.appendChild(mgrBtn);
         }
+        // For a club this device coaches, a one-tap "🏃 מאמן" entry → the trainer screen (auto-login
+        // while the trainer token is saved).
+        if (getCoachClubs().indexOf(slug) >= 0) {
+          var coachBtn = document.createElement('button'); coachBtn.className = 'go'; coachBtn.textContent = '🏃 מאמן';
+          coachBtn.style.cssText = 'background:linear-gradient(135deg,#0d9488,#059669);color:#fff;border:none;font-weight:800;';
+          coachBtn.addEventListener('click', function () { go(trainerUrl(slug), slug); });
+          row.appendChild(coachBtn);
+        }
         row.appendChild(enterBtn);
         box.appendChild(row);
       });
       document.getElementById('recentCard').style.display = '';
+    }
+
+    // Manage / remove a club's registrations. Opened by the card's ✕, so a single accidental tap can
+    // never wipe a club. Lists each registration (every team + the manager/coach roles) with its own
+    // "הסר", plus a separated, two-tap-confirmed "remove the whole club".
+    function openClubManage(slug) {
+      var meta = clubMeta[slug] || {};
+      var name = meta.name || slug;
+      var overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem;';
+      var close = function () { try { document.body.removeChild(overlay); } catch (e) {} };
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+      var card = document.createElement('div');
+      card.style.cssText = 'background:#0c1324;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:1.1rem;width:100%;max-width:380px;box-shadow:0 30px 70px -20px rgba(0,0,0,.9);';
+      var h = document.createElement('h3'); h.textContent = 'הרשמות — ' + name; h.style.cssText = 'margin:.1rem 0 .3rem;font-size:1.05rem;'; card.appendChild(h);
+      var hint = document.createElement('div'); hint.textContent = 'אפשר להסיר רישום בודד, או את כל המועדון.'; hint.style.cssText = 'color:#94a3b8;font-size:.8rem;margin-bottom:.7rem;'; card.appendChild(hint);
+      var body = document.createElement('div'); card.appendChild(body);
+      var rowStyle = 'display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:#0b1220;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:.5rem .7rem;margin-bottom:.4rem;';
+      var rmBtnStyle = 'background:none;border:1px solid #7f1d1d;color:#f87171;border-radius:8px;padding:.35rem .8rem;font-weight:700;font-size:.8rem;cursor:pointer;font-family:inherit;';
+      var redraw = function () {
+        body.innerHTML = '';
+        var items = [];
+        getMembers().filter(function (m) { return m.club === slug && m.team; }).forEach(function (m) { items.push({ label: 'קבוצה: ' + m.team, kind: 'team', team: m.team }); });
+        if (getManagerClubs().indexOf(slug) >= 0) items.push({ label: 'ניהול (מנהל)', kind: 'manager' });
+        if (getCoachClubs().indexOf(slug) >= 0) items.push({ label: 'מאמן', kind: 'coach' });
+        if (!items.length) { close(); renderRecent(getRecent()); return; }
+        items.forEach(function (it) {
+          var r = document.createElement('div'); r.style.cssText = rowStyle;
+          var lbl = document.createElement('span'); lbl.textContent = it.label; lbl.style.cssText = 'font-weight:600;font-size:.9rem;'; r.appendChild(lbl);
+          var rm = document.createElement('button'); rm.textContent = 'הסר'; rm.style.cssText = rmBtnStyle;
+          rm.addEventListener('click', function () {
+            if (it.kind === 'team') removeOneTeam(slug, it.team); else removeRole(slug, it.kind);
+            renderRecent(getRecent()); redraw();
+          });
+          r.appendChild(rm); body.appendChild(r);
+        });
+      };
+      var sep = document.createElement('div'); sep.style.cssText = 'border-top:1px dashed rgba(255,255,255,.14);margin:.6rem 0;'; card.appendChild(sep);
+      var allBtn = document.createElement('button'); allBtn.textContent = '🗑 הסר את כל המועדון';
+      allBtn.style.cssText = 'width:100%;background:#dc2626;color:#fff;border:none;border-radius:10px;padding:.7rem;font-weight:800;cursor:pointer;font-family:inherit;';
+      allBtn.addEventListener('click', function () {
+        if (allBtn.dataset.confirm === '1') { removeRecent(slug); close(); }
+        else { allBtn.dataset.confirm = '1'; allBtn.textContent = 'בטוח? לחצו שוב כדי להסיר הכול'; }
+      });
+      card.appendChild(allBtn);
+      var cancel = document.createElement('button'); cancel.textContent = 'סגור';
+      cancel.style.cssText = 'width:100%;margin-top:.5rem;background:none;border:1px solid rgba(255,255,255,.16);color:#cbd5e1;border-radius:10px;padding:.6rem;font-weight:700;cursor:pointer;font-family:inherit;';
+      cancel.addEventListener('click', close);
+      card.appendChild(cancel);
+      overlay.appendChild(card); document.body.appendChild(overlay);
+      redraw();
     }
 
     function showHome(list) {
