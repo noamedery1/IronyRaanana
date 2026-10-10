@@ -16,6 +16,7 @@ import FeedbackModal from './components/FeedbackModal';
 import InstallPrompt from './components/InstallPrompt';
 import { useI18n } from './i18n.jsx';
 import { isKnownClub } from './clubConfig.js';
+import { isManagerOf } from './adminApi.js';
 import './App.css';
 
 // Root ("/") → the product sales page (the server also serves it; this covers in-app nav).
@@ -47,8 +48,9 @@ const RoleReturn = () => {
   let isManager = false;
   let isCoach = false;
   try {
-    isManager = Boolean(slug) && localStorage.getItem('isAdmin') === 'true'
-      && Boolean(localStorage.getItem('mgrToken:' + slug));
+    // Per-club: only a valid manager token FOR THIS club counts (decoded + club-matched), never the
+    // global isAdmin flag — otherwise a manager of club A sees a "back to management" pill on club B.
+    isManager = Boolean(slug) && isManagerOf(slug);
     isCoach = Boolean(localStorage.getItem('trainerToken'));
   } catch { /* storage blocked */ }
   const showManager = isManager && seg !== 'admin';
@@ -79,12 +81,13 @@ const RoleReturn = () => {
   );
 };
 
-// Manager dashboard guard — must be inside a known club AND logged in.
+// Manager dashboard guard — must be inside a known club AND hold a valid manager token FOR THAT club.
+// (Checking the per-club token, not the global isAdmin flag, is what stops a manager of one club from
+// opening another club's dashboard. The server also re-verifies the token's HMAC on every API call.)
 const ProtectedRoute = ({ children }) => {
   const { club } = useParams();
   if (!isKnownClub(club)) return <NoClub />;
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
-  if (!isAdmin) return <Navigate to={`/${club}/admin`} replace />;
+  if (!isManagerOf(club)) return <Navigate to={`/${club}/admin`} replace />;
   return children;
 };
 

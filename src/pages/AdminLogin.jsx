@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getActiveClub } from '../clubConfig.js';
+import { isManagerOf } from '../adminApi.js';
 import BrandMark from '../components/BrandMark';
 import '../ActionStyles.css'; // Re-use button styles
 
@@ -10,15 +11,13 @@ const AdminLogin = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
-    // A manager who already signed in on this device shouldn't have to retype the password every time:
-    // if the admin flag is present, go straight to the dashboard. ProtectedRoute still guards it and the
-    // dashboard's API calls still need the persisted manager token, so a cleared/forged flag grants nothing.
+    // A manager who already signed in on THIS club shouldn't retype the password: if a valid manager
+    // token for this club is saved, go straight to the dashboard. Keyed on the per-club token (not the
+    // global isAdmin flag) so a manager of another club isn't auto-forwarded into this club's dashboard.
     useEffect(() => {
         try {
             const slug = getActiveClub().slug;
-            if (localStorage.getItem('isAdmin') === 'true') {
-                navigate(`/${slug}/admin/dashboard`, { replace: true });
-            }
+            if (isManagerOf(slug)) navigate(`/${slug}/admin/dashboard`, { replace: true });
         } catch { /* storage blocked → just show the form */ }
     }, [navigate]);
 
