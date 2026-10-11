@@ -312,6 +312,10 @@ footer ul{list-style:none;padding:0;margin:0;display:grid;gap:.4rem}
 footer button.lnk{background:none;border:0;color:inherit;font:inherit;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 footer .bottom{margin-top:2.5rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem}
 footer .bottom a{color:#34d399;text-decoration:none}
+footer .bottom a.credit{display:inline-flex;align-items:center;gap:.5rem;color:#bdb9b2;font-size:.85rem;padding:.3rem .7rem;border:1px solid rgba(255,255,255,.1);border-radius:999px;transition:border-color .2s,color .2s}
+footer .bottom a.credit:hover{color:#fff;border-color:#ff7a2f}
+footer .bottom a.credit b{color:#ff7a2f;font-weight:700}
+footer .bottom a.credit img{width:22px;height:auto}
 @media(max-width:760px){footer .grid{grid-template-columns:1fr}}
 
 /* ---------- DIALOGS ---------- */
@@ -614,6 +618,7 @@ dialog[open]{animation:dlg .35s cubic-bezier(.2,.9,.3,1.1)}
     <div class="bottom">
       <span>© <span id="yr"></span> הפועל רעננה. כל הזכויות שמורות.</span>
       <span>מערכת ניהול האימונים: <a href="https://squadio.techbynoam.com/sales-landing" target="_blank" rel="noopener">Squadio</a></span>
+      <a class="credit" href="https://techbynoam.com/" target="_blank" rel="noopener"><img src="img/techbynoam.png" alt="" width="22" height="20" loading="lazy" /><span>נבנה ע״י <b>TechByNoam</b></span></a>
     </div>
   </div>
 </footer>

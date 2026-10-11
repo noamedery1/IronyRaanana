@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>מכבי אורנית כדורגל — בית ספר לכדורגל ומחלקת ילדים | הרשמה לעונת 2026/27</title>
+<meta name="description" content="מכבי אורנית כדורגל — 6 קבוצות מהגן ועד מחלקת הילדים, מאמנים מקצועיים ואפליקציית Squadio להורים. הרשמה לעונה." />
+<meta name="theme-color" content="#1f6fc5" />
+<meta property="og:title" content="מכבי אורנית — בואו לשחק איתנו" />
+<meta property="og:description" content="6 קבוצות, 4 מאמנים, לו״ז חי באפליקציה. הרשמה לעונת 2026/27." />
+<meta property="og:image" content="https://squadio.techbynoam.com/api/macabioranit/icon/512" />
+<meta property="og:locale" content="he_IL" />
+<link rel="icon" href="https://squadio.techbynoam.com/api/macabioranit/icon/192" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Karantina:wght@400;700&family=Rubik:wght@400;500;700;900&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --red:#1f6fc5; --red-d:#0f4c8f; --ink:#0a1730; --ink2:#12213f; --paper:#f3ede2; --paper2:#e9e1d2;
+  --line:rgba(13,13,15,.14); --muted:#5d5a55; --grass:#1f7a3f; --gold:#ffcf3f;
+  --display:'Karantina',Impact,sans-serif; --body:'Rubik',system-ui,sans-serif;
+  --r:18px; --fs:1rem;
+}
+*{box-sizing:border-box}
+html{overflow-x:hidden;scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:var(--fs);line-height:1.6;overflow-x:hidden}
+body.big{--fs:1.18rem}
+body.hc{--paper:#fff;--paper2:#fff;--muted:#000;--line:#000}
+body.hc .hero,body.hc .dark{background:#000!important}
+body.still *,body.still *::before,body.still *::after{animation:none!important;transition:none!important}
+img{max-width:100%;display:block}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;top:-60px;right:12px;background:var(--gold);color:#000;padding:.6rem 1rem;z-index:100;border-radius:8px;font-weight:700}
+.skip:focus{top:12px}
+.wrap{width:min(1180px,100% - 32px);margin-inline:auto}
+.grain::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.07;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.btn{display:inline-flex;align-items:center;gap:.55rem;font:700 1.05rem var(--body);padding:.95rem 1.6rem;border-radius:999px;border:0;cursor:pointer;text-decoration:none;transition:transform .2s,box-shadow .2s,background .2s}
+.btn-red{background:var(--red);color:#fff;box-shadow:0 10px 30px -10px rgba(31,111,197,.7)}
+.btn-red:hover{transform:translateY(-2px);background:#ee1422}
+.btn-ghost{background:transparent;color:inherit;border:2px solid currentColor}
+.btn-ghost:hover{transform:translateY(-2px)}
+.kicker{font:700 .82rem var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--red);display:flex;align-items:center;gap:.6rem}
+.kicker::before{content:"";width:28px;height:3px;background:currentColor}
+h1,h2,h3{font-family:var(--display);font-weight:700;line-height:.9;margin:0;letter-spacing:.01em}
+h2{font-size:clamp(3.2rem,8vw,6.2rem)}
+section{position:relative}
+.reveal{opacity:0;transform:translateY(34px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- NAV ---------- */
+.nav{position:fixed;inset:0 0 auto;z-index:50;transition:background .3s,box-shadow .3s}
+.nav.solid{background:rgba(10,23,48,.94);backdrop-filter:blur(10px);box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:72px;color:#fff}
+.brand{display:flex;align-items:center;gap:.7rem;text-decoration:none}
+.brand img{width:44px;height:44px;border-radius:50%;background:#fff;object-fit:contain;padding:2px}
+.brand b{font:700 2rem var(--display);line-height:1;white-space:nowrap}
+@media(max-width:420px){.brand b{font-size:1.6rem}.brand img{width:38px;height:38px}}
+@media(max-width:340px){.brand b{display:none}}
+.nav ul{display:flex;gap:1.6rem;list-style:none;margin:0;padding:0}
+.nav ul a{text-decoration:none;font-weight:500;opacity:.85}
+.nav ul a:hover{opacity:1;color:var(--gold)}
+.nav .btn{padding:.6rem 1.2rem;font-size:.95rem}
+@media(max-width:860px){.nav ul{display:none}}
+
+/* ---------- HERO ---------- */
+.hero{min-height:100svh;background:var(--ink);color:#fff;overflow:hidden;display:flex;align-items:center;padding:110px 0 70px}
+.hero .pitch{position:absolute;inset:0;opacity:.16}
+.hero .pitch path,.hero .pitch circle,.hero .pitch rect{stroke-dasharray:3000;stroke-dashoffset:3000;animation:draw 3.2s .2s cubic-bezier(.6,0,.2,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.hero .glow{position:absolute;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(31,111,197,.55),transparent 60%);top:-280px;left:-260px;filter:blur(10px)}
+.hero-photo{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 1s}
+.hero-photo.ok{opacity:.32}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.25fr .75fr;gap:2rem;align-items:center}
+.hero h1{font-size:clamp(4.2rem,11vw,9.6rem);line-height:.8;margin:.9rem 0 1.4rem}
+.hero h1 .l{display:block;overflow:hidden}
+.hero h1 .l span{display:block;transform:translateY(105%);animation:up .9s cubic-bezier(.2,.8,.2,1) forwards}
+.hero h1 .l:nth-child(2) span{animation-delay:.12s;color:var(--red);-webkit-text-stroke:0}
+.hero h1 .outline span{color:transparent;-webkit-text-stroke:2px #fff;animation-delay:.24s}
+@keyframes up{to{transform:none}}
+.hero p.lead{font-size:clamp(1.05rem,2vw,1.3rem);max-width:34rem;color:#d9d6d0;margin:0 0 2rem;opacity:0;animation:fade .8s .6s forwards}
+.hero .ctas{display:flex;gap:1rem;flex-wrap:wrap;opacity:0;animation:fade .8s .75s forwards}
+@keyframes fade{to{opacity:1}}
+.badge-season{display:inline-flex;gap:.5rem;align-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);padding:.4rem .9rem;border-radius:999px;font-size:.9rem;opacity:0;animation:fade .6s .1s forwards}
+.badge-season i{width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 0 rgba(61,220,132,.7);animation:ping 1.8s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 10px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+.crest{position:relative;aspect-ratio:1;display:grid;place-items:center}
+.crest .ring{position:absolute;inset:0;border-radius:50%;border:2px dashed rgba(255,255,255,.22);animation:spin 40s linear infinite}
+.crest .ring2{inset:9%;border:1px solid rgba(255,255,255,.12);animation-duration:60s;animation-direction:reverse}
+.crest .ring3{inset:-6%;border:0}
+.crest .ring3 text{font:700 15px var(--body);letter-spacing:.42em;fill:rgba(255,255,255,.55)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.crest img{width:62%;filter:drop-shadow(0 30px 60px rgba(31,111,197,.55));animation:float 6s ease-in-out infinite;background:#fff;border-radius:50%;padding:4%}
+@keyframes float{50%{transform:translateY(-14px) rotate(-3deg)}}
+.ball{position:absolute;width:74px;bottom:6%;left:4%;animation:bounce 2.4s cubic-bezier(.5,0,.5,1) infinite}
+@keyframes bounce{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-60px) rotate(180deg)}}
+.scroll-cue{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);color:#fff;opacity:.6;font-size:.8rem;letter-spacing:.2em;display:flex;flex-direction:column;align-items:center;gap:.4rem}
+.scroll-cue::after{content:"";width:2px;height:34px;background:linear-gradient(#fff,transparent);animation:cue 1.6s infinite}
+@keyframes cue{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+@media(max-width:860px){.hero .wrap{grid-template-columns:1fr}.crest{width:62%;margin:0 auto;order:-1}.ball{display:none}}
+
+/* ---------- TICKER ---------- */
+.ticker{background:var(--red);color:#fff;overflow:hidden;white-space:nowrap;border-block:3px solid var(--ink);transform:rotate(-1.2deg);margin:0 -20px}
+.ticker-clip{overflow:hidden;padding:14px 0;margin-top:-36px;position:relative;z-index:3}
+.ticker .track{display:inline-flex;gap:2.4rem;padding:.9rem 0;animation:tick 60s linear infinite;font:700 2.1rem var(--display)}
+.ticker .track span::after{content:"⚽";margin-inline-start:2.4rem;font-size:1.2rem;vertical-align:middle}
+@keyframes tick{to{transform:translateX(50%)}}
+
+/* ---------- STATS ---------- */
+.stats{padding:90px 0 40px}
+.stats .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:2px solid var(--ink)}
+.stat{padding:1.6rem 1rem 1rem;border-inline-start:1px solid var(--line)}
+.stat:first-child{border:0}
+.stat b{display:block;text-align:right;font:700 clamp(4rem,9vw,7rem) var(--display);line-height:.85;color:var(--red)}
+.stat span{font-weight:500;color:var(--muted)}
+@media(max-width:700px){.stats .grid{grid-template-columns:repeat(2,1fr)}.stat:nth-child(3){border:0}}
+
+/* ---------- ABOUT ---------- */
+.about{padding:60px 0 110px}
+.about .grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.about p{font-size:1.12rem;color:#2c2a27}
+.about .pillars{display:grid;gap:1rem;margin-top:1.8rem}
+.pillar{display:flex;gap:1rem;align-items:flex-start;padding:1rem 1.2rem;background:#fff;border-radius:var(--r);border:1px solid var(--line)}
+.pillar .ic{flex:none;width:46px;height:46px;border-radius:12px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:1.35rem}
+.pillar h3{font-size:1.9rem}
+.pillar p{margin:.2rem 0 0;font-size:.98rem;color:var(--muted)}
+.mosaic{position:relative;aspect-ratio:4/5}
+.tile{position:absolute;border-radius:24px;overflow:hidden;isolation:isolate;background:var(--ink);box-shadow:0 30px 60px -30px rgba(0,0,0,.5)}
+.tile>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.tile.a{inset:0 18% 26% 0}
+.tile.b{inset:46% 0 0 34%;background:var(--red)}
+.tile .art{position:absolute;inset:0}
+.tile .art svg{width:100%;height:100%;display:block}
+.tile .cap{position:absolute;z-index:2;top:0;inset-inline:0;padding:1.1rem 1.3rem 2.6rem;color:#fff;font:700 2.3rem/1 var(--display);background:linear-gradient(rgba(0,0,0,.6),transparent)}
+.tile .cap small{display:block;font:700 .75rem var(--body);letter-spacing:.18em;color:var(--gold);margin-bottom:.35rem}
+.plays path{stroke-dashoffset:300;animation:play 6s ease-in-out infinite}
+.plays path:nth-child(2){animation-delay:.6s}.plays path:nth-child(3){animation-delay:1.2s}
+@keyframes play{0%{stroke-dashoffset:300;opacity:0}15%{opacity:1}45%,80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+.pl circle{stroke:#fff;stroke-width:3}.pl.home{fill:var(--red)}.pl.away{fill:#111}
+.pl.away circle{animation:drift 6s ease-in-out infinite}.pl.away circle:nth-child(2){animation-delay:-2s}.pl.away circle:nth-child(3){animation-delay:-4s}
+@keyframes drift{50%{transform:translate(12px,-8px)}}
+.tball{offset-path:path("M110 330 Q 90 250 140 220 Q 230 200 270 160 Q 300 110 230 70");animation:pass 6s ease-in-out infinite;offset-rotate:0deg}
+@keyframes pass{0%,10%{offset-distance:0%}85%,100%{offset-distance:100%}}
+.art-b{background:radial-gradient(circle at 80% 10%,#4fa3f0,var(--red) 55%,var(--red-d));color:#fff;overflow:hidden}
+.art-b .crest-wm{position:absolute;border-radius:50%;width:85%;left:-18%;bottom:-22%;opacity:.35;mix-blend-mode:multiply;filter:grayscale(1) contrast(1.4);transform:rotate(-14deg)}
+.art-b .stripes{position:absolute;top:0;left:0;width:70%;height:100%;background:repeating-linear-gradient(115deg,rgba(255,255,255,.09) 0 14px,transparent 14px 34px);-webkit-mask-image:linear-gradient(to right,#000,transparent);mask-image:linear-gradient(to right,#000,transparent)}
+.art-b .bnum{position:absolute;inset-inline-start:1.4rem;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:.8rem;z-index:1}
+.art-b .bnum b{font:700 clamp(5rem,9vw,7.5rem)/.8 var(--display)}
+.art-b .bnum span{font-weight:700;font-size:1.05rem;line-height:1.25}
+.sticker{position:absolute;z-index:3;top:34%;right:-14px;background:var(--gold);color:var(--ink);font:700 1.7rem/1 var(--display);padding:1rem 1.1rem;border-radius:50%;width:122px;height:122px;display:grid;place-items:center;text-align:center;transform:rotate(-12deg);box-shadow:0 12px 30px -10px rgba(0,0,0,.4);animation:wob 5s ease-in-out infinite}
+@keyframes wob{50%{transform:rotate(-4deg) scale(1.05)}}
+@media(max-width:860px){.about .grid{grid-template-columns:1fr;gap:2.5rem}.sticker{right:6px}}
+
+/* ---------- TEAMS ---------- */
+.teams{background:var(--ink);color:#fff;padding:110px 0}
+.teams .head{display:flex;justify-content:space-between;align-items:end;gap:2rem;flex-wrap:wrap;margin-bottom:2.2rem}
+.teams .head p{max-width:30rem;color:#bdb9b2;margin:0}
+.tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:2rem}
+.tab{font:500 1rem var(--body);background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.25);padding:.55rem 1.1rem;border-radius:999px;cursor:pointer;transition:.2s}
+.tab[aria-selected=true]{background:#fff;color:var(--ink);border-color:#fff}
+.tab:hover{border-color:#fff}
+.cat-blurb{color:#bdb9b2;margin:-1rem 0 1.6rem;min-height:1.6em}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
+.card{position:relative;background:var(--ink2);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:1.3rem 1.3rem 1.1rem;cursor:pointer;text-align:start;color:#fff;font:inherit;overflow:hidden;transition:transform .25s,border-color .25s,background .25s;display:flex;flex-direction:column;gap:.6rem;min-height:210px}
+.card::before{content:"";position:absolute;inset:auto -40px -60px auto;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(31,111,197,.45),transparent 70%);opacity:0;transition:.3s}
+.card:hover{transform:translateY(-4px);border-color:rgba(31,111,197,.7)}
+.card:hover::before{opacity:1}
+.card .age{font-size:.82rem;color:var(--gold);font-weight:700;letter-spacing:.05em}
+.card h3{font-size:2.5rem}
+.card .coach{color:#bdb9b2;font-size:.94rem}
+.days{display:flex;gap:4px;margin-top:auto}
+.days i{font-style:normal;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:.8rem;font-weight:700;background:rgba(255,255,255,.06);color:rgba(255,255,255,.35)}
+.days i.on{background:var(--red);color:#fff}
+.card .more{font-size:.85rem;color:#fff;opacity:.7;display:flex;justify-content:space-between;align-items:center}
+.card .more::after{content:"←";font-size:1.1rem;transition:transform .2s}
+.card:hover .more::after{transform:translateX(-5px)}
+.card.in{animation:pop .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.97)}}
+
+/* ---------- VENUES ---------- */
+.venues{padding:110px 0}
+.venues .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-top:2.4rem}
+.venue{background:#fff;border-radius:24px;overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column}
+.venue .map{height:170px;background:var(--grass);position:relative;overflow:hidden}
+.venue .map svg{position:absolute;inset:0;width:100%;height:100%}
+.venue .pin{position:absolute;top:50%;left:50%;width:44px;height:44px;margin:-44px 0 0 -22px;background:var(--red);border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 10px 20px rgba(0,0,0,.35);animation:drop 2.4s ease-in-out infinite}
+.venue .pin::after{content:"";position:absolute;inset:14px;background:#fff;border-radius:50%}
+@keyframes drop{50%{transform:rotate(-45deg) translate(4px,-4px)}}
+.venue .body{padding:1.3rem 1.4rem 1.5rem;display:flex;flex-direction:column;gap:.4rem;flex:1}
+.venue h3{font-size:2.3rem}
+.venue p{margin:0;color:var(--muted)}
+.venue .tags{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0 1rem}
+.venue .tags span{font-size:.8rem;background:var(--paper);padding:.25rem .65rem;border-radius:999px}
+.venue .btn{margin-top:auto;align-self:flex-start;padding:.6rem 1.1rem;font-size:.95rem;background:var(--ink);color:#fff}
+@media(max-width:900px){.venues .grid{grid-template-columns:1fr}}
+
+/* ---------- SQUADIO ---------- */
+.squadio{background:linear-gradient(160deg,#0b1020,#0d1530 60%,#081022);color:#fff;padding:120px 0;overflow:hidden}
+.squadio .grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.squadio .kicker{color:#34d399}
+.squadio h2 em{font-style:normal;color:#34d399}
+.squadio p{color:#c6cde0;font-size:1.1rem}
+.feat{display:grid;grid-template-columns:repeat(2,1fr);gap:.9rem;margin:2rem 0}
+.feat div{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:1rem}
+.feat b{display:block;font-size:1.02rem;margin-bottom:.15rem}
+.feat span{color:#9aa6bd;font-size:.9rem}
+.phone{position:relative;overflow:hidden;width:min(320px,80%);margin:0 auto;aspect-ratio:9/19;background:#05070f;border-radius:46px;border:10px solid #1d2233;box-shadow:0 60px 120px -40px rgba(52,211,153,.35),0 0 0 2px #2b3146 inset}
+.phone::before{content:"";position:absolute;top:10px;left:50%;transform:translateX(-50%);width:34%;height:22px;background:#000;border-radius:20px;z-index:3}
+.screen{position:absolute;inset:0;border-radius:36px;overflow:hidden;background:#0a0f1e;padding:46px 14px 14px;font-size:.78rem}
+.screen .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.screen .top b{font-size:.95rem}
+.screen .top img{width:28px;height:28px;border-radius:50%;background:#fff}
+.sess{background:#121a30;border-radius:14px;padding:10px 12px;margin-bottom:8px;border-inline-start:4px solid #34d399;transition:background .4s}
+.sess small{color:#8b96b0;display:block}
+.sess b{font-size:.95rem;display:block}
+.sess em{font-style:normal;color:#c6cde0;font-size:.8rem}
+.t{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.sess.changed{border-color:#ffcf3f;background:#2a2410}
+.sess .old{text-decoration:line-through;color:#8b96b0;margin-inline-end:6px}
+.notif{position:absolute;top:44px;left:10px;right:10px;background:rgba(240,242,248,.97);color:#111;border-radius:18px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;box-shadow:0 20px 40px rgba(0,0,0,.4);transform:translateY(-140%);transition:transform .6s cubic-bezier(.2,.9,.3,1.2);z-index:4}
+.notif.show{transform:none}
+.notif img{width:34px;height:34px;border-radius:9px;background:#fff;flex:none}
+.notif b{font-size:.8rem;display:block}
+.notif span{font-size:.78rem;color:#333}
+.float-chip{position:absolute;background:#fff;color:#111;border-radius:14px;padding:.6rem .9rem;font-size:.85rem;font-weight:700;box-shadow:0 20px 40px -10px rgba(0,0,0,.5);animation:float 5s ease-in-out infinite;z-index:5}
+.float-chip.c1{top:18%;right:-4%}
+.float-chip.c2{bottom:14%;left:-6%;animation-delay:-2.5s}
+.store{display:flex;gap:.7rem;flex-wrap:wrap}
+.store a{display:flex;align-items:center;gap:.5rem;background:#fff;color:#0b1020;text-decoration:none;padding:.65rem 1.1rem;border-radius:12px;font-weight:700;font-size:.95rem}
+@media(max-width:900px){.squadio .grid{grid-template-columns:1fr}.float-chip.c1{right:0}.float-chip.c2{left:0}}
+
+/* ---------- STEPS + FAQ ---------- */
+.steps{padding:110px 0 40px}
+.steps ol{list-style:none;padding:0;margin:2.4rem 0 0;display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;counter-reset:s}
+.steps li{counter-increment:s;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:1.3rem;position:relative}
+.steps li::before{content:counter(s);font:700 4.2rem/1 var(--display);color:var(--red);display:block}
+.steps li b{display:block;font-size:1.1rem;margin:.3rem 0}
+.steps li span{color:var(--muted);font-size:.95rem}
+@media(max-width:900px){.steps ol{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.steps ol{grid-template-columns:1fr}}
+.faq{padding:60px 0 110px}
+.faq details{border-bottom:1px solid var(--line);padding:1.1rem 0}
+.faq summary{cursor:pointer;font-weight:700;font-size:1.12rem;list-style:none;display:flex;justify-content:space-between;gap:1rem}
+.faq summary::after{content:"+";font:700 2rem/1 var(--display);color:var(--red);transition:transform .25s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{margin:.6rem 0 0;color:var(--muted)}
+
+/* ---------- SIGNUP ---------- */
+.signup{background:var(--red);color:#fff;padding:110px 0;overflow:hidden}
+.signup .big-bg{position:absolute;bottom:-.18em;left:-.05em;font:700 clamp(10rem,30vw,26rem)/1 var(--display);color:rgba(0,0,0,.12);pointer-events:none;white-space:nowrap}
+.signup .grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:3.5rem;position:relative}
+.signup p.lead{font-size:1.15rem;color:#ffe2e2}
+.checks{list-style:none;padding:0;margin:1.5rem 0 0;display:grid;gap:.6rem}
+.checks li{display:flex;gap:.6rem;align-items:center;font-weight:500}
+.checks li::before{content:"✓";width:26px;height:26px;border-radius:50%;background:#fff;color:var(--red);display:grid;place-items:center;font-weight:900;flex:none}
+form.f{background:var(--paper);color:var(--ink);border-radius:28px;padding:2rem;box-shadow:0 40px 80px -30px rgba(0,0,0,.5);display:grid;grid-template-columns:1fr 1fr;gap:1rem 1rem}
+.f .full{grid-column:1/-1}
+.f label{display:flex;flex-direction:column;gap:.35rem;font-weight:500;font-size:.92rem}
+.f input,.f select,.f textarea{font:inherit;font-size:1rem;padding:.8rem .9rem;border-radius:12px;border:1.5px solid #cfc6b6;background:#fff;color:var(--ink);width:100%}
+.f input[type=tel],.f input[type=email]{direction:ltr;text-align:right}
+.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--red);box-shadow:0 0 0 4px rgba(31,111,197,.15)}
+.f .req::after{content:" *";color:var(--red)}
+.f .chk{flex-direction:row;align-items:flex-start;gap:.6rem;font-weight:400;font-size:.88rem;color:#3a3732}
+.f .chk input{width:20px;height:20px;flex:none;margin-top:2px;accent-color:var(--red)}
+.f .chk a{color:var(--red);font-weight:700}
+.f .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.f .btn{justify-content:center;font-size:1.15rem}
+.f .msg{min-height:1.4em;font-weight:700}
+.f .msg.err{color:var(--red)}
+.f .note{font-size:.8rem;color:var(--muted);margin:0}
+.done{display:none;text-align:center;padding:2rem 1rem}
+.done .tick{width:90px;height:90px;margin:0 auto 1rem;border-radius:50%;background:#1f9d55;display:grid;place-items:center;color:#fff;font-size:3rem;animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+.done h3{font-size:3rem}
+@media(max-width:900px){.signup .grid{grid-template-columns:1fr}form.f{grid-template-columns:1fr;padding:1.4rem}}
+
+@media(max-width:600px){
+  .sticker{width:94px;height:94px;font-size:1.35rem;top:auto;bottom:2%;right:auto;left:4%}
+  .tile .cap{font-size:1.75rem;padding:.9rem 1rem 2rem}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;margin-inline:-16px;padding:0 16px 4px;scrollbar-width:none;scroll-snap-type:x mandatory}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:none;scroll-snap-align:start}
+  .card{min-height:0;padding:1rem 1.1rem;gap:.35rem}
+  .card h3{font-size:2.1rem}
+  .card .days{margin-top:.3rem}
+  .float-chip{font-size:.78rem;padding:.45rem .7rem}
+  .float-chip.c1{top:-10px;right:2%}.float-chip.c2{bottom:-10px;left:2%}
+  .phone{width:min(300px,88%)}
+  footer{padding-bottom:96px}
+  .about{padding-bottom:70px}
+  footer ul a,footer button.lnk{display:inline-block;padding:.45rem 0}
+  .slot{grid-template-columns:62px 1fr auto}
+  .slot .d{font-size:1.5rem}
+  .dlg-head h3{font-size:2.6rem}
+}
+/* ---------- FOOTER ---------- */
+footer{background:var(--ink);color:#bdb9b2;padding:60px 0 30px;font-size:.92rem}
+footer .grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:2rem}
+footer h4{color:#fff;margin:0 0 .7rem;font-size:1rem}
+footer ul{list-style:none;padding:0;margin:0;display:grid;gap:.4rem}
+footer button.lnk{background:none;border:0;color:inherit;font:inherit;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+footer .bottom{margin-top:2.5rem;padding-top:1.2rem;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+footer .bottom a{color:#34d399;text-decoration:none}
+@media(max-width:760px){footer .grid{grid-template-columns:1fr}}
+
+/* ---------- DIALOGS ---------- */
+dialog{border:0;border-radius:26px;padding:0;width:min(640px,calc(100% - 24px));max-height:88vh;background:var(--paper);color:var(--ink);box-shadow:0 40px 100px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(5,5,8,.7);backdrop-filter:blur(4px)}
+dialog[open]{animation:dlg .35s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes dlg{from{opacity:0;transform:translateY(30px) scale(.97)}}
+.dlg-head{background:var(--ink);color:#fff;padding:1.6rem 1.6rem 1.3rem;position:relative}
+.dlg-head .x{position:absolute;top:14px;left:14px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:1.3rem;cursor:pointer}
+.dlg-head h3{font-size:3.2rem}
+.dlg-head .age{color:var(--gold);font-weight:700;font-size:.9rem}
+.dlg-body{padding:1.4rem 1.6rem 1.6rem;overflow:auto}
+.slot{display:grid;grid-template-columns:70px 1fr auto;gap:.8rem;align-items:center;padding:.75rem 0;border-bottom:1px dashed var(--line)}
+.slot .d{font:700 1.7rem var(--display);color:var(--red)}
+.slot small{color:var(--muted);display:block}
+.slot a{font-size:.85rem;color:var(--ink)}
+.coach-row{display:flex;align-items:center;gap:.9rem;margin-bottom:1rem}
+.coach-row .av{width:54px;height:54px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font:700 1.8rem var(--display)}
+.legal .dlg-body h4{margin:1.3rem 0 .3rem;font-size:1.05rem}
+.legal .dlg-body p,.legal .dlg-body li{color:#3a3732;font-size:.95rem}
+.legal .dlg-head h3{font-size:2.6rem}
+
+/* ---------- A11Y + COOKIE ---------- */
+.a11y-btn{position:fixed;bottom:18px;left:18px;z-index:60;width:52px;height:52px;border-radius:50%;border:0;background:#1d4ed8;color:#fff;font-size:1.5rem;cursor:pointer;box-shadow:0 10px 25px rgba(0,0,0,.3)}
+.a11y-panel{position:fixed;bottom:80px;left:18px;z-index:60;background:#fff;color:#111;border-radius:16px;padding:1rem;box-shadow:0 20px 50px rgba(0,0,0,.3);display:none;flex-direction:column;gap:.4rem;width:230px}
+.a11y-panel.open{display:flex}
+.a11y-panel button{font:inherit;text-align:start;background:#f2f2f2;border:0;padding:.55rem .8rem;border-radius:10px;cursor:pointer}
+.a11y-panel button[aria-pressed=true]{background:#1d4ed8;color:#fff}
+.cookie{position:fixed;bottom:18px;right:18px;left:84px;max-width:520px;margin-inline-start:auto;z-index:59;background:var(--ink);color:#e6e2da;border-radius:16px;padding:1rem 1.2rem;display:none;gap:1rem;align-items:center;box-shadow:0 20px 40px rgba(0,0,0,.35);font-size:.88rem}
+.cookie.show{display:flex}
+.cookie button{flex:none;padding:.55rem 1.1rem;font-size:.9rem}
+@media(max-width:600px){.cookie{left:12px;right:12px;bottom:82px;max-width:none}}
+.sticky-cta{position:fixed;bottom:16px;right:16px;z-index:55;display:none}
+@media(max-width:700px){.sticky-cta.show{display:inline-flex}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}.hero h1 .l span{transform:none}.hero p.lead,.hero .ctas,.badge-season{opacity:1}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">דלג לתוכן הראשי</a>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="מכבי אורנית — לראש הדף">
+      <img src="https://squadio.techbynoam.com/api/macabioranit/icon/192" alt="" width="44" height="44" />
+      <b>מכבי אורנית</b>
+    </a>
+    <nav aria-label="ניווט ראשי">
+      <ul>
+        <li><a href="#about">המועדון</a></li>
+        <li><a href="#teams">קבוצות וגילאים</a></li>
+        <li><a href="#venues">מגרשים</a></li>
+        <li><a href="#app">האפליקציה</a></li>
+        <li><a href="#faq">שאלות</a></li>
+      </ul>
+    </nav>
+    <a class="btn btn-red" href="#signup">להרשמה</a>
+  </div>
+</header>
+
+<main id="main">
+<!-- HERO -->
+<section class="hero grain" id="top">
+  <div class="hero-photo" id="heroPhoto" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
+  <svg class="pitch" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true" fill="none" stroke="#fff" stroke-width="3">
+    <rect x="40" y="40" width="1120" height="680" rx="4"/>
+    <path d="M600 40v680"/>
+    <circle cx="600" cy="380" r="110"/>
+    <rect x="40" y="200" width="170" height="360"/><rect x="40" y="290" width="60" height="180"/>
+    <rect x="990" y="200" width="170" height="360"/><rect x="1100" y="290" width="60" height="180"/>
+    <path d="M210 310a90 90 0 0 1 0 140M990 310a90 90 0 0 0 0 140"/>
+  </svg>
+  <div class="wrap">
+    <div>
+      <span class="badge-season"><i></i> ההרשמה לעונת 2026/27 פתוחה</span>
+      <h1>
+        <span class="l"><span>משחקים</span></span>
+        <span class="l"><span>בכחול.</span></span>
+        <span class="l outline"><span>גדלים יחד.</span></span>
+      </h1>
+      <p class="lead">מועדון הכדורגל של אורנית — מהגן ועד מחלקת הילדים. מאמנים מקצועיים, אווירה משפחתית, וקהילה שמרגישה כמו בית.</p>
+      <div class="ctas">
+        <a class="btn btn-red" href="#signup">הרשמה לקבוצה ←</a>
+        <a class="btn btn-ghost" href="#teams">מצאו את הקבוצה שלכם</a>
+      </div>
+    </div>
+    <div class="crest" aria-hidden="true">
+      <div class="ring"></div><div class="ring ring2"></div>
+      <svg class="ring ring3" viewBox="0 0 300 300"><defs><path id="circ" d="M150,150 m-138,0 a138,138 0 1,1 276,0 a138,138 0 1,1 -276,0"/></defs><text><textPath href="#circ">MACCABI ORANIT F.C. • FOOTBALL ACADEMY • MACCABI ORANIT F.C. • </textPath></text></svg>
+      <img src="https://squadio.techbynoam.com/api/macabioranit/icon/512" alt="" onerror="this.style.visibility='hidden'" />
+    </div>
+  </div>
+  <svg class="ball" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="47" fill="#fff" stroke="#111" stroke-width="3"/><path d="M50 30l17 12-6 20H39l-6-20z" fill="#111"/><path d="M50 3v27M67 42l27-9M61 62l17 23M39 62L22 85M33 42L6 33" stroke="#111" stroke-width="3"/></svg>
+  <div class="scroll-cue" aria-hidden="true">גללו</div>
+</section>
+
+<div class="ticker-clip" aria-hidden="true"><div class="ticker"><div class="track" id="ticker"></div></div></div>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="wrap">
+    <div class="grid reveal">
+      <div class="stat"><b data-count="6">0</b><span>קבוצות</span></div>
+      <div class="stat"><b data-count="4">0</b><span>מאמנים מקצועיים</span></div>
+      <div class="stat"><b data-count="13">0</b><span>אימונים בשבוע</span></div>
+      <div class="stat"><b data-count="3">0</b><span>מגרשי אימון</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about" id="about">
+  <div class="wrap grid">
+    <div class="reveal">
+      <div class="kicker">המועדון</div>
+      <h2>יותר מכדורגל.<br/>בית.</h2>
+      <p>מכבי אורנית הוא מועדון הכדורגל הקהילתי של אורנית. אצלנו כל ילד וילדה מוצאים מקום — מהצעד הראשון עם הכדור בגן ועד קבוצות הטרום והילדים. אנחנו מאמינים שכדורגל מלמד ערכים: מחויבות, עבודת צוות, כבוד ליריב ולמאמן — והכי חשוב, הנאה.</p>
+      <div class="pillars">
+        <div class="pillar"><div class="ic">🎯</div><div><h3>מקצועיות</h3><p>תוכנית אימון מדורגת לכל גיל, מאמנים מקצועיים וליווי מקצועי לאורך השנים.</p></div></div>
+        <div class="pillar"><div class="ic">❤️</div><div><h3>קהילה</h3><p>מקום שמחבר ילדים, הורים ושכנים — באורנית ולמען אורנית.</p></div></div>
+        <div class="pillar"><div class="ic">⚽</div><div><h3>כולם משחקים</h3><p>מתחילים ומתקדמים, מהגן ועד מחלקת הילדים — מסלול מתאים לכל ילד.</p></div></div>
+      </div>
+    </div>
+    <div class="mosaic reveal">
+      <div class="tile a">
+        <div class="art" aria-hidden="true">
+          <svg viewBox="0 0 400 420" preserveAspectRatio="xMidYMid slice">
+            <defs><pattern id="mow" width="400" height="70" patternUnits="userSpaceOnUse"><rect width="400" height="35" fill="#1d7a3e"/><rect y="35" width="400" height="35" fill="#22874a"/></pattern>
+              <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ffcf3f"/></marker></defs>
+            <rect width="400" height="420" fill="url(#mow)"/>
+            <g stroke="#fff" stroke-opacity=".55" stroke-width="3" fill="none"><rect x="24" y="24" width="352" height="372" rx="2"/><path d="M24 210h352"/><circle cx="200" cy="210" r="58"/><rect x="110" y="24" width="180" height="70"/><rect x="160" y="24" width="80" height="26"/><rect x="110" y="326" width="180" height="70"/><path d="M160 94a46 46 0 0 0 80 0M160 326a46 46 0 0 1 80 0"/></g>
+            <g class="plays" fill="none" stroke="#ffcf3f" stroke-width="3.5" stroke-dasharray="9 8" stroke-linecap="round" marker-end="url(#arr)">
+              <path d="M110 330 Q 90 250 140 220"/><path d="M150 210 Q 230 200 270 160"/><path d="M280 150 Q 300 110 230 70"/>
+            </g>
+            <g class="pl home"><circle cx="110" cy="340" r="14"/><circle cx="140" cy="215" r="14"/><circle cx="280" cy="150" r="14"/><circle cx="300" cy="300" r="14"/><circle cx="200" cy="270" r="14"/></g>
+            <g class="pl away"><circle cx="200" cy="120" r="13"/><circle cx="120" cy="140" r="13"/><circle cx="270" cy="230" r="13"/></g>
+            <circle class="tball" cx="0" cy="0" r="8" fill="#fff" stroke="#111" stroke-width="2"/>
+          </svg>
+        </div>
+        <img src="img/team.jpg" alt="שחקני מכבי אורנית באימון" onerror="this.remove()" />
+        <div class="cap"><small>תוכנית אימון</small>מגרש · אימון · משחק</div>
+      </div>
+      <div class="tile b">
+        <div class="art art-b" aria-hidden="true">
+          <img class="crest-wm" src="https://squadio.techbynoam.com/api/macabioranit/icon/512" alt="" onerror="this.remove()" />
+          <div class="bnum"><b>6</b><span>קבוצות<br/>מהגן ועד ילדים ג׳</span></div>
+          <div class="stripes"></div>
+        </div>
+        <img src="img/kids.jpg" alt="ילדי המחלקה עם הכדור" onerror="this.remove()" />
+      </div>
+      <div class="sticker">מגיל<br/>הגן ⚽</div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAMS -->
+<section class="teams grain" id="teams">
+  <div class="wrap">
+    <div class="head reveal">
+      <div>
+        <div class="kicker" style="color:var(--gold)">קבוצות וגילאים</div>
+        <h2>מצאו את<br/>הקבוצה שלכם</h2>
+      </div>
+      <p>לחצו על קבוצה כדי לראות את המאמן, ימי ושעות האימון והמגרש — ולהירשם בלחיצה. שיבוץ סופי לפי שנתון ייעשה מול מזכירות המועדון.</p>
+    </div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <p class="cat-blurb" id="catBlurb"></p>
+    <div class="cards" id="cards"></div>
+  </div>
+</section>
+
+<!-- VENUES -->
+<section class="venues" id="venues">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="kicker">מיקום אימונים</div>
+      <h2>איפה מתאמנים</h2>
+    </div>
+    <div class="grid" id="venueGrid"></div>
+  </div>
+</section>
+
+<!-- SQUADIO -->
+<section class="squadio" id="app">
+  <div class="wrap grid">
+    <div class="reveal">
+      <div class="kicker">חדש במועדון · SQUADIO</div>
+      <h2>הלו״ז בכיס.<br/><em>עדכונים בלייב.</em></h2>
+      <p>מכבי אורנית עובדת עם <b>Squadio</b> — מערכת חדשה לניהול אימונים. אין יותר "באיזה מגרש היום?" ואין הודעות שהולכות לאיבוד בקבוצות הוואטסאפ: כל הורה רואה את לוח האימונים של הקבוצה שלו, ומקבל התראה לטלפון ברגע שמשהו משתנה.</p>
+      <div class="feat">
+        <div><b>🔔 התראות בזמן אמת</b><span>אימון בוטל, הוזז או עבר מגרש? יודעים מיד.</span></div>
+        <div><b>📅 לו״ז שבועי חי</b><span>תמיד מעודכן — ישירות מהמזכירות.</span></div>
+        <div><b>📍 ניווט למגרש</b><span>כתובת וכפתור Waze לכל אימון.</span></div>
+        <div><b>🗓️ סנכרון ליומן</b><span>מוסיפים את האימונים ליומן בטלפון.</span></div>
+      </div>
+      <div class="store">
+        <a href="https://play.google.com/store/apps/details?id=com.squadio.app" target="_blank" rel="noopener">▶ Google Play</a>
+        <a href="https://squadio.techbynoam.com/macabioranit" target="_blank" rel="noopener">🌐 פתיחה בדפדפן / iPhone</a>
+      </div>
+      <p style="font-size:.85rem;color:#8b96b0;margin-top:1rem">קישור הצטרפות אישי לקבוצה נשלח לכל הורה לאחר ההרשמה.</p>
+    </div>
+    <div class="reveal" style="position:relative">
+      <div class="phone" aria-label="הדגמה של אפליקציית Squadio" role="img">
+        <div class="notif" id="notif"><img src="https://squadio.techbynoam.com/api/macabioranit/icon/192" alt="" /><div><b>מכבי אורנית · עכשיו</b><span id="notifTxt">אימון טרום א׳ היום עבר למיניפיץ גוונים 18:30</span></div></div>
+        <div class="screen">
+          <div class="top"><b>טרום א׳ · השבוע</b><img src="https://squadio.techbynoam.com/api/macabioranit/icon/192" alt="" /></div>
+          <div class="sess"><small>ראשון</small><b class="t">15:00–16:30</b><em>אמפי שערי תקווה</em></div>
+          <div class="sess"><small>שלישי</small><b class="t">16:30–18:00</b><em>אמפי שערי תקווה</em></div>
+          <div class="sess" id="demoSess"><small>חמישי · היום</small><b><span class="old t" id="oldTxt"></span> <span class="t" id="newTxt">18:00–19:30</span></b><em id="demoPlace">אמפי שערי תקווה</em></div>
+        </div>
+      </div>
+      <div class="float-chip c1">🔔 עודכן לפני דקה</div>
+      <div class="float-chip c2">✅ כל הקבוצות מחוברות</div>
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section class="steps">
+  <div class="wrap">
+    <div class="reveal"><div class="kicker">איך נרשמים</div><h2>ארבעה צעדים<br/>למגרש</h2></div>
+    <ol class="reveal">
+      <li><b>ממלאים טופס</b><span>פרטי הילד/ה וההורה — פחות מדקה.</span></li>
+      <li><b>המזכירות חוזרת אליכם</b><span>שיחה קצרה, התאמת קבוצה לפי גיל ורמה.</span></li>
+      <li><b>אימון ניסיון</b><span>באים להתרשם, להכיר את המאמן והחברים.</span></li>
+      <li><b>מצטרפים ל‑Squadio</b><span>מקבלים לינק לקבוצה — והלו״ז אצלכם בטלפון.</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="wrap" style="max-width:860px">
+    <div class="reveal"><div class="kicker">שאלות נפוצות</div><h2>שאלתם?</h2></div>
+    <div class="reveal" style="margin-top:2rem">
+      <details><summary>מאיזה גיל אפשר להצטרף?</summary><p>יש לנו קבוצות מגיל הגן (בית הספר לכדורגל) ועד ילדים ג׳ (בערך כיתה ה׳). בטופס בחרו את הקבוצה המתאימה — ואם אתם לא בטוחים, השאירו "עזרו לי לבחור" והמזכירות תתאים.</p></details>
+      <details><summary>אפשר לבוא לאימון ניסיון?</summary><p>בהחלט. אחרי ההרשמה המזכירות תתאם איתכם אימון ניסיון בקבוצה המתאימה.</p></details>
+      <details><summary>הילד/ה מעולם לא שיחק/ה. זה בסדר?</summary><p>בטח. בקבוצות הצעירות ובקבוצות בית הספר לכדורגל מתחילים מהבסיס, באווירה כיפית ותומכת.</p></details>
+      <details><summary>איך יודעים אם אימון בוטל או הוזז?</summary><p>דרך אפליקציית Squadio — התראה נשלחת לטלפון ברגע שיש שינוי, ולוח האימונים תמיד מעודכן.</p></details>
+      <details><summary>מה צריך להביא לאימון?</summary><p>נעלי כדורגל (או נעלי ספורט לקטנים), מגיני שוקיים, בקבוק מים ובגדי ספורט. פרטים על ערכת המועדון יימסרו בהרשמה.</p></details>
+      <details><summary>האם נדרש אישור רפואי?</summary><p>כן. לפי חוק הספורט נדרשת הצהרת בריאות / אישור רפואי בתוקף לפי הגיל. המזכירות תשלח את הטפסים הנדרשים.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- SIGNUP -->
+<section class="signup" id="signup">
+  <div class="big-bg" aria-hidden="true">מכבי</div>
+  <div class="wrap grid">
+    <div class="reveal">
+      <div class="kicker" style="color:#fff">הרשמה לעונת 2026/27</div>
+      <h2>בואו לשחק<br/>איתנו.</h2>
+      <p class="lead">השאירו פרטים ומזכירות המועדון תחזור אליכם בהקדם להשלמת ההרשמה ותיאום אימון ניסיון.</p>
+      <ul class="checks">
+        <li>ללא התחייבות — רק השארת פרטים</li>
+        <li>התאמת קבוצה לפי גיל ורמה</li>
+        <li>אימון ניסיון לפני הצטרפות</li>
+        <li>הלו״ז וההתראות באפליקציה</li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <form class="f" id="form" novalidate>
+        <label class="full"><span class="req">קבוצה מבוקשת</span>
+          <select name="team" id="teamSel" required><option value="">בחרו קבוצה…</option></select>
+        </label>
+        <label><span class="req">שם הילד/ה</span><input name="childName" required autocomplete="off" maxlength="80" /></label>
+        <label><span>שנת לידה</span><input name="birthYear" inputmode="numeric" maxlength="4" placeholder="לדוגמה 2016" /></label>
+        <label><span class="req">שם ההורה</span><input name="parentName" required autocomplete="name" maxlength="80" /></label>
+        <label><span class="req">טלפון נייד</span><input name="phone" type="tel" required autocomplete="tel" inputmode="tel" placeholder="05X-XXXXXXX" maxlength="15" /></label>
+        <label class="full"><span>אימייל</span><input name="email" type="email" autocomplete="email" maxlength="120" /></label>
+        <label class="full"><span>הערות (ניסיון קודם, חברים בקבוצה…)</span><textarea name="notes" rows="2" maxlength="600"></textarea></label>
+        <div class="hp" aria-hidden="true"><label>אתר<input name="website" tabindex="-1" autocomplete="off" /></label></div>
+        <label class="chk full"><input type="checkbox" name="consent" required /><span>אני ההורה / האפוטרופוס, ומאשר/ת שהפרטים יישמרו וישמשו את המועדון ליצירת קשר והרשמה, בהתאם ל<button type="button" class="lnk" data-open="privacy" style="background:none;border:0;padding:0;font:inherit;color:var(--red);font-weight:700;cursor:pointer;text-decoration:underline">מדיניות הפרטיות</button>. <span style="color:var(--red)">*</span></span></label>
+        <label class="chk full"><input type="checkbox" name="marketing" /><span>אשמח לקבל עדכונים על אירועים, קייטנות ופעילויות המועדון (לא חובה; ניתן להסיר בכל עת).</span></label>
+        <div class="full msg" id="msg" role="status" aria-live="polite"></div>
+        <button class="btn btn-red full" type="submit" id="submitBtn">שליחת הרשמה ←</button>
+        <p class="note full">השדות המסומנים ב‑* הם חובה. מסירת המידע אינה חובה על פי חוק, אך בלעדיו לא נוכל לטפל בהרשמה.</p>
+      </form>
+      <div class="f done" id="done" style="display:none">
+        <div class="tick">✓</div>
+        <h3>קיבלנו! 🎉</h3>
+        <p>תודה <b id="doneName"></b>. מזכירות מכבי אורנית תחזור אליכם בהקדם.</p>
+        <p style="color:var(--muted);font-size:.9rem">בינתיים — <a href="#app">הכירו את Squadio</a>, האפליקציה שבה תקבלו את הלו״ז.</p>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="grid">
+      <div>
+        <a class="brand" href="#top" style="color:#fff;margin-bottom:.8rem"><img src="https://squadio.techbynoam.com/api/macabioranit/icon/192" alt="" width="44" height="44" /><b>מכבי אורנית</b></a>
+        <p style="max-width:22rem">מועדון הכדורגל של אורנית</p>
+      </div>
+      <div>
+        <h4>ניווט</h4>
+        <ul><li><a href="#teams">קבוצות וגילאים</a></li><li><a href="#venues">מגרשים</a></li><li><a href="#signup">הרשמה</a></li><li><a href="https://squadio.techbynoam.com/macabioranit">לו״ז אימונים</a></li></ul>
+      </div>
+      <div>
+        <h4>מידע משפטי</h4>
+        <ul>
+          <li><button class="lnk" data-open="privacy">מדיניות פרטיות</button></li>
+          <li><button class="lnk" data-open="terms">תנאי שימוש</button></li>
+          <li><button class="lnk" data-open="access">הצהרת נגישות</button></li>
+          <li><button class="lnk" data-open="cookies">מדיניות עוגיות</button></li>
+        </ul>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>© <span id="yr"></span> מכבי אורנית. כל הזכויות שמורות.</span>
+      <span>מערכת ניהול האימונים: <a href="https://squadio.techbynoam.com/sales-landing" target="_blank" rel="noopener">Squadio</a></span>
+    </div>
+  </div>
+</footer>
+
+<!-- TEAM DIALOG -->
+<dialog id="teamDlg" aria-labelledby="tdName">
+  <div class="dlg-head"><button class="x" data-close aria-label="סגירה">✕</button><div class="age" id="tdAge"></div><h3 id="tdName"></h3></div>
+  <div class="dlg-body">
+    <div class="coach-row"><div class="av" id="tdAv"></div><div><small style="color:var(--muted)">מאמן/ת</small><div style="font-weight:700;font-size:1.15rem" id="tdCoach"></div></div></div>
+    <div id="tdSlots"></div>
+    <p style="font-size:.85rem;color:var(--muted);margin:1rem 0 1.2rem">* ימי ושעות האימון נכונים לתחילת העונה ועשויים להשתנות. הלו״ז המעודכן תמיד באפליקציית Squadio.</p>
+    <button class="btn btn-red" id="tdReg" style="width:100%;justify-content:center">הרשמה לקבוצה הזו ←</button>
+  </div>
+</dialog>
+
+<!-- LEGAL DIALOGS -->
+<dialog id="dlg-privacy" class="legal" aria-labelledby="pvT">
+  <div class="dlg-head"><button class="x" data-close aria-label="סגירה">✕</button><h3 id="pvT">מדיניות פרטיות</h3><div class="age">עודכן: אוקטובר 2026</div></div>
+  <div class="dlg-body">
+    <p>מכבי אורנית (להלן: "המועדון") מכבד את פרטיותכם ופרטיות ילדיכם. מדיניות זו מסבירה איזה מידע נאסף באתר, למה, וכיצד ניתן לממש את זכויותיכם — בהתאם לחוק הגנת הפרטיות, התשמ"א‑1981 (לרבות תיקון 13), תקנות הגנת הפרטיות (אבטחת מידע), התשע"ז‑2017, וסעיף 30א לחוק התקשורת (בזק ושידורים).</p>
+    <h4>1. מי אחראי על המידע</h4>
+    <p>בעל השליטה במאגר הוא המועדון. לפניות בנושא פרטיות: <span class="contact-email">דרך מזכירות המועדון</span>. המידע מאוחסן ומעובד עבור המועדון על ידי Squadio (מערכת ניהול האימונים) כ"מחזיק" מטעמו.</p>
+    <h4>2. איזה מידע נאסף</h4>
+    <ul><li>בטופס ההרשמה: שם הילד/ה, שנת לידה, הקבוצה המבוקשת, שם ההורה, טלפון, אימייל (רשות) והערות שתבחרו לכתוב.</li><li>מידע טכני בסיסי: כתובת IP ותאריך השליחה — לצורכי אבטחה ומניעת שימוש לרעה בלבד.</li></ul>
+    <p>אנו מבקשים לא לכלול בטופס מידע רגיש (למשל מידע רפואי). מידע כזה, ככל שיידרש לפי חוק הספורט, ייאסף בנפרד ובאופן מאובטח מול המזכירות.</p>
+    <h4>3. מטרות השימוש</h4>
+    <ul><li>יצירת קשר עמכם לצורך השלמת ההרשמה, שיבוץ לקבוצה ותיאום אימון ניסיון.</li><li>לאחר הצטרפות — ניהול הפעילות, לוח האימונים והודעות תפעוליות דרך אפליקציית Squadio.</li><li>דיוור על אירועים ופעילויות — <b>רק</b> אם סימנתם הסכמה נפרדת לכך. ניתן לבטל בכל עת.</li></ul>
+    <h4>4. מסירת מידע לצדדים שלישיים</h4>
+    <p>המידע לא יימכר ולא יועבר לצד שלישי לשימושו העצמאי. המידע נגיש רק לבעלי תפקידים במועדון (מזכירות, הנהלה מקצועית ומאמן הקבוצה) ולספקי שירות טכנולוגיים הפועלים מטעמנו (אחסון ענן, שליחת אימייל) במסגרת התחייבויות סודיות ואבטחה. ייתכן שהמידע יאוחסן בשרתים מחוץ לישראל, בכפוף לתקנות העברת מידע אל מאגרי מידע שמחוץ לגבולות המדינה.</p>
+    <h4>5. מידע על קטינים</h4>
+    <p>הטופס מיועד למילוי על ידי הורה או אפוטרופוס בלבד. איננו אוספים ביודעין מידע ישירות מקטינים ללא הסכמת הורה.</p>
+    <h4>6. אבטחת מידע</h4>
+    <p>אנו נוקטים אמצעים סבירים ומקובלים לאבטחת המידע, ובהם הצפנת תעבורה (HTTPS), הגבלת הרשאות גישה לבעלי תפקידים בלבד ומנגנוני הגנה מפני שימוש לרעה. עם זאת, אין אבטחה מוחלטת.</p>
+    <h4>7. שמירת מידע</h4>
+    <p>פרטי פנייה שלא הבשילה להרשמה יימחקו לא יאוחר מ‑12 חודשים ממועד השליחה. מידע על שחקנים רשומים נשמר כל עוד הם פעילים במועדון ולמשך הזמן הנדרש על פי דין.</p>
+    <h4>8. הזכויות שלכם</h4>
+    <ul><li><b>זכות עיון</b> במידע (סעיף 13 לחוק).</li><li><b>זכות תיקון או מחיקה</b> של מידע שאינו נכון, שלם, ברור או מעודכן (סעיף 14).</li><li><b>הסרה מדיוור</b> בכל עת, ללא עלות.</li></ul>
+    <p>לממוש הזכויות פנו למזכירות המועדון; נשיב תוך 30 יום. אם לא נענתם — באפשרותכם לפנות לרשות להגנת הפרטיות.</p>
+    <h4>9. עוגיות ואחסון בדפדפן</h4>
+    <p>האתר אינו משתמש בעוגיות פרסום או במעקב צד שלישי. נשמרות רק העדפות מקומיות (תצוגת נגישות, סגירת הודעת העוגיות) בדפדפן שלכם. הגופנים נטענים מ‑Google Fonts, מה שחושף בפני Google את כתובת ה‑IP שלכם.</p>
+    <h4>10. שינויים</h4>
+    <p>נעדכן מדיניות זו מעת לעת; תאריך העדכון יופיע בראשה.</p>
+  </div>
+</dialog>
+<dialog id="dlg-terms" class="legal" aria-labelledby="tmT">
+  <div class="dlg-head"><button class="x" data-close aria-label="סגירה">✕</button><h3 id="tmT">תנאי שימוש</h3></div>
+  <div class="dlg-body">
+    <p>השימוש באתר כפוף לתנאים אלה. האתר נועד להצגת מידע על המועדון ולהשארת פרטים לצורך הרשמה.</p>
+    <h4>מידע באתר</h4><p>המידע (קבוצות, מאמנים, ימי ושעות אימון ומגרשים) מוצג לנוחות ואינו מחייב; הוא עשוי להשתנות במהלך העונה. הלו״ז המחייב הוא זה המפורסם באפליקציית Squadio.</p>
+    <h4>הרשמה</h4><p>השארת פרטים אינה מהווה הרשמה סופית או התחייבות מצד המועדון או ההורה. ההרשמה מושלמת מול המזכירות, לרבות חתימה על טפסים, הצגת אישור רפואי כנדרש בחוק הספורט, התשמ"ח‑1988, והסדרת דמי השתתפות.</p>
+    <h4>קניין רוחני</h4><p>סמל המועדון, התכנים והעיצוב שייכים למועדון או לבעלי הזכויות בהם. אין להעתיק ללא אישור.</p>
+    <h4>אחריות</h4><p>המועדון עושה מאמץ שהמידע יהיה מדויק, אך אינו אחראי לטעויות או לשינויים שלא עודכנו.</p>
+    <h4>דין וסמכות</h4><p>על תנאים אלה יחול הדין הישראלי.</p>
+  </div>
+</dialog>
+<dialog id="dlg-access" class="legal" aria-labelledby="acT">
+  <div class="dlg-head"><button class="x" data-close aria-label="סגירה">✕</button><h3 id="acT">הצהרת נגישות</h3></div>
+  <div class="dlg-body">
+    <p>המועדון רואה חשיבות במתן שירות שוויוני ונגיש לכל אדם, בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ"ח‑1998 ולתקנות הנגישות לשירות (התשע"ג‑2013).</p>
+    <h4>הנגשת האתר</h4>
+    <ul><li>האתר נבנה בשאיפה לעמוד בתקן הישראלי ת"י 5568 ברמה AA (מבוסס WCAG 2.0).</li><li>ניווט מלא במקלדת, קישור "דלג לתוכן", תיאורים חלופיים לתמונות ותוויות לשדות הטופס.</li><li>כפתור נגישות (בפינת המסך): הגדלת טקסט, ניגודיות גבוהה ועצירת אנימציות. האתר מכבד גם את הגדרת "הפחתת תנועה" של המכשיר.</li><li>התאמה מלאה לטלפונים ולהגדלת תצוגה בדפדפן.</li></ul>
+    <h4>נתקלתם בבעיה?</h4>
+    <p>אם נתקלתם ברכיב שאינו נגיש — נשמח לשמוע ולתקן. פנו לרכז/ת הנגישות דרך מזכירות המועדון, ותארו את הבעיה והעמוד שבו נתקלתם בה.</p>
+    <h4>נגישות המגרשים</h4>
+    <p>למידע על נגישות פיזית במתחמי האימון (חניה, שירותים, גישה ליציע) פנו למזכירות.</p>
+    <p style="color:var(--muted)">תאריך עדכון ההצהרה: אוקטובר 2026.</p>
+  </div>
+</dialog>
+<dialog id="dlg-cookies" class="legal" aria-labelledby="ckT">
+  <div class="dlg-head"><button class="x" data-close aria-label="סגירה">✕</button><h3 id="ckT">עוגיות</h3></div>
+  <div class="dlg-body">
+    <p>האתר <b>אינו</b> משתמש בעוגיות פרסום, פיקסלים של רשתות חברתיות או כלי מעקב של צד שלישי.</p>
+    <p>אנו שומרים בדפדפן שלכם (Local Storage) רק העדפות תפעוליות: הגדרות הנגישות שבחרתם וסימון שראיתם הודעה זו. ניתן למחוק אותן בכל עת דרך הגדרות הדפדפן.</p>
+    <p>גופני האתר נטענים מ‑Google Fonts; לצורך כך הדפדפן פונה לשרתי Google.</p>
+  </div>
+</dialog>
+
+<!-- A11Y + COOKIE + STICKY -->
+<button class="a11y-btn" id="a11yBtn" aria-expanded="false" aria-controls="a11yPanel" aria-label="תפריט נגישות">♿</button>
+<div class="a11y-panel" id="a11yPanel" role="group" aria-label="הגדרות נגישות">
+  <button data-a11y="big" aria-pressed="false">🔠 הגדלת טקסט</button>
+  <button data-a11y="hc" aria-pressed="false">◐ ניגודיות גבוהה</button>
+  <button data-a11y="still" aria-pressed="false">⏸ עצירת אנימציות</button>
+  <button data-open="access">📄 הצהרת נגישות</button>
+</div>
+<div class="cookie" id="cookie" role="region" aria-label="הודעת עוגיות">
+  <span>אנחנו לא משתמשים בעוגיות מעקב — רק בהעדפות מקומיות לנוחותכם. <button class="lnk" data-open="cookies" style="background:none;border:0;color:#fff;text-decoration:underline;cursor:pointer;font:inherit;padding:0">פרטים</button></span>
+  <button class="btn btn-red" id="cookieOk">הבנתי</button>
+</div>
+<a class="btn btn-red sticky-cta" id="sticky" href="#signup">להרשמה ←</a>
+
+<script>
+(() => {
+const CLUB = 'macabioranit';
+const DAYS = ['א','ב','ג','ד','ה','ו','ש'];
+const DAY_FULL = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+// Venues — hall names as they appear in the Squadio schedule.
+const VENUES = {
+  amfi:   { name:'אמפי שערי תקווה', addr:'', q:'אמפי שערי תקווה', tags:['קבוצות הטרום'], desc:'מגרש האימונים של קבוצות הטרום בשערי תקווה.' },
+  gvanim: { name:'מיניפיץ גוונים', addr:'', q:'מיניפיץ גוונים', tags:['מיניפיץ'], desc:'מגרש מיניפיץ לאימוני הקבוצות הצעירות.' },
+  field:  { name:'מגרש הכדורגל אורנית', addr:'מבוא אורנית 2, אורנית', tags:['המגרש של המועדון'], desc:'מגרש הכדורגל של אורנית.' },
+};
+const HALL = {
+  'אמפי שערי תקווה':['amfi','אמפי שערי תקווה'], 'מיניפיץ גוונים':['gvanim','מיניפיץ גוונים'], 'מגרש כדורגל אורנית':['field','מגרש הכדורגל אורנית'],
+};
+
+const CATS = [
+  { id:'school', name:'בית ספר לכדורגל', blurb:'הכרות ראשונה עם הכדור — משחק, תנועה וכיף. מתאים גם למי שמעולם לא שיחק.' },
+  { id:'kids',   name:'מחלקת ילדים', blurb:'קבוצות הטרום והילדים — אימון מקצועי מדורג ומשחקי ליגה.' },
+];
+
+// Teams — from the live Squadio board (week of 27.9.2026). Ages are approximate; placement by birth year with the secretary.
+// slot: [dayIndex, start, end, hall]
+const TEAMS = [
+  ['school','ביה"ס לכדורגל','גיל הגן – כיתה א׳','גילי נוי',[]],
+  ['kids','טרום ג','כיתה ב׳','טל ינובסקי',[[0,'16:30','18:00','מיניפיץ גוונים'],[2,'18:15','19:45','מיניפיץ גוונים']]],
+  ['kids','טרום ב צפון','כיתה ג׳','אורי סלם',[[0,'18:00','19:30','אמפי שערי תקווה'],[2,'10:00','11:30','מיניפיץ גוונים'],[4,'10:00','11:30','מיניפיץ גוונים']]],
+  ['kids','טרום ב דרום','כיתה ג׳','אורי סלם',[[0,'18:00','19:30','אמפי שערי תקווה'],[2,'10:00','11:30','מיניפיץ גוונים'],[4,'10:00','11:30','מיניפיץ גוונים']]],
+  ['kids','טרום א','כיתה ד׳','טל ינובסקי',[[0,'15:00','16:30','אמפי שערי תקווה'],[2,'16:30','18:00','אמפי שערי תקווה'],[4,'18:00','19:30','אמפי שערי תקווה']]],
+  ['kids','ילדים ג','כיתה ה׳','נאור פסר',[[2,'09:30','11:00','מיניפיץ גוונים'],[4,'09:30','11:00','מיניפיץ גוונים']]],
+].map(([cat,name,age,coach,slots]) => ({cat,name,age,coach,slots}));
+
+const $ = (s, r=document) => r.querySelector(s);
+const el = (tag, attrs={}, html='') => { const e = document.createElement(tag); Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k,v)); if (html) e.innerHTML = html; return e; };
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store = { get(k){ try { return localStorage.getItem(k); } catch { return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch {} } };
+
+// hero photo (optional real photo dropped at img/hero.jpg)
+const hp = new Image(); hp.onload = () => { const h = $('#heroPhoto'); h.style.backgroundImage = 'url(img/hero.jpg)'; h.classList.add('ok'); }; hp.src = 'img/hero.jpg';
+
+// ticker
+const names = TEAMS.map(t => t.name); const tk = $('#ticker');
+tk.innerHTML = [...names, ...names].map(n => `<span>${esc(n)}</span>`).join('');
+
+// nav state + sticky CTA
+const nav = $('#nav'), sticky = $('#sticky');
+const onScroll = () => { const y = scrollY; nav.classList.toggle('solid', y > 40); const sg = $('#signup').getBoundingClientRect(); sticky.classList.toggle('show', y > 600 && (sg.top > innerHeight || sg.bottom < 0)); };
+addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+// reveal + counters
+const io = new IntersectionObserver((es) => es.forEach(e => {
+  if (!e.isIntersecting) return; e.target.classList.add('in'); io.unobserve(e.target);
+  e.target.querySelectorAll('[data-count]').forEach(b => {
+    const to = +b.dataset.count, suf = b.dataset.suffix || '', t0 = performance.now(), dur = 1400;
+    const step = (t) => { const p = Math.min(1, (t - t0) / dur); b.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))) + (p === 1 ? suf : ''); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}), {threshold:.15});
+document.querySelectorAll('.reveal').forEach(n => io.observe(n));
+
+// tabs + cards
+const tabs = $('#tabs'), cards = $('#cards');
+let cur = 'kids';
+CATS.forEach(c => {
+  const n = TEAMS.filter(t => t.cat === c.id).length;
+  const b = el('button', {class:'tab', role:'tab', 'aria-selected': String(c.id===cur), 'data-cat': c.id}, `${esc(c.name)} <small style="opacity:.6">${n}</small>`);
+  b.onclick = () => { cur = c.id; tabs.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x.dataset.cat === cur))); renderCards(); };
+  tabs.append(b);
+});
+function renderCards() {
+  const c = CATS.find(x => x.id === cur); $('#catBlurb').textContent = c.blurb;
+  cards.innerHTML = '';
+  TEAMS.filter(t => t.cat === cur).forEach((t, i) => {
+    const on = new Set(t.slots.map(s => s[0]));
+    const b = el('button', {class:'card in', style:`animation-delay:${i*45}ms`, 'aria-label':`${t.name} — פרטים והרשמה`});
+    b.innerHTML = `<span class="age">${esc(t.age)}</span><h3>${esc(t.name)}</h3><span class="coach">${t.coach ? '🧢 ' + esc(t.coach) : '🧢 צוות המחלקה'}</span>
+      <div class="days" aria-label="ימי אימון">${DAYS.slice(0,6).map((d,k) => `<i class="${on.has(k)?'on':''}">${d}</i>`).join('')}</div>
+      <span class="more">${t.slots.length ? t.slots.length + ' אימונים בשבוע' : 'ימי אימון — בקרוב'} · פרטים והרשמה</span>`;
+    b.onclick = () => openTeam(t);
+    cards.append(b);
+  });
+}
+renderCards();
+
+// team dialog
+const tdlg = $('#teamDlg'); let curTeam = null;
+function openTeam(t) {
+  curTeam = t;
+  $('#tdName').textContent = t.name; $('#tdAge').textContent = t.age + ' · ' + CATS.find(c => c.id === t.cat).name;
+  $('#tdCoach').textContent = t.coach || 'צוות המחלקה המקצועית'; $('#tdAv').textContent = (t.coach || 'ה')[0];
+  $('#tdSlots').innerHTML = !t.slots.length ? '<p style="color:var(--muted)">ימי ושעות האימון יפורסמו בקרוב — המזכירות תעדכן אתכם בהרשמה.</p>' : t.slots.slice().sort((a,b) => a[0]-b[0] || a[1].localeCompare(b[1])).map(([d,s,e,h]) => {
+    const [vk, label] = HALL[h] || ['amfi', h]; const v = VENUES[vk];
+    return `<div class="slot"><span class="d">${DAY_FULL[d]}</span><div><b class="t">${s}–${e}</b><small>${esc(label)}</small></div><a href="https://waze.com/ul?q=${encodeURIComponent(v.q || v.addr)}&navigate=yes" target="_blank" rel="noopener">ניווט ↗</a></div>`;
+  }).join('');
+  tdlg.showModal();
+}
+$('#tdReg').onclick = () => { tdlg.close(); pickTeam(curTeam.name); };
+
+// venues
+$('#venueGrid').innerHTML = Object.values(VENUES).map((v, i) => {
+  const cnt = TEAMS.filter(t => t.slots.some(s => VENUES[(HALL[s[3]]||['amfi'])[0]] === v)).length;
+  return `<article class="venue reveal" style="transition-delay:${i*100}ms">
+    <div class="map" aria-hidden="true"><svg viewBox="0 0 300 170" preserveAspectRatio="xMidYMid slice"><rect width="300" height="170" fill="#1f7a3f"/><g fill="#24894a"><rect x="0" width="40" height="170"/><rect x="80" width="40" height="170"/><rect x="160" width="40" height="170"/><rect x="240" width="40" height="170"/></g><g fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2.5"><rect x="20" y="15" width="260" height="140"/><path d="M150 15v140"/><circle cx="150" cy="85" r="26"/><rect x="20" y="50" width="34" height="70"/><rect x="246" y="50" width="34" height="70"/></g></svg><span class="pin"></span></div>
+    <div class="body"><h3>${esc(v.name)}</h3><p>📍 ${esc(v.addr || 'כתובת מדויקת תימסר בהרשמה')}</p><p>${esc(v.desc)}</p>
+      <div class="tags">${v.tags.map(x => `<span>${esc(x)}</span>`).join('')}${cnt ? `<span>${cnt} קבוצות</span>` : ''}</div>
+      <a class="btn" href="https://waze.com/ul?q=${encodeURIComponent(v.q || v.addr)}&navigate=yes" target="_blank" rel="noopener">ניווט ב‑Waze ↗</a></div></article>`;
+}).join('');
+document.querySelectorAll('#venueGrid .reveal').forEach(n => io.observe(n));
+
+// squadio phone demo loop
+const notif = $('#notif'), demo = $('#demoSess'), oldT = $('#oldTxt'), newT = $('#newTxt'), place = $('#demoPlace');
+const SCRIPT = [
+  ['אימון טרום א׳ היום הוזז לשעה 18:30, מיניפיץ גוונים', '18:30–20:00', 'מיניפיץ גוונים'],
+  ['האימון של היום בוטל בגלל מזג האוויר 🌧️', 'בוטל', 'אמפי שערי תקווה'],
+];
+let si = 0;
+function loop() {
+  const [msg, newv, newPlace] = SCRIPT[si++ % SCRIPT.length];
+  demo.classList.remove('changed'); oldT.textContent = ''; newT.textContent = '18:00–19:30'; place.textContent = 'אמפי שערי תקווה'; notif.classList.remove('show');
+  setTimeout(() => { $('#notifTxt').textContent = msg; notif.classList.add('show'); }, 1200);
+  setTimeout(() => { demo.classList.add('changed'); oldT.textContent = '18:00–19:30'; newT.textContent = newv; place.textContent = newPlace; }, 2000);
+  setTimeout(() => notif.classList.remove('show'), 4800);
+}
+loop(); setInterval(loop, 7000);
+
+// form
+const sel = $('#teamSel');
+CATS.forEach(c => { const g = el('optgroup', {label:c.name}); TEAMS.filter(t => t.cat === c.id).forEach(t => g.append(new Option(`${t.name} (${t.age})`, t.name))); sel.append(g); });
+sel.append(new Option('לא בטוחים — עזרו לי לבחור', 'עזרו לי לבחור'));
+function pickTeam(name) { sel.value = name; $('#signup').scrollIntoView({behavior:'smooth'}); setTimeout(() => $('[name=childName]').focus({preventScroll:true}), 700); }
+
+const form = $('#form'), msg = $('#msg'), btn = $('#submitBtn');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault(); msg.className = 'full msg'; msg.textContent = '';
+  const d = Object.fromEntries(new FormData(form)); d.consent = form.consent.checked; d.marketing = form.marketing.checked;
+  const phone = (d.phone || '').replace(/[^\d+]/g, '');
+  const err = !d.team ? 'בחרו קבוצה' : !d.childName?.trim() ? 'מלאו את שם הילד/ה' : !d.parentName?.trim() ? 'מלאו את שם ההורה'
+    : !/^(\+972|0)\d{8,9}$/.test(phone) ? 'מספר הטלפון לא תקין' : (d.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) ? 'כתובת האימייל לא תקינה'
+    : !d.consent ? 'יש לאשר את מדיניות הפרטיות' : '';
+  if (err) { msg.classList.add('err'); msg.textContent = '⚠ ' + err; return; }
+  btn.disabled = true; btn.textContent = 'שולח…';
+  try {
+    const r = await fetch(`https://squadio.techbynoam.com/api/${CLUB}/signups`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(d)});
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error) throw new Error(j.error || 'שגיאה בשליחה');
+    $('#doneName').textContent = d.parentName; form.style.display = 'none'; $('#done').style.display = 'block';
+  } catch (ex) {
+    msg.classList.add('err'); msg.textContent = '⚠ ' + (ex.message || 'שגיאת תקשורת, נסו שוב');
+  } finally { btn.disabled = false; btn.textContent = 'שליחת הרשמה ←'; }
+});
+
+// dialogs
+document.addEventListener('click', (e) => {
+  const o = e.target.closest('[data-open]'); if (o) { e.preventDefault(); $('#dlg-' + o.dataset.open).showModal(); }
+  const c = e.target.closest('[data-close]'); if (c) c.closest('dialog').close();
+});
+document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+
+// a11y panel
+const ab = $('#a11yBtn'), ap = $('#a11yPanel');
+ab.onclick = () => { const o = ap.classList.toggle('open'); ab.setAttribute('aria-expanded', String(o)); };
+ap.querySelectorAll('[data-a11y]').forEach(b => {
+  const k = b.dataset.a11y; if (store.get('a11y-' + k) === '1') { document.body.classList.add(k); b.setAttribute('aria-pressed','true'); }
+  b.onclick = () => { const on = document.body.classList.toggle(k); b.setAttribute('aria-pressed', String(on)); store.set('a11y-' + k, on ? '1' : '0'); };
+});
+
+// cookie notice
+if (store.get('cookie-ok') !== '1') $('#cookie').classList.add('show');
+$('#cookieOk').onclick = () => { store.set('cookie-ok','1'); $('#cookie').classList.remove('show'); };
+
+$('#yr').textContent = new Date().getFullYear();
+})();
+</script>
+</body>
+</html>

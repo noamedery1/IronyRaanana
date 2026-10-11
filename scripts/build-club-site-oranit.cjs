@@ -14,13 +14,18 @@ R('<title>הפועל רעננה — מחלקת הנוער והילדים | הר�
 RX(/<meta name="description" content="[^"]*" \/>/, '<meta name="description" content="מכבי אורנית כדורגל — 6 קבוצות מהגן ועד מחלקת הילדים, מאמנים מקצועיים ואפליקציית Squadio להורים. הרשמה לעונה." />');
 RX(/<meta property="og:description" content="[^"]*" \/>/, '<meta property="og:description" content="6 קבוצות, 4 מאמנים, לו״ז חי באפליקציה. הרשמה לעונת 2026/27." />');
 R('<meta property="og:title" content="הפועל רעננה — בואו לשחק איתנו" />', '<meta property="og:title" content="מכבי אורנית — בואו לשחק איתנו" />');
-R("HAPOEL RA'ANANA • FOOTBALL ACADEMY • HAPOEL RA'ANANA • ", 'MACCABI ORANIT F.C. • FOOTBALL ACADEMY • MACCABI ORANIT F.C. • ');
 
 // colors: red -> Maccabi blue, black -> navy
 R('--red:#d90b18; --red-d:#a3060f; --ink:#0d0d0f; --ink2:#18181c;', '--red:#1f6fc5; --red-d:#0f4c8f; --ink:#0a1730; --ink2:#12213f;');
 R('rgba(217,11,24', 'rgba(31,111,197');
 R('#ff3b45', '#4fa3f0');
-R('<meta name="theme-color" content="#d90b18" />', '<meta name="theme-color" content="#1f6fc5" />');
+// football-redesign colours: stadium canvas, LED scoreboard, jerseys, confetti -> Maccabi blue
+R('#d90b18', '#1f6fc5');
+R('#ff2a2a', '#3aa0ff'); R('rgba(255,20,30', 'rgba(40,140,255'); R('rgba(255,30,40', 'rgba(40,140,255');
+R('#ff3b3b', '#5fb4ff'); R('#ff4d4d', '#6cb8ff'); R('#ee1422', '#2b82e0');
+R("sky.addColorStop(1, '#1a0508')", "sky.addColorStop(1, '#05122a')");
+R("c.fillStyle = '#0b0507'", "c.fillStyle = '#050b17'");
+R('radial-gradient(ellipse at 50% 0%,#1a0507,#070708 70%)', 'radial-gradient(ellipse at 50% 0%,#06142c,#060709 70%)');
 R('.art-b .crest-wm{position:absolute;', '.art-b .crest-wm{position:absolute;border-radius:50%;');
 R('.nav.solid{background:rgba(13,13,15,.92)', '.nav.solid{background:rgba(10,23,48,.94)');
 
@@ -38,7 +43,6 @@ R('<div class="stat"><b data-count="5">0</b><span>קבוצות לגיל הרך</
 R('<div class="stat"><b data-count="64">0</b><span>אימונים בשבוע</span></div>', '<div class="stat"><b data-count="13">0</b><span>אימונים בשבוע</span></div>');
 R('<div class="stat"><b data-count="15">0</b><span>מאמנים מקצועיים</span></div>', '<div class="stat"><b data-count="3">0</b><span>מגרשי אימון</span></div>');
 R('<div class="bnum"><b>16</b><span>קבוצות ליגה<br/>+ 5 לגיל הרך</span></div>', '<div class="bnum"><b>6</b><span>קבוצות<br/>מהגן ועד ילדים ג׳</span></div>');
-R('<div class="sticker">מגיל<br/>5 ⚽</div>', '<div class="sticker">מגיל<br/>הגן ⚽</div>');
 R("יש לנו קבוצות מגן חובה / כיתה א' ועד הנוער.", 'יש לנו קבוצות מגיל הגן (בית הספר לכדורגל) ועד ילדים ג׳ (בערך כיתה ה׳).');
 
 // squadio phone demo
@@ -88,7 +92,7 @@ const TEAMS = [
 R("(HALL[s[3]]||['park'])[0]", "(HALL[s[3]]||['amfi'])[0]");
 R("const [vk, label] = HALL[h] || ['park', h];", "const [vk, label] = HALL[h] || ['amfi', h];");
 R('encodeURIComponent(v.addr)', 'encodeURIComponent(v.q || v.addr)');
-R('<p>📍 ${esc(v.addr)}</p>', "<p>📍 ${esc(v.addr || 'כתובת מדויקת תימסר בהרשמה')}</p>");
+R(' ${esc(v.addr)}</p>', " ${esc(v.addr || 'כתובת מדויקת תימסר בהרשמה')}</p>");
 R('<span class="more">${t.slots.length} אימונים בשבוע · פרטים והרשמה</span>', "<span class=\"more\">${t.slots.length ? t.slots.length + ' אימונים בשבוע' : 'ימי אימון — בקרוב'} · פרטים והרשמה</span>");
 R("$('#tdSlots').innerHTML = t.slots.slice()", "$('#tdSlots').innerHTML = !t.slots.length ? '<p style=\"color:var(--muted)\">ימי ושעות האימון יפורסמו בקרוב — המזכירות תעדכן אתכם בהרשמה.</p>' : t.slots.slice()");
 
