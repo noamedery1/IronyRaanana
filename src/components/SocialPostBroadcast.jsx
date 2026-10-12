@@ -44,7 +44,13 @@ export default function SocialPostBroadcast() {
             });
             const d = await r.json().catch(() => ({ error: 'x' }));
             if (d.error) setMsg('⚠️ השליחה נכשלה');
-            else { setMsg(`✓ נשלח ל-${d.sent || 0} מכשירים${d.failed ? `, ${d.failed} נכשלו` : ''}`); setLink(''); setHeadline(''); }
+            else {
+                // Count BOTH web push and native app (FCM/APNs) deliveries — most users are on the app,
+                // so a web-only count would read 0 even when every app device got it.
+                const total = (d.sent || 0) + ((d.native && d.native.sent) || 0);
+                setMsg(`✓ נשלח ל-${total} מכשירים${d.failed ? `, ${d.failed} נכשלו` : ''}`);
+                setLink(''); setHeadline('');
+            }
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
     };
 

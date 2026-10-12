@@ -190,13 +190,18 @@ export async function listMessages(slug) {
 // devices will actually receive a message for each target (0 = nobody enabled notifications yet).
 export async function pushStats(slug) {
     const cid = await clubId(slug);
-    // Count every subscription that would receive a send (all origins). This can include a device's
-    // duplicate across origins; the manager reconciles those by name in the "מנויי פוש" screen.
-    const r = await pool.query("SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions WHERE club_id=$1 GROUP BY 1", [cid]);
+    // Count every device that would receive a send — BOTH web push subscriptions AND native app
+    // (FCM/APNs) tokens. Most users are on the store app, so a web-only count misled the manager into
+    // thinking "0 devices" even when the whole club got the push. (All origins; duplicates reconciled
+    // by name in the "מנויי פוש" screen.)
+    const web = await pool.query("SELECT coalesce(segment,'') seg, count(*)::int n FROM push_subscriptions WHERE club_id=$1 GROUP BY 1", [cid]);
+    let nat = { rows: [] };
+    try { nat = await pool.query("SELECT coalesce(segment,'') seg, count(*)::int n FROM native_push_tokens WHERE club_id=$1 GROUP BY 1", [cid]); } catch { /* table may not exist on old DB */ }
     const bySegment = {};
-    let total = 0;
-    r.rows.forEach((x) => { bySegment[x.seg] = x.n; total += x.n; });
-    return { total, bySegment };
+    let total = 0, webTotal = 0, nativeTotal = 0;
+    web.rows.forEach((x) => { bySegment[x.seg] = (bySegment[x.seg] || 0) + x.n; total += x.n; webTotal += x.n; });
+    nat.rows.forEach((x) => { bySegment[x.seg] = (bySegment[x.seg] || 0) + x.n; total += x.n; nativeTotal += x.n; });
+    return { total, bySegment, webTotal, nativeTotal };
 }
 
 // ===== Device subscriptions (manager cleanup) =====
