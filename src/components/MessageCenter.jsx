@@ -84,10 +84,15 @@ export default function MessageCenter() {
             if (d.error) { setMsg('⚠️ שגיאה בשליחה'); return; }
             const codes = d.statusCodes || {};
             const codeStr = Object.keys(codes).length ? ` [${Object.entries(codes).map(([k, v]) => `${k}×${v}`).join(', ')}]` : '';
-            const nativeStr = (d.nativeSent || d.nativeFailed) ? ` · אפליקציות: ${d.nativeSent || 0}${d.nativeFailed ? `, ${d.nativeFailed} נכשלו` : ''}` : '';
+            // Count BOTH web and native (app) devices — most users are on the app, so a web-only number
+            // read 0 even when every app device got it. Show the total + a web/app breakdown.
+            const webN = d.sent || 0;
+            const natN = d.nativeSent || 0;
+            const total = webN + natN;
+            const failN = (d.failed || 0) + (d.nativeFailed || 0);
             setMsg(nativeOnly
-                ? `✓ נשלח לאפליקציות (${d.nativeSent || 0} מכשירים${d.nativeFailed ? `, ${d.nativeFailed} נכשלו` : ''})`
-                : `✓ נשלח (${d.sent || 0} מכשירים${d.failed ? `, ${d.failed} נכשלו${codeStr}` : ''}${nativeStr})`);
+                ? `✓ נשלח לאפליקציות (${natN} מכשירים${d.nativeFailed ? `, ${d.nativeFailed} נכשלו` : ''})`
+                : `✓ נשלח ל-${total} מכשירים (ווב ${webN} · אפליקציה ${natN})${failN ? `, ${failN} נכשלו${codeStr}` : ''}`);
             setBody('');
             loadStats(); // refresh counts (a send prunes expired subscriptions)
         } catch { setMsg('שגיאת תקשורת'); } finally { setBusy(false); }
