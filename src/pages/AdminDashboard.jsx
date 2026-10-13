@@ -951,7 +951,7 @@ const AdminDashboard = () => {
                 )}
                 {/* Sidebar — inline column on desktop, fixed drawer on mobile */}
                 {sidebarOpen && <aside style={isMobile
-                    ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'rgba(10,17,32,0.98)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: 'calc(env(safe-area-inset-top) + 1.2rem) 0 calc(env(safe-area-inset-bottom) + 1.2rem)', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
+                    ? { position: 'fixed', top: 0, right: 0, bottom: 0, width: '76vw', maxWidth: '300px', zIndex: 50, background: 'var(--chrome-bg-2)', backdropFilter: 'blur(16px)', borderLeft: '1px solid var(--glass-border)', padding: 'calc(env(safe-area-inset-top) + 1.2rem) 0 calc(env(safe-area-inset-bottom) + 1.2rem)', overflowY: 'auto', boxShadow: '-20px 0 60px -10px rgba(0,0,0,0.7)' }
                     : { width: '230px', flexShrink: 0, background: 'var(--chrome-bg-2)', backdropFilter: 'blur(14px)', borderLeft: '1px solid var(--glass-border)', padding: '2rem 0 calc(env(safe-area-inset-bottom) + 1rem)', overflowY: 'auto', maxHeight: '100%' }}>
                     <nav style={{ display: 'flex', flexDirection: 'column' }}>
                         <div style={navHdr}>📅 לו"ז</div>
