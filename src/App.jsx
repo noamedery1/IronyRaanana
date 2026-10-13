@@ -17,6 +17,7 @@ import InstallPrompt from './components/InstallPrompt';
 import { useI18n } from './i18n.jsx';
 import { isKnownClub } from './clubConfig.js';
 import { isManagerOf } from './adminApi.js';
+import { isNativeApp } from './native.js';
 import './App.css';
 
 // Root ("/") → the product sales page (the server also serves it; this covers in-app nav).
@@ -149,6 +150,38 @@ function App() {
 
       {/* Persistent "back to my screen" pills for a signed-in manager/coach (hidden on their own routes). */}
       <RoleReturn />
+
+      {/* Native app only: an on-screen "back to clubs" button. iOS has NO hardware Back button, so without
+          this a parent stuck inside one club can't return to the launcher to add/switch a club (Android
+          users just use the system Back). Shown only inside the bundled app (SquadioApp UA); history.back()
+          returns to the launcher — the same navigation Android's Back performs. */}
+      {isNativeApp() && (
+        <button
+          onClick={() => { try { window.history.back(); } catch { /* ignore */ } }}
+          aria-label="חזרה למסך המועדונים"
+          style={{
+            position: 'fixed',
+            bottom: 'max(20px, env(safe-area-inset-bottom))',
+            right: 'max(20px, env(safe-area-inset-right))',
+            zIndex: 999,
+            background: 'linear-gradient(135deg,#0ea5e9,#2563eb)',
+            color: '#fff',
+            border: 'none',
+            padding: '0.7rem 1.1rem',
+            borderRadius: '30px',
+            boxShadow: '0 8px 22px -6px rgba(37,99,235,0.6)',
+            cursor: 'pointer',
+            fontWeight: 800,
+            fontSize: '0.9rem',
+            fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+          }}
+        >
+          <span style={{ fontSize: '1.05rem' }}>⌂</span> מועדונים
+        </button>
+      )}
 
       {/* Floating Feedback Button - Shows on all pages (or conditionally if needed) */}
       <button
