@@ -82,6 +82,49 @@ const RoleReturn = () => {
   );
 };
 
+// Small, icon-only, translucent "add a team/club" button for the native app. iOS has no hardware Back,
+// so a parent inside one club couldn't add another. Tapping it opens the club's code-entry screen
+// (/:club/code) — entering any 5-digit code there joins another team, or another club (it resolves to
+// the right club and navigates on). In-app SPA navigation only → reliable, never the blank launcher.
+const NativeAddButton = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  if (!isNativeApp()) return null;
+  const parts = location.pathname.split('/').filter(Boolean);
+  const slug = parts[0];
+  const seg = parts[1];
+  // Need a real club in the path; hide on the code screen itself and on non-club routes.
+  if (!slug || slug === 'superuser' || slug === 's' || !isKnownClub(slug) || seg === 'code') return null;
+  return (
+    <button
+      onClick={() => navigate(`/${slug}/code`)}
+      aria-label="הוספת קבוצה או מועדון"
+      title="הוספת קבוצה / מועדון"
+      style={{
+        position: 'fixed',
+        bottom: 'max(16px, env(safe-area-inset-bottom))',
+        right: 'max(16px, env(safe-area-inset-right))',
+        zIndex: 999,
+        width: 42,
+        height: 42,
+        borderRadius: '50%',
+        background: 'rgba(37,99,235,0.5)',
+        color: '#fff',
+        border: '1px solid rgba(255,255,255,0.25)',
+        backdropFilter: 'blur(6px)',
+        boxShadow: '0 4px 12px -4px rgba(0,0,0,0.4)',
+        cursor: 'pointer',
+        fontSize: '1.4rem',
+        lineHeight: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'inherit',
+      }}
+    >＋</button>
+  );
+};
+
 // Manager dashboard guard — must be inside a known club AND hold a valid manager token FOR THAT club.
 // (Checking the per-club token, not the global isAdmin flag, is what stops a manager of one club from
 // opening another club's dashboard. The server also re-verifies the token's HMAC on every API call.)
@@ -151,37 +194,11 @@ function App() {
       {/* Persistent "back to my screen" pills for a signed-in manager/coach (hidden on their own routes). */}
       <RoleReturn />
 
-      {/* Native app only: an on-screen "back to clubs" button. iOS has NO hardware Back button, so without
-          this a parent stuck inside one club can't return to the launcher to add/switch a club (Android
-          users just use the system Back). Shown only inside the bundled app (SquadioApp UA); history.back()
-          returns to the launcher — the same navigation Android's Back performs. */}
-      {isNativeApp() && (
-        <button
-          onClick={() => { try { window.history.back(); } catch { /* ignore */ } }}
-          aria-label="חזרה למסך המועדונים"
-          style={{
-            position: 'fixed',
-            bottom: 'max(20px, env(safe-area-inset-bottom))',
-            right: 'max(20px, env(safe-area-inset-right))',
-            zIndex: 999,
-            background: 'linear-gradient(135deg,#0ea5e9,#2563eb)',
-            color: '#fff',
-            border: 'none',
-            padding: '0.7rem 1.1rem',
-            borderRadius: '30px',
-            boxShadow: '0 8px 22px -6px rgba(37,99,235,0.6)',
-            cursor: 'pointer',
-            fontWeight: 800,
-            fontSize: '0.9rem',
-            fontFamily: 'inherit',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-          }}
-        >
-          <span style={{ fontSize: '1.05rem' }}>⌂</span> מועדונים
-        </button>
-      )}
+      {/* Native app only: a small, icon-only "add club/team" button. iOS has no hardware Back, so a
+          parent inside one club had no way to add another team/club. Opens the site's code-entry screen
+          (reliable in-app navigation — adds another team OR club by code), NOT the bundled launcher
+          (history.back() to it rendered a blank page). */}
+      <NativeAddButton />
 
       {/* Floating Feedback Button - Shows on all pages (or conditionally if needed) */}
       <button
