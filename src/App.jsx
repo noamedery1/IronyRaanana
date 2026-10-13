@@ -83,21 +83,25 @@ const RoleReturn = () => {
 };
 
 // Small, icon-only, translucent "add a team/club" button for the native app. iOS has no hardware Back,
-// so a parent inside one club couldn't add another. Tapping it opens the club's code-entry screen
-// (/:club/code) — entering any 5-digit code there joins another team, or another club (it resolves to
-// the right club and navigates on). In-app SPA navigation only → reliable, never the blank launcher.
+// so a parent inside one club couldn't get back to the LAUNCHER to add another — and the launcher is
+// where the club list is saved locally (its own bundled origin, which the live site can't write). So
+// this navigates straight to the launcher's origin (a fresh load → it boots and shows the home/add
+// screen), instead of history.back() which returned a blank page on iOS. Capacitor default origins:
+// iOS = capacitor://localhost, Android = https://localhost.
 const NativeAddButton = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   if (!isNativeApp()) return null;
   const parts = location.pathname.split('/').filter(Boolean);
   const slug = parts[0];
-  const seg = parts[1];
-  // Need a real club in the path; hide on the code screen itself and on non-club routes.
-  if (!slug || slug === 'superuser' || slug === 's' || !isKnownClub(slug) || seg === 'code') return null;
+  // Need a real club context; hide on non-club routes.
+  if (!slug || slug === 'superuser' || slug === 's' || !isKnownClub(slug)) return null;
+  const goToLauncher = () => {
+    const launcher = /Android/i.test(navigator.userAgent || '') ? 'https://localhost/' : 'capacitor://localhost/';
+    try { window.location.href = launcher; } catch { /* ignore */ }
+  };
   return (
     <button
-      onClick={() => navigate(`/${slug}/code`)}
+      onClick={goToLauncher}
       aria-label="הוספת קבוצה או מועדון"
       title="הוספת קבוצה / מועדון"
       style={{
