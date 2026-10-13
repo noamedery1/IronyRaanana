@@ -91,13 +91,16 @@ const RoleReturn = () => {
 const NativeAddButton = () => {
   const location = useLocation();
   if (!isNativeApp()) return null;
+  // Android already has a NATIVE "⌂" home button (MainActivity adds a floating button over the WebView),
+  // so showing this too would be a duplicate. iOS has no such native button — this is its only way back
+  // to the launcher. So render it on iOS only.
+  if (/Android/i.test(navigator.userAgent || '')) return null;
   const parts = location.pathname.split('/').filter(Boolean);
   const slug = parts[0];
   // Need a real club context; hide on non-club routes.
   if (!slug || slug === 'superuser' || slug === 's' || !isKnownClub(slug)) return null;
   const goToLauncher = () => {
-    const launcher = /Android/i.test(navigator.userAgent || '') ? 'https://localhost/' : 'capacitor://localhost/';
-    try { window.location.href = launcher; } catch { /* ignore */ }
+    try { window.location.href = 'capacitor://localhost/'; } catch { /* ignore */ }
   };
   return (
     <button
