@@ -288,12 +288,17 @@ const AdminDashboard = () => {
     const resetDraftFromLive = async () => {
         if (!window.confirm('לשחזר את הטיוטה ללו"ז החי הנוכחי? כל השינויים בטיוטה שלא פורסמו — כולל משחקים/אימוני שוערים שנוספו — יימחקו. הלו"ז שההורים רואים לא יושפע.')) return;
         try {
+            // Stop any in-flight/queued draft auto-save FIRST, and mark the draft clean, so the
+            // stale in-memory rows (which may still hold the games/GK) can't be PUT back on top of
+            // the server reset. Then hard-reload the page so nothing in memory survives to re-save.
+            if (saveTimer.current) clearTimeout(saveTimer.current);
+            dirtyRef.current = false;
+            latestDraft.current = null;
             const r = await fetch(`/api/${club.slug}/draft/reset-from-live`, { method: 'POST', headers: authHeaders(club.slug) });
             if (!r.ok) throw new Error('fail');
             localStorage.removeItem(DRAFT_KEY);
-            await loadDraft();
-            selectTab('preview');
             alert('✓ הטיוטה שוחזרה מהלו"ז החי (נקייה ממשחקים/שוערים שנוספו)');
+            window.location.reload();
         } catch { alert('שחזור נכשל'); }
     };
 
