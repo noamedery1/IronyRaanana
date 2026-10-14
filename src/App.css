@@ -925,7 +925,9 @@
 .app-container::before{content:none}
 
 /* topbar */
-.app-container .topbar{background:rgba(10,15,27,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair);padding:.9rem 1.25rem}
+/* This more-specific rule overrode the base .topbar's safe-area top padding → the bar slid under
+   the phone status bar/notch on iOS+Android. Re-apply the inset here so it isn't clobbered. */
+.app-container .topbar{background:rgba(10,15,27,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair);padding:calc(env(safe-area-inset-top) + .9rem) 1.25rem .9rem}
 .app-container .brand-logo{border-radius:12px;box-shadow:none;border:1px solid var(--hair)}
 .app-container .brand-name{font-weight:800;font-size:1.12rem;letter-spacing:-.01em}
 .app-container .brand-sub{text-transform:none;letter-spacing:.02em;font-size:.72rem;color:var(--a2)}

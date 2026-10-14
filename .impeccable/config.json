@@ -1,0 +1,44 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "*",
+        "files": [
+          "src/App.css"
+        ],
+        "createdAt": "2026-10-13T17:18:02.976Z",
+        "reason": "pre-existing animation easing in the app's established CSS; not introduced this session, live app in production"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "src/App.css"
+        ],
+        "createdAt": "2026-10-13T17:40:40.529Z",
+        "reason": "pre-existing map-card surface grid (a map surface, which the rule allows); not introduced this session"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/App.css"
+        ],
+        "createdAt": "2026-10-13T17:52:40.085Z",
+        "reason": "pre-existing live CSS: 4 side-borders are meaningful status/timeline color-codes (.sess + .schedule-card status; .hero-card brand strip; .schedule-card timeline spine w/ ::before dot), not decorative AI accents; additive-only production app"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/App.css"
+        ],
+        "createdAt": "2026-10-14T06:39:45.163Z",
+        "reason": "pre-existing brand gradient-clip headings (.title, .hl, hero) in established live CSS; not introduced this session, additive-only production app"
+      }
+    ]
+  }
+}

@@ -578,7 +578,11 @@ function PublicSchedule() {
                             window.location.href = `/${club.slug}`;
                         };
                         return (
-                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 1rem' }}>
+                            <div style={{ margin: '0 0 1.2rem', padding: '0.7rem 0.8rem 0.8rem', background: 'var(--surf)', border: '1px solid var(--hair)', borderRadius: 14 }}>
+                              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--a2)', textAlign: 'center', marginBottom: '0.55rem', letterSpacing: '0.01em' }}>
+                                👨‍👩‍👧 הקבוצות שלך · לחצו כדי להחליף
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 {clubMemberships.map((m) => (
                                     <span key={m.team} className={`vtab ${role === 'member' && activeTeam === m.team ? 'on' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}>
                                         <button onClick={() => pickTeam(m.team)} style={{ all: 'unset', cursor: 'pointer' }}>👨‍👩‍👧 {m.team}</button>
@@ -599,6 +603,7 @@ function PublicSchedule() {
                                         >{pendingLeave === '__operator__' ? 'להסיר?' : '✕'}</button>
                                     </span>
                                 )}
+                              </div>
                             </div>
                         );
                     })()}
