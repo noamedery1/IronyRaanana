@@ -78,6 +78,8 @@ export const parseCellContent = (text) => {
 
     // Check for Match (text "משחק" or basketball icon)
     const isMatch = cleanText.includes('משחק') || cleanText.includes('🏀');
+    // Goalkeeper training ("אימון שוערים" / 🧤) — a distinct, colour-coded session type.
+    const isGK = /שוער/.test(cleanText) || cleanText.includes('🧤');
 
     // Normalize time format to HH:MM
     let formatted = cleanText.replace(/\b([0-1][0-9]|2[0-3])([0-5][0-9])\b/g, '$1:$2');
@@ -97,15 +99,18 @@ export const parseCellContent = (text) => {
         });
     }
 
-    // Clean up location: remove "משחק", emojis, and extra whitespace
+    // Clean up location: remove "משחק" / "אימון שוערים" labels, emojis, extra whitespace
+    // (the type is shown as a badge, so it shouldn't also sit in the location text).
     location = location
         .replace('משחק', '')
+        .replace(/אימון שוערים|שוערים/g, '')
         .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F000}-\u{1F2FF}]/gu, '')
         .trim();
     return {
         time: time.trim(),
         location: location,
         isMatch,
+        isGK,
         status, // 'normal', 'cancelled', 'changed'
         originalText: text
     };

@@ -678,12 +678,14 @@ function PublicSchedule() {
 
                                     const lines = content.split('\n').filter(l => l.trim().length > 0);
                                     const anyMatch = lines.some(l => l.includes('משחק') || l.includes('🏀'));
+                                    const anyGK = lines.some(l => /שוער/.test(l) || l.includes('🧤'));
                                     const anyChanged = lines.some(l => l.includes('!') || l.includes('⚠️') || l.includes('שינוי'));
                                     const allCancelled = lines.every(l => l.match(/x|בוטל|canceled|cancelled/i));
 
                                     let cardClass = 'schedule-card';
                                     if (allCancelled) cardClass += ' is-cancelled';
                                     else if (anyMatch) cardClass += ' is-match';
+                                    else if (anyGK) cardClass += ' is-gk';
                                     else if (anyChanged) cardClass += ' is-changed';
 
                                     return (
@@ -700,7 +702,7 @@ function PublicSchedule() {
                                             </div>
                                             <div className="events-container">
                                                 {lines.map((line, lIdx) => {
-                                                    const { location, time, status, isMatch } = parseScheduleContent(line);
+                                                    const { location, time, status, isMatch, isGK } = parseScheduleContent(line);
                                                     const isCancelled = status === 'cancelled';
                                                     const isChanged = status === 'changed';
                                                     return (
@@ -708,8 +710,9 @@ function PublicSchedule() {
                                                             {isCancelled && <span className="status-tag cancelled">❌ {t('cancelled')}</span>}
                                                             {isChanged && <span className="status-tag changed">⚠️ {t('changed')}</span>}
                                                             <div className="event-time">{time}</div>
-                                                            <div className="event-location">{localizeHall(location)}</div>
+                                                            {location && <div className="event-location">{localizeHall(location)}</div>}
                                                             {isMatch && <div className="match-badge">{sportEmoji()} {t('match')}</div>}
+                                                            {isGK && !isMatch && <div className="gk-badge">🧤 אימון שוערים</div>}
                                                         </div>
                                                     );
                                                 })}

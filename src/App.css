@@ -789,6 +789,19 @@
 .status-tag.cancelled { background: rgba(244, 71, 91, 0.2); color: #ffb3bd; }
 .status-tag.changed { background: rgba(251, 191, 36, 0.18); color: #fde68a; }
 
+/* Goalkeeper training — a distinct purple session type (badge + card accent). */
+.gk-badge {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 50px;
+  background: rgba(168, 85, 247, 0.22);
+  color: #e9d5ff;
+}
+.schedule-card.is-gk::after { background: #a855f7; }
+
 /* edit (coach) entry button */
 .edit-btn {
   position: absolute;
@@ -966,6 +979,10 @@
 }
 .app-container .schedule-card::after{height:100%;width:4px;top:0;bottom:0;left:auto;right:0;background:var(--grad)}
 .app-container .schedule-card.is-match::after{background:var(--amber)}
+/* GK training: purple timeline dot + right rail on the public board (app-container timeline). */
+.app-container .schedule-card.is-gk::before{background:#a855f7;box-shadow:0 0 0 4px #0a0f1b,0 0 14px rgba(168,85,247,.55)}
+.app-container .schedule-card.is-gk{border-right-color:rgba(168,85,247,.5)}
+:root[data-theme="light"] .app-container .gk-badge{background:rgba(168,85,247,.15);color:#7e22ce}
 .app-container .schedule-card:hover{transform:translateY(-3px);border-color:rgba(34,211,238,.4);box-shadow:0 18px 40px -28px rgba(34,211,238,.5)}
 .app-container .day-header{border-bottom:1px solid var(--hair);padding-bottom:.5rem;margin-bottom:.55rem}
 .app-container .day-name{font-weight:800;font-size:1rem}

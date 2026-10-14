@@ -17,6 +17,8 @@ import ThemeToggle from '../components/ThemeToggle';
 import QuickStart from '../components/QuickStart';
 import PublishPanel from '../components/PublishPanel';
 import ApprovalsPanel from '../components/ApprovalsPanel';
+import SpecialSchedule from '../components/SpecialSchedule';
+import { mergeEntries } from '../utils/scheduleMerge.js';
 import { getActiveClub } from '../clubConfig.js';
 import { venues } from '../sportLabels.js';
 import { subscribeToPush } from '../push.js';
@@ -224,6 +226,23 @@ const AdminDashboard = () => {
         } catch (e) { console.error('draft save error', e); return { ok: false }; }
     };
     saveDraftRef.current = saveDraftToDB; // keep the interval pointing at the latest closure
+
+    // Merge extra entries (games / goalkeeper trainings) INTO the current draft — append a line
+    // to each matched team's weekday cell, then persist + refresh the preview. Additive: existing
+    // training cells are untouched. Returns { matched, unmatched } so the panel can report.
+    const applyMergeEntries = async (entries) => {
+        if (!latestDraft.current) await loadDraft({ silent: true });
+        const d = latestDraft.current; const sd = sheetDataRef.current;
+        if (!d || !sd) return { matched: [], unmatched: entries };
+        const dayStart = sd.indices?.dayStart ?? 2;
+        const { rows, matched, unmatched } = mergeEntries(d.rows, dayStart, entries);
+        latestDraft.current = { headers: d.headers, rows };
+        setSheetData((prev) => ({ ...prev, rawRows: rows }));
+        setCurrentSchedule(rows);
+        dirtyRef.current = true;
+        await saveDraftToDB();
+        return { matched, unmatched };
+    };
 
     // Safety net: auto-save the draft to the DB every 30s if there are unsaved edits, so a crash,
     // refresh or dropped connection never loses more than ~30s of work (on top of the 2.5s debounce
@@ -881,6 +900,10 @@ const AdminDashboard = () => {
                 return <TrainerManager />;
             case 'publish':
                 return <PublishPanel clubSlug={getActiveClub().slug} />;
+            case 'games':
+                return <SpecialSchedule mode="games" onMerge={applyMergeEntries} goPreview={() => selectTab('preview')} />;
+            case 'goalkeeper':
+                return <SpecialSchedule mode="gk" onMerge={applyMergeEntries} goPreview={() => selectTab('preview')} />;
             case 'approvals':
                 return <ApprovalsPanel clubSlug={getActiveClub().slug} onChange={loadPending} />;
             default:
@@ -960,6 +983,12 @@ const AdminDashboard = () => {
                         </button>
                         <button style={menuButtonStyle(activeTab === 'preview')} onClick={() => selectTab('preview')}>
                             👁️ בניית הלו"ז (טיוטה)
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'games')} onClick={() => selectTab('games')}>
+                            🏀 פרסום משחקים
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'goalkeeper')} onClick={() => selectTab('goalkeeper')}>
+                            🧤 לו"ז שוערים
                         </button>
                         <button style={menuButtonStyle(activeTab === 'publish')} onClick={() => selectTab('publish')}>
                             🚀 פרסם לוז
