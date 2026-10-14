@@ -38,6 +38,15 @@
         ],
         "createdAt": "2026-10-14T06:39:45.163Z",
         "reason": "pre-existing brand gradient-clip headings (.title, .hl, hero) in established live CSS; not introduced this session, additive-only production app"
+      },
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "files": [
+          "server.js"
+        ],
+        "createdAt": "2026-10-14T07:12:47.733Z",
+        "reason": "Arial on a minimal server-rendered approve/reject utility page (not a product UI surface); deliberate safe system font, pre-existing"
       }
     ]
   }
