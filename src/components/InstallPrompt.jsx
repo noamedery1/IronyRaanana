@@ -4,7 +4,7 @@ import { hasNativePrompt, isIOS, isStandalone, subscribe, promptInstall, isInsta
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji } from '../sportLabels.js';
 import { resetApp } from '../resetApp.js';
-import { isNativeApp } from '../native.js';
+import { isNativeApp, isAndroidWebView } from '../native.js';
 
 // Install affordances (shown on every screen until the app is installed):
 // - First visit (not dismissed): a prominent centered modal.
@@ -36,7 +36,7 @@ export default function InstallPrompt() {
 
     // Inside the bundled native app (store install) there's nothing to install — and the WebView isn't
     // reported as display-mode standalone, so without this it would wrongly show the install UI.
-    if (isNativeApp()) return null;
+    if (isNativeApp() || isAndroidWebView()) return null;
     if (isStandalone()) return null; // already installed → nothing to do
 
     // Install is a parent-facing action. Hide it on manager/superuser screens — its

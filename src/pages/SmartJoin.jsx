@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { isNativeApp } from '../native.js';
+import { isNativeApp, isAndroidWebView } from '../native.js';
 import { isIOS } from '../inAppBrowser.js';
 import { playStoreUrl, appStoreUrl } from '../appStores.js';
 import { getMemberships, setActiveTeam } from '../userIdentity.js';
@@ -37,7 +37,7 @@ export default function SmartJoin() {
                 const joinUrl = (origin && origin !== window.location.origin) ? origin + path : '';
                 const goJoin = () => { if (joinUrl) window.location.href = joinUrl; else navigate(path, { replace: true }); };
                 // In the app, or on a desktop browser → no store step; go straight in.
-                if (isNativeApp() || !isMobile()) { goJoin(); return; }
+                if (isNativeApp() || isAndroidWebView() || !isMobile()) { goJoin(); return; }
                 setState({ loading: false, goJoin, ...d });
             })
             .catch(() => { if (alive) setState({ loading: false, error: true }); });

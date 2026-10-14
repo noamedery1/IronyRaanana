@@ -13,6 +13,13 @@ export function isNativeApp() {
     } catch { return false; }
 }
 
+// Any Android WebView (UA token "; wv)") — e.g. an OLD Squadio build without the UA tag, or a
+// social app's in-app browser. A PWA can never be installed from a WebView, so install UI is
+// pointless there, and the "install from the store" detour only confuses an app user.
+export function isAndroidWebView() {
+    try { return /; wv\)/.test(navigator.userAgent || ''); } catch { return false; }
+}
+
 // When running inside the native app, a tapped Squadio https link (App Link / Universal Link) that
 // arrives while the app is already open should navigate the WebView to that exact URL, so the invite's
 // Join / personal-sign-in handling runs. Cold-start launch URLs are handled by the native launcher.

@@ -828,6 +828,13 @@ function renderClubIndex(club, canonicalPath, manifestStart) {
         .replace('</head>', `    ${clubHead(club, canonicalPath || `/${club.slug}`)}\n  </head>`);
 }
 
+// A bare code as the path (/78218) — what OLD app launchers produce when a parent types a team
+// code (they only knew club slugs). Not a club → hand it to the smart-link flow, which resolves it.
+app.get(/^\/(\d{4,6})\/?$/, async (req, res, next) => {
+    try { if (clubSubFromReq(req) || await getClub(req.params[0])) return next(); } catch { return next(); }
+    res.redirect(302, `/s/${req.params[0]}`);
+});
+
 // Handle React routing, return all requests to React app (with per-club head when applicable).
 app.get(/.*/, async (req, res) => {
     try {
