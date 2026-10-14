@@ -88,6 +88,32 @@ export async function replaceDraftSessions(slug, sessions = [], weekStart) {
     });
 }
 
+// Reset the draft to be an exact copy of the current LIVE schedule — a clean "undo" that
+// throws away unpublished draft edits (e.g. a games/goalkeeper import the manager tried out)
+// and brings back exactly what parents currently see. If there's no live schedule yet, the
+// draft is emptied. Does NOT touch the live schedule.
+export async function resetDraftFromLive(slug) {
+    const draft = await getOrCreateDraft(slug);
+    return withTx(async (cx) => {
+        const live = await cx.query(
+            `SELECT id, week_start::text FROM schedule_publications
+             WHERE club_id=$1 AND status='live' ORDER BY week_start DESC LIMIT 1`,
+            [draft.clubId],
+        );
+        await cx.query('DELETE FROM sessions WHERE publication_id=$1', [draft.id]);
+        if (!live.rows.length) return { ok: true, draftId: draft.id, sessionCount: 0, fromLive: false };
+        await cx.query(`UPDATE schedule_publications SET week_start=$2 WHERE id=$1`, [draft.id, live.rows[0].week_start]);
+        await cx.query(
+            `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
+             SELECT $1, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, 'active', note
+             FROM sessions WHERE publication_id=$2`,
+            [draft.id, live.rows[0].id],
+        );
+        const n = (await cx.query(`SELECT count(*)::int n FROM sessions WHERE publication_id=$1`, [draft.id])).rows[0].n;
+        return { ok: true, draftId: draft.id, sessionCount: n, fromLive: true };
+    });
+}
+
 // Seed the draft from an uploaded Excel/CSV (reuses the live-publish parser).
 export async function importCsvToDraft(slug, csvText) {
     const { sessions, weekStart } = parseSheetToSessions(csvText);

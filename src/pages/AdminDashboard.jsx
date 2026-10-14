@@ -283,6 +283,20 @@ const AdminDashboard = () => {
         else saveTimer.current = setTimeout(() => { saveDraftToDB(); }, 2500);
     };
 
+    // Undo unpublished draft experiments (e.g. a games/goalkeeper import) by copying the live
+    // schedule back into the draft. The live board parents see is untouched.
+    const resetDraftFromLive = async () => {
+        if (!window.confirm('לשחזר את הטיוטה ללו"ז החי הנוכחי? כל השינויים בטיוטה שלא פורסמו — כולל משחקים/אימוני שוערים שנוספו — יימחקו. הלו"ז שההורים רואים לא יושפע.')) return;
+        try {
+            const r = await fetch(`/api/${club.slug}/draft/reset-from-live`, { method: 'POST', headers: authHeaders(club.slug) });
+            if (!r.ok) throw new Error('fail');
+            localStorage.removeItem(DRAFT_KEY);
+            await loadDraft();
+            selectTab('preview');
+            alert('✓ הטיוטה שוחזרה מהלו"ז החי (נקייה ממשחקים/שוערים שנוספו)');
+        } catch { alert('שחזור נכשל'); }
+    };
+
     const discardDraft = async () => {
         if (!window.confirm('לרוקן את הטיוטה הנוכחית ולהתחיל מחדש? (הלוז החי שכבר פורסם להורים לא יושפע.)')) return;
         await fetch(`/api/${club.slug}/draft`, {
@@ -984,11 +998,17 @@ const AdminDashboard = () => {
                         <button style={menuButtonStyle(activeTab === 'preview')} onClick={() => selectTab('preview')}>
                             👁️ בניית הלו"ז (טיוטה)
                         </button>
+                        <button style={menuButtonStyle(activeTab === 'setup')} onClick={() => selectTab('setup')}>
+                            ⬆ טעינת לו"ז מקובץ
+                        </button>
                         <button style={menuButtonStyle(activeTab === 'games')} onClick={() => selectTab('games')}>
                             🏀 פרסום משחקים
                         </button>
                         <button style={menuButtonStyle(activeTab === 'goalkeeper')} onClick={() => selectTab('goalkeeper')}>
                             🧤 לו"ז שוערים
+                        </button>
+                        <button style={menuButtonStyle(false)} onClick={resetDraftFromLive}>
+                            ↩ שחזר טיוטה נקייה
                         </button>
                         <button style={menuButtonStyle(activeTab === 'publish')} onClick={() => selectTab('publish')}>
                             🚀 פרסם לוז
