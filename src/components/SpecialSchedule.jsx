@@ -119,8 +119,13 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
                 postAppend('live', valid.filter((r) => r.target === 'live')),
                 postAppend('draft', valid.filter((r) => r.target === 'draft')),
             ]);
-            const affected = [...new Set([...(rl.affectedTeams || []), ...(rd.affectedTeams || [])])];
-            setApplied({ liveN: rl.inserted || 0, draftN: rd.inserted || 0, skipped: (rl.skipped || 0) + (rd.skipped || 0), affectedTeams: affected });
+            setApplied({
+                liveN: rl.inserted || 0, draftN: rd.inserted || 0,
+                skipped: (rl.skipped || 0) + (rd.skipped || 0),
+                // Push only for LIVE teams — next-week (draft) games aren't visible to parents yet.
+                liveTeams: rl.affectedTeams || [],
+                draftTeams: rd.affectedTeams || [],
+            });
             setStep('done');
             if (rd.inserted) onApplied?.();
         } catch (e) { setErr(e.message); }
@@ -128,11 +133,11 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
     };
 
     const sendPush = async () => {
-        if (!applied?.affectedTeams?.length) return;
+        if (!applied?.liveTeams?.length) return;
         setBusy(true); setPushMsg('');
         try {
             const body = isGk ? 'לו"ז אימון השוערים עודכן 🧤' : 'לו"ז המשחקים עודכן 🏀';
-            const segments = applied.affectedTeams.map((t) => 'team:' + t);
+            const segments = applied.liveTeams.map((t) => 'team:' + t);
             const r = await fetch(`/api/${slug}/messages`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
                 body: JSON.stringify({ title: 'עדכון לו"ז', body, target: `קבוצות: ${applied.affectedTeams.join(', ')}`, segments, channel: 'all' }),
@@ -140,7 +145,7 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
             const d = await r.json().catch(() => ({}));
             if (d.error) throw new Error();
             const n = (d.sent || 0) + (d.nativeSent || 0);
-            setPushMsg(`✓ פוש נשלח ל-${n} מכשירים (${applied.affectedTeams.length} קבוצות)`);
+            setPushMsg(`✓ פוש נשלח ל-${n} מכשירים (${applied.liveTeams.length} קבוצות)`);
         } catch { setPushMsg('⚠️ שליחת הפוש נכשלה'); }
         finally { setBusy(false); }
     };
@@ -267,16 +272,22 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
                             {!applied.liveN && !applied.draftN && <div>לא נוספו רשומות חדשות.</div>}
                             {applied.skipped ? <div style={{ fontWeight: 400, color: '#475569' }}>({applied.skipped} כבר היו קיימות — דולגו)</div> : null}
                         </div>
-                        {applied.affectedTeams.length > 0 && (
-                            <div style={{ marginTop: '0.5rem', color: '#334155' }}>קבוצות שעודכנו: {applied.affectedTeams.join(', ')}</div>
+                        {applied.liveTeams.length > 0 && (
+                            <div style={{ marginTop: '0.5rem', color: '#334155' }}>קבוצות שעודכנו בלו"ז החי: {applied.liveTeams.join(', ')}</div>
+                        )}
+                        {applied.draftTeams.length > 0 && (
+                            <div style={{ marginTop: '0.3rem', color: '#64748b', fontSize: '0.85rem' }}>בטיוטה (שבוע הבא, לא גלוי עדיין להורים): {applied.draftTeams.join(', ')}</div>
                         )}
                     </div>
 
-                    {applied.affectedTeams.length > 0 && (
+                    {applied.liveTeams.length > 0 ? (
                         <div style={{ marginTop: '1rem' }}>
-                            <button onClick={sendPush} disabled={busy} style={btn('#2563eb')}>📢 שלח פוש לקבוצות שעודכנו</button>
+                            <button onClick={sendPush} disabled={busy} style={btn('#2563eb')}>📢 שלח פוש להורים (משחקי השבוע)</button>
                             {pushMsg && <span style={{ marginInlineStart: '0.8rem', fontWeight: 700, color: pushMsg.startsWith('✓') ? '#16a34a' : '#dc2626' }}>{pushMsg}</span>}
+                            <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.4rem' }}>יישלח ל{applied.liveTeams.length} קבוצות שקיבלו משחק השבוע.</div>
                         </div>
+                    ) : (
+                        <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#64748b' }}>אין פוש — לא נוספו משחקים ללו"ז החי (רק לטיוטה). הפוש יישלח כשתפרסם את הטיוטה.</div>
                     )}
 
                     <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1rem', flexWrap: 'wrap' }}>
