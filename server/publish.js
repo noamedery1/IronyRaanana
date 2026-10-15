@@ -168,19 +168,38 @@ export async function publishClub(slug, { weekStart: forced, publishedBy = 'admi
     });
 }
 
-// Live schedule for the public site (latest live publication, or a specific week).
+// Sunday of the current week in Israel time (robust to the server's UTC clock).
+function curWeekSundayIL() {
+    const ymd = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jerusalem' });
+    const [Y, M, D] = ymd.split('-').map(Number);
+    const d = new Date(Date.UTC(Y, M - 1, D));
+    d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+}
+
+// Live schedule for the public site. Several weeks can be live at once (a manager may publish next
+// week while this week is still running), so: a specific `week` returns that week; otherwise prefer
+// the CURRENT week, then the most recent past week (display rolls it forward — recurring schedules),
+// then the earliest future week. `weeks` lists every live week so the board can offer a switcher.
 export async function getLiveSchedule(slug, week) {
     const club = await pool.query('SELECT id FROM clubs WHERE slug=$1', [slug]);
     if (!club.rows.length) return null;
     const clubId = club.rows[0].id;
 
     const cols = `id, club_id, week_start::text, status, source_url, published_by, published_at`;
-    const pub = week
-        ? await pool.query(`SELECT ${cols} FROM schedule_publications WHERE club_id=$1 AND week_start=$2 AND status='live'`, [clubId, week])
-        : await pool.query(`SELECT ${cols} FROM schedule_publications WHERE club_id=$1 AND status='live' ORDER BY week_start DESC LIMIT 1`, [clubId]);
-    if (!pub.rows.length) return { publication: null, sessions: [] };
+    const all = await pool.query(`SELECT ${cols} FROM schedule_publications WHERE club_id=$1 AND status='live' ORDER BY week_start`, [clubId]);
+    const weeks = all.rows.map((r) => r.week_start);
+    const cur = curWeekSundayIL();
+    let p = null;
+    if (week) p = all.rows.find((r) => r.week_start === week) || null;
+    else {
+        p = all.rows.find((r) => r.week_start === cur)
+            || [...all.rows].reverse().find((r) => r.week_start < cur)
+            || all.rows.find((r) => r.week_start > cur)
+            || null;
+    }
+    if (!p) return { publication: null, sessions: [], weeks };
 
-    const p = pub.rows[0];
     const s = await pool.query(
         `SELECT team, coach, gender, hall, date::text, day_of_week,
                 to_char(start_time,'HH24:MI') AS start_time, to_char(end_time,'HH24:MI') AS end_time,
@@ -188,7 +207,7 @@ export async function getLiveSchedule(slug, week) {
          FROM sessions WHERE publication_id=$1 ORDER BY date, start_time`,
         [p.id],
     );
-    return { publication: p, sessions: s.rows };
+    return { publication: p, sessions: s.rows, weeks };
 }
 
 // Live, per-club calendar feed (ICS) for one team — built from the DB, not the Sheet.

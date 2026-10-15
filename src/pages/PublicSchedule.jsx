@@ -113,10 +113,16 @@ function PublicSchedule() {
     const toggleGames = () => setShowGames((v) => { const n = !v; try { localStorage.setItem('pref:showGames', n ? '1' : '0'); } catch { /* */ } return n; });
     const toggleGK = () => setShowGK((v) => { const n = !v; try { localStorage.setItem('pref:showGK', n ? '1' : '0'); } catch { /* */ } return n; });
 
-    useEffect(() => {
-        // Shared: take an array-of-arrays sheet model (from the DB or from CSV) and
-        // populate all the view state. Identical logic for both data sources.
-        const processRows = (rows) => {
+    // Week switcher: several weeks can be published at once (e.g. this week + next week). The board
+    // defaults to the current week; `availableWeeks` (from the API) drives a prev/this/next switcher.
+    const [availableWeeks, setAvailableWeeks] = useState([]);
+    const [activeWeek, setActiveWeek] = useState(null);
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const sundayStr = (offsetWeeks = 0) => { const c = new Date(); c.setHours(0, 0, 0, 0); c.setDate(c.getDate() - c.getDay() + offsetWeeks * 7); return `${c.getFullYear()}-${pad2(c.getMonth() + 1)}-${pad2(c.getDate())}`; };
+
+    // Shared: take an array-of-arrays sheet model (from the DB or from CSV) and
+    // populate all the view state. Identical logic for both data sources.
+    const processRows = (rows) => {
             let headerRowIndex = -1;
             for (let i = 0; i < rows.length; i++) {
                 if (rows[i][0] && rows[i][0].includes('קבוצות')) { headerRowIndex = i; break; }
@@ -192,49 +198,52 @@ function PublicSchedule() {
             setSelectedTeamId(defaultTeamId);
         };
 
-        const fetchData = async () => {
+    // Load a week's schedule (null = default = current week). Reused by the initial load and the
+    // week switcher. Also captures the list of published weeks for the switcher.
+    const loadWeek = async (week) => {
+        setLoading(true);
+        try {
+            // 1) Prefer the DB-backed live schedule (published via the manager screen).
             try {
-                // 1) Prefer the DB-backed live schedule (published via the manager screen).
-                try {
-                    const apiRes = await fetch(`/api/${club.slug}/schedule`);
-                    if (apiRes.ok) {
-                        const payload = await apiRes.json();
-                        if (payload && Array.isArray(payload.sessions) && payload.sessions.length) {
-                            // Label the days with the published week (week_start) — EXCEPT when that
-                            // week is already fully in the past: then roll forward to the current week
-                            // so a recurring weekly schedule auto-advances instead of showing last week.
-                            // A current/future week is kept exactly as published (dated-ahead schedules).
-                            const ws = payload.publication?.week_start;
-                            const pad2 = (n) => String(n).padStart(2, '0');
-                            const c = new Date(); c.setHours(0, 0, 0, 0); c.setDate(c.getDate() - c.getDay());
-                            const curWeek = `${c.getFullYear()}-${pad2(c.getMonth() + 1)}-${pad2(c.getDate())}`;
-                            const displayWs = (ws && ws < curWeek) ? curWeek : ws;
-                            processRows(sessionsToRows(payload.sessions, displayWs));
-                            setLoading(false);
-                            return;
-                        }
+                const apiRes = await fetch(`/api/${club.slug}/schedule${week ? `?week=${encodeURIComponent(week)}` : ''}`);
+                if (apiRes.ok) {
+                    const payload = await apiRes.json();
+                    if (Array.isArray(payload.weeks)) setAvailableWeeks(payload.weeks);
+                    if (payload && Array.isArray(payload.sessions) && payload.sessions.length) {
+                        const ws = payload.publication?.week_start;
+                        setActiveWeek(ws || week || null);
+                        // An explicitly chosen week shows its real dates. The DEFAULT view rolls a
+                        // past week forward to the current week (recurring weekly schedules).
+                        const displayWs = week ? ws : ((ws && ws < sundayStr(0)) ? sundayStr(0) : ws);
+                        processRows(sessionsToRows(payload.sessions, displayWs));
+                        setLoading(false);
+                        return;
                     }
-                } catch { /* DB/API unavailable — fall back to CSV */ }
+                    if (week) { // chosen week has no sessions — clear the board
+                        setActiveWeek(week); setData([]); setTeams([]); setHeaders([]); setSelectedTeamId('');
+                        setLoading(false); return;
+                    }
+                }
+            } catch { /* DB/API unavailable — fall back to CSV */ }
 
-                // 2) Fallback: the live Google Sheet CSV (legacy / not-yet-published clubs).
-                const response = await fetch(DATA_URL);
-                const reader = response.body.getReader();
-                const result = await reader.read();
-                const decoder = new TextDecoder('utf-8');
-                const csv = decoder.decode(result.value);
-                Papa.parse(csv, {
-                    header: false,
-                    complete: (results) => { processRows(results.data); setLoading(false); },
-                    error: (error) => { console.error('Error parsing CSV:', error); setLoading(false); },
-                });
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                setLoading(false);
-            }
-        };
+            // 2) Fallback: the live Google Sheet CSV (legacy / not-yet-published clubs).
+            const response = await fetch(DATA_URL);
+            const reader = response.body.getReader();
+            const result = await reader.read();
+            const decoder = new TextDecoder('utf-8');
+            const csv = decoder.decode(result.value);
+            Papa.parse(csv, {
+                header: false,
+                complete: (results) => { processRows(results.data); setLoading(false); },
+                error: (error) => { console.error('Error parsing CSV:', error); setLoading(false); },
+            });
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            setLoading(false);
+        }
+    };
 
-        fetchData();
-    }, []);
+    useEffect(() => { loadWeek(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
     // Club settings: banners (general + per-team) + hall addresses (bridged to localStorage for nav).
     useEffect(() => {
@@ -670,6 +679,25 @@ function PublicSchedule() {
                                 </div>
                             </section>
 
+                            {/* ===== week switcher (only when more than one week is published) ===== */}
+                            {(() => {
+                                const prev = sundayStr(-1), cur = sundayStr(0), nxt = sundayStr(1);
+                                const near = [prev, cur, nxt].filter((w) => availableWeeks.includes(w));
+                                if (near.length < 2) return null;
+                                const label = (w) => (w === prev ? 'שבוע קודם' : w === cur ? 'השבוע' : 'שבוע הבא');
+                                const act = activeWeek || cur;
+                                return (
+                                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', flexWrap: 'wrap', margin: '0 0 1rem' }}>
+                                        {near.map((w) => (
+                                            <button key={w} onClick={() => { setActiveWeek(w); loadWeek(w); }}
+                                                className={`vtab ${act === w ? 'on' : ''}`} style={{ fontWeight: 700 }}>
+                                                {label(w)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+
                             {/* ===== full weekly schedule ===== */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', margin: '1.4rem 0 0.2rem' }}>
                                 <h2 className="section-title" style={{ margin: 0 }}>{t('full_week')}</h2>
@@ -677,7 +705,7 @@ function PublicSchedule() {
                                     {/* Per-parent filters — show/hide games & goalkeeper trainings (saved on this device). */}
                                     <button onClick={toggleGames} title="הצג/הסתר משחקים"
                                         style={{ border: '1px solid var(--hair)', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: showGames ? 'rgba(251,191,36,0.2)' : 'transparent', color: showGames ? '#fde68a' : 'var(--text-dim)' }}>
-                                        {showGames ? '🏀 משחקים' : '🏀 משחקים ✕'}
+                                        {sportEmoji()} משחקים{showGames ? '' : ' ✕'}
                                     </button>
                                     <button onClick={toggleGK} title="הצג/הסתר אימון שוערים"
                                         style={{ border: '1px solid var(--hair)', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: showGK ? 'rgba(168,85,247,0.22)' : 'transparent', color: showGK ? '#e9d5ff' : 'var(--text-dim)' }}>
@@ -718,12 +746,8 @@ function PublicSchedule() {
 
                                     return (
                                         <div key={index} className={cardClass}>
-                                            <button
-                                                className="edit-btn"
-                                                title={t('coach_edit_title')}
-                                                onClick={(e) => { e.stopPropagation(); handleEditSession(content, dayHeader, colIndex); }}
-                                            >✏️ {t('coach')}</button>
-
+                                            {/* No coach "edit" button on the parent board — coaches have their own page + code.
+                                                Showing it to parents is clutter and invites password-guessing. */}
                                             <div className="day-header">
                                                 <span className="day-name">{localizeDay(dayName)}</span>
                                                 <span className="day-date">{date}</span>

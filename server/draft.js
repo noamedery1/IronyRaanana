@@ -125,12 +125,16 @@ export async function appendSessions(slug, target, sessions = []) {
     if (!clubId) throw new Error('Unknown club: ' + slug);
     let pub;
     if (target === 'live') {
+        // Several weeks can be live; "add now" means the CURRENT week — prefer it, else the most
+        // recent past week (recurring), else the earliest live week.
         const r = await pool.query(
-            `SELECT id, week_start::text FROM schedule_publications WHERE club_id=$1 AND status='live' ORDER BY week_start DESC LIMIT 1`,
+            `SELECT id, week_start::text FROM schedule_publications WHERE club_id=$1 AND status='live' ORDER BY week_start`,
             [clubId],
         );
         if (!r.rows.length) throw new Error('אין לו"ז חי לפרסם אליו — פרסם לו"ז קודם, או טען לשבוע הבא (טיוטה).');
-        pub = { id: r.rows[0].id, weekStart: r.rows[0].week_start };
+        const cur = israelCurrentWeekSunday();
+        const row = r.rows.find((x) => x.week_start === cur) || [...r.rows].reverse().find((x) => x.week_start < cur) || r.rows[0];
+        pub = { id: row.id, weekStart: row.week_start };
     } else {
         const d = await getOrCreateDraft(slug);
         pub = { id: d.id, weekStart: d.weekStart };
@@ -205,9 +209,11 @@ export async function publishDraft(slug, publishedBy = 'manager') {
             await cx.query(`UPDATE schedule_publications SET week_start=$2 WHERE id=$1`, [draft.id, curWeek]);
             ws = curWeek;
         }
-        // Archive every currently-live publication for the club (not just the same week) so there is
-        // exactly one live schedule after publishing — otherwise an older week can linger as 'live'.
-        await cx.query(`UPDATE schedule_publications SET status='archived' WHERE club_id=$1 AND status='live'`, [draft.clubId]);
+        // Keep MULTIPLE weeks live at once (e.g. this week + next week) so publishing next week on
+        // Thursday doesn't hide the current week's Fri/Sat games from parents. Archive only the week
+        // being republished (same week_start) and any week already in the past; the current and other
+        // future weeks stay live. The public board defaults to the current week with a week switcher.
+        await cx.query(`UPDATE schedule_publications SET status='archived' WHERE club_id=$1 AND status='live' AND (week_start=$2 OR week_start<$3)`, [draft.clubId, ws, curWeek]);
         await cx.query(`UPDATE schedule_publications SET status='live', published_by=$2, published_at=now() WHERE id=$1`, [draft.id, publishedBy]);
         // Fill each session's coach from the trainers assignment ("ניהול מאמנים") when the schedule
         // was imported without a coach column, so parents see the coach on the published board. Match
