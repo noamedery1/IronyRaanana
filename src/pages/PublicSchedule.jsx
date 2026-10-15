@@ -562,6 +562,19 @@ function PublicSchedule() {
                     </div>
                     )}
 
+                    {/* Prominent games / goalkeeper filters — at the top so an operator scanning all teams
+                        can toggle them without scrolling. Saved per device. */}
+                    <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap', margin: '0.2rem 0 1.1rem' }}>
+                        <button onClick={toggleGames} title="הצג/הסתר משחקים"
+                            style={{ border: `1.5px solid ${showGames ? 'rgba(251,191,36,0.6)' : 'var(--hair)'}`, borderRadius: 999, padding: '0.5rem 1.1rem', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', background: showGames ? 'rgba(251,191,36,0.2)' : 'transparent', color: showGames ? '#fde68a' : 'var(--text-dim)' }}>
+                            {sportEmoji()} משחקים {showGames ? '✓' : '✕'}
+                        </button>
+                        <button onClick={toggleGK} title="הצג/הסתר אימון שוערים"
+                            style={{ border: `1.5px solid ${showGK ? 'rgba(168,85,247,0.6)' : 'var(--hair)'}`, borderRadius: 999, padding: '0.5rem 1.1rem', fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', background: showGK ? 'rgba(168,85,247,0.22)' : 'transparent', color: showGK ? '#e9d5ff' : 'var(--text-dim)' }}>
+                            🧤 שוערים {showGK ? '✓' : '✕'}
+                        </button>
+                    </div>
+
                     {/* Identity switcher (top tabs): the parent's teams in this club — each removable via
                         ✕ (two-tap confirm; window.confirm is unreliable in the app WebView) — plus an
                         "operator" tab when this device also holds an operator identity. Shown in BOTH the
@@ -699,20 +712,7 @@ function PublicSchedule() {
                             })()}
 
                             {/* ===== full weekly schedule ===== */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', margin: '1.4rem 0 0.2rem' }}>
-                                <h2 className="section-title" style={{ margin: 0 }}>{t('full_week')}</h2>
-                                <div style={{ display: 'flex', gap: '0.4rem', marginInlineStart: 'auto' }}>
-                                    {/* Per-parent filters — show/hide games & goalkeeper trainings (saved on this device). */}
-                                    <button onClick={toggleGames} title="הצג/הסתר משחקים"
-                                        style={{ border: '1px solid var(--hair)', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: showGames ? 'rgba(251,191,36,0.2)' : 'transparent', color: showGames ? '#fde68a' : 'var(--text-dim)' }}>
-                                        {sportEmoji()} משחקים{showGames ? '' : ' ✕'}
-                                    </button>
-                                    <button onClick={toggleGK} title="הצג/הסתר אימון שוערים"
-                                        style={{ border: '1px solid var(--hair)', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: showGK ? 'rgba(168,85,247,0.22)' : 'transparent', color: showGK ? '#e9d5ff' : 'var(--text-dim)' }}>
-                                        {showGK ? '🧤 שוערים' : '🧤 שוערים ✕'}
-                                    </button>
-                                </div>
-                            </div>
+                            <h2 className="section-title">{t('full_week')}</h2>
                             <div className="schedule-grid">
                                 {!hasWeek && <div className="empty-state"><h3>{t('no_week')} {sportEmoji()}</h3></div>}
                                 {headers.slice(dayStart, dayStart + 7).map((dayHeader, index) => {
