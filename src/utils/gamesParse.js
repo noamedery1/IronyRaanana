@@ -121,13 +121,18 @@ export function extractGames(items, mainDow = 6 /* שבת */) {
     for (const r of rows) {
         if (r.y <= header.y + 2) continue; // skip title + header rows
         const buckets = {};
-        for (const it of r.items) { const k = colOf(it.x); (buckets[k] ||= []).push(it.str); }
-        const val = (k) => clean((buckets[k] || []).join(' '));
+        for (const it of r.items) { const k = colOf(it.x); (buckets[k] ||= []).push({ x: it.x, str: it.str }); }
+        const val = (k) => clean((buckets[k] || []).map((o) => o.str).join(' '));
+        const strs = (k) => (buckets[k] || []).map((o) => o.str);
         const teamRaw = val('team');
         const time = firstTime(val('time'));
-        const dayCell = val('day');
-        const dayName = (dayCell.match(DAY_RE) || [])[0] || '';
-        const rowDate = findDate((buckets.day || [])); // explicit per-row date (midweek games)
+        // A Hebrew day name can be split across items in reading (RTL) order, e.g. "ש"(x54)+"ישי"
+        // (x38) for שישי. Reconstruct by x (both directions) so the day isn't lost → the game would
+        // otherwise fall back to the main weekday and land on the wrong day.
+        const dayAsc = [...(buckets.day || [])].sort((a, b) => a.x - b.x).map((o) => o.str).join('');
+        const dayDesc = [...(buckets.day || [])].sort((a, b) => b.x - a.x).map((o) => o.str).join('');
+        const dayName = (dayDesc.match(DAY_RE) || dayAsc.match(DAY_RE) || [])[0] || '';
+        const rowDate = findDate(strs('day')); // explicit per-row date (midweek games)
 
         // A continuation line below a game carries its DATE and/or a team-suffix (צו פיוס / צפון),
         // with no time and no day-name of its own — fold both into the previous game. This is how
