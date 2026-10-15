@@ -20,9 +20,9 @@ const COLS = [
 ];
 
 const clean = (s) => (s || '').toString().replace(/\s+/g, ' ').trim();
-// Re-glue a time the PDF split into separate items: "1 6 :00" / "16 :00" → "16:00",
-// "15:00 - 16:30" → "15:00-16:30".
-const glueTime = (s) => clean(s).replace(/(\d)\s+(?=[\d:])/g, '$1').replace(/\s*[-–]\s*/g, '-');
+// Re-glue a time the PDF split into separate items. The time column holds only time tokens, so
+// we can drop every space inside it: "20: 00" / "16 :00" / "1 6 :00" → "16:00"; en-dash → hyphen.
+const glueTime = (s) => clean(s).replace(/\s+/g, '').replace(/–/g, '-');
 const firstTime = (s) => { const m = glueTime(s).match(/\d{1,2}:\d{2}(?:-\d{1,2}:\d{2})?/); return m ? m[0] : ''; };
 // Strip apostrophes/quotes + collapse spaces for team-name matching against the draft.
 export const normTeam = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();

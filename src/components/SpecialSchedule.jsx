@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { gamesPdfToEntries, gameLine } from '../utils/gamesParse.js';
+import { gamesPdfToEntries } from '../utils/gamesParse.js';
 import { gkTextToEntries, gkWhatsApp } from '../utils/gkParse.js';
 import { matchTeam } from '../utils/scheduleMerge.js';
 import { authHeaders } from '../adminApi.js';
@@ -12,29 +12,27 @@ const sundayOf = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDa
 const curWeek = () => fmt(sundayOf(new Date()));
 const nextWeek = () => { const s = sundayOf(new Date()); s.setDate(s.getDate() + 7); return fmt(s); };
 // Route one dated game: this week (or earlier) → live (now); a future week → draft (next week).
-// No date → null, meaning "use the manager's default pick".
 const targetOf = (dateStr) => {
     if (!dateStr) return null;
-    const sun = fmt(sundayOf(new Date(dateStr + 'T00:00:00')));
-    return sun <= curWeek() ? 'live' : 'draft';
+    return fmt(sundayOf(new Date(dateStr + 'T00:00:00'))) <= curWeek() ? 'live' : 'draft';
 };
 
 // Manager tools that ADD games / goalkeeper trainings to the schedule. Two targets:
 //  • "עכשיו" → the LIVE schedule (current week) — parents see on reload.
 //  • "שבוע הבא" → the draft.
-// Flow: parse → REVIEW (what goes where, team-matched or not) → confirm → optional push to the
-// updated teams. Nothing is written until the manager confirms in the review step.
+// Flow: parse → REVIEW (an EDITABLE table — the manager fixes team / day / time / week / details
+// before anything is written) → confirm → optional manual push to the updated teams.
 export default function SpecialSchedule({ mode, onApplied, goPreview }) {
     const slug = getActiveClub().slug;
+    const isGk = mode === 'gk';
     const [step, setStep] = useState('input'); // input | review | done
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState('');
     const [gkText, setGkText] = useState('');
-    const [defaultTarget, setDefaultTarget] = useState('live'); // week for rows WITHOUT a date in the file
-    const [rows, setRows] = useState([]);          // [{team, matched, dow, time, note, start, end, type, gender, coach, date, target}]
-    const [unmatched, setUnmatched] = useState([]);
+    const [rows, setRows] = useState([]);       // editable: [{hint, team, dow, time, target, details}]
+    const [teamsList, setTeamsList] = useState([]); // {name, gender, coach} for the dropdowns
     const [warnings, setWarnings] = useState([]);
-    const [applied, setApplied] = useState(null);  // { inserted, affectedTeams, target }
+    const [applied, setApplied] = useState(null);
     const [whatsapp, setWhatsapp] = useState('');
     const [pushMsg, setPushMsg] = useState('');
 
@@ -43,22 +41,21 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         return (d.teams || []).map((t) => ({ name: t.name, gender: t.gender || 'M', coach: t.coach || '' }));
     };
 
-    // entries (team, dow, line, time/timeRange) + team list → review rows (matched) + unmatched.
-    const toRows = (entries, teams, kind) => {
+    // Build the editable rows. Unmatched teams come through with team:'' so the manager can pick one.
+    const toRows = (entries, teams, kind, fileDefault) => {
         const names = teams.map((t) => t.name);
-        const byName = {}; teams.forEach((t) => { byName[t.name] = t; });
-        const rowsOut = [], miss = [];
-        for (const e of entries) {
-            const hit = matchTeam(e.team, names);
-            const [start, end] = (kind === 'gk' ? e.timeRange : e.time || '').split('-');
-            // GK entries already carry a `line`; game entries don't — build it with gameLine(e).
-            const note = kind === 'gk' ? e.line : gameLine(e);
-            const base = { dow: e.dow, time: e.timeRange || e.time || '', note, start: start || '', end: end || '', type: kind === 'gk' ? 'training' : 'match', date: e.date || null, target: targetOf(e.date) };
-            if (!hit) { miss.push({ ...base, team: e.team }); continue; }
-            const t = byName[hit] || {};
-            rowsOut.push({ ...base, team: hit, matched: true, gender: t.gender || 'M', coach: t.coach || '' });
-        }
-        return { rowsOut, miss };
+        return entries.map((e) => {
+            const details = kind === 'gk' ? ''
+                : [e.opponent ? `נגד ${e.opponent}` : '', e.homeAway ? `(${e.homeAway})` : '', e.field ? `· ${e.field}` : ''].filter(Boolean).join(' ');
+            return {
+                hint: e.team,                                   // the name as parsed (for unmatched rows)
+                team: matchTeam(e.team, names) || '',           // matched club team, or '' to assign
+                dow: e.dow,
+                time: e.timeRange || e.time || '',
+                target: targetOf(e.date) || fileDefault,        // per-row week, editable
+                details,
+            };
+        });
     };
 
     const startGames = async (file) => {
@@ -66,11 +63,9 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         setBusy(true); setErr('');
         try {
             const [{ entries, warnings: w, weekStart }, teams] = await Promise.all([gamesPdfToEntries(file), fetchTeams()]);
-            const { rowsOut, miss } = toRows(entries, teams, 'games');
-            // Default week (for any game WITHOUT a date) from the file's weekend: next week → draft.
-            setDefaultTarget(weekStart === nextWeek() ? 'draft' : 'live');
-            setRows(rowsOut); setUnmatched(miss); setWarnings(w || []); setWhatsapp('');
-            setStep('review');
+            setTeamsList(teams);
+            setRows(toRows(entries, teams, 'games', weekStart === nextWeek() ? 'draft' : 'live'));
+            setWarnings(w || []); setWhatsapp(''); setStep('review');
         } catch (e) { setErr(e.message || 'שגיאה בקריאת הקובץ'); }
         finally { setBusy(false); }
     };
@@ -79,27 +74,36 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         if (!gkText.trim()) { setErr('הדבק את טקסט אימון השוערים'); return; }
         setBusy(true); setErr('');
         try {
-            const [{ entries, warnings: w, dayName }, teams] = await Promise.all([Promise.resolve(gkTextToEntries(gkText)), fetchTeams()]);
-            const { rowsOut, miss } = toRows(entries, teams, 'gk');
-            setDefaultTarget('live'); // GK usually arrives for the current week (a day or two before)
-            setRows(rowsOut); setUnmatched(miss); setWarnings(w || []);
-            setWhatsapp(gkWhatsApp(entries, dayName));
-            setStep('review');
+            const { entries, warnings: w, dayName } = gkTextToEntries(gkText);
+            const teams = await fetchTeams();
+            setTeamsList(teams);
+            setRows(toRows(entries, teams, 'gk', 'live'));
+            setWarnings(w || []); setWhatsapp(gkWhatsApp(entries, dayName)); setStep('review');
         } catch (e) { setErr(e.message || 'שגיאה בפענוח הטקסט'); }
         finally { setBusy(false); }
     };
 
-    const resolved = (r) => r.target || defaultTarget; // row's own week, else the manager's default
+    const update = (i, field, val) => setRows((rs) => rs.map((r, k) => (k === i ? { ...r, [field]: val } : r)));
+    const removeRow = (i) => setRows((rs) => rs.filter((_, k) => k !== i));
+
+    // One editable row → the session to POST. note is REBUILT from the (possibly edited) fields.
+    const toSession = (r) => {
+        const [start, end] = (r.time || '').split('-');
+        const note = isGk
+            ? ['🧤 אימון שוערים', r.time].filter(Boolean).join(' ')
+            : ['🏀 משחק', r.time, r.details].filter((x) => x && x.trim()).join(' ');
+        const t = teamsList.find((x) => x.name === r.team) || {};
+        return {
+            team: r.team, coach: t.coach || '', gender: t.gender || 'M', day_of_week: r.dow,
+            start_time: start || null, end_time: end || null, type: isGk ? 'training' : 'match', note,
+        };
+    };
 
     const postAppend = async (tgt, grp) => {
         if (!grp.length) return { inserted: 0, affectedTeams: [] };
-        const sessions = grp.map((r) => ({
-            team: r.team, coach: r.coach, gender: r.gender, day_of_week: r.dow,
-            start_time: r.start || null, end_time: r.end || null, type: r.type, note: r.note,
-        }));
         const res = await fetch(`/api/${slug}/schedule/append`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
-            body: JSON.stringify({ target: tgt, sessions }),
+            body: JSON.stringify({ target: tgt, sessions: grp.map(toSession) }),
         });
         const d = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(d.error || 'ההוספה נכשלה');
@@ -107,20 +111,18 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
     };
 
     const confirmApply = async () => {
-        if (!rows.length) { setErr('אין מה להוסיף'); return; }
+        const valid = rows.filter((r) => r.team && r.time); // need a team + a time to place it
+        if (!valid.length) { setErr('אין רשומות מוכנות — ודא שלכל שורה יש קבוצה ושעה'); return; }
         setBusy(true); setErr('');
         try {
-            const live = rows.filter((r) => resolved(r) === 'live');
-            const draft = rows.filter((r) => resolved(r) === 'draft');
-            const [rl, rd] = await Promise.all([postAppend('live', live), postAppend('draft', draft)]);
+            const [rl, rd] = await Promise.all([
+                postAppend('live', valid.filter((r) => r.target === 'live')),
+                postAppend('draft', valid.filter((r) => r.target === 'draft')),
+            ]);
             const affected = [...new Set([...(rl.affectedTeams || []), ...(rd.affectedTeams || [])])];
-            setApplied({
-                liveN: rl.inserted || 0, draftN: rd.inserted || 0,
-                skipped: (rl.skipped || 0) + (rd.skipped || 0),
-                affectedTeams: affected,
-            });
+            setApplied({ liveN: rl.inserted || 0, draftN: rd.inserted || 0, skipped: (rl.skipped || 0) + (rd.skipped || 0), affectedTeams: affected });
             setStep('done');
-            if (draft.length) onApplied?.();
+            if (rd.inserted) onApplied?.();
         } catch (e) { setErr(e.message); }
         finally { setBusy(false); }
     };
@@ -129,7 +131,7 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         if (!applied?.affectedTeams?.length) return;
         setBusy(true); setPushMsg('');
         try {
-            const body = mode === 'gk' ? 'לו"ז אימון השוערים עודכן 🧤' : 'לו"ז המשחקים עודכן 🏀';
+            const body = isGk ? 'לו"ז אימון השוערים עודכן 🧤' : 'לו"ז המשחקים עודכן 🏀';
             const segments = applied.affectedTeams.map((t) => 'team:' + t);
             const r = await fetch(`/api/${slug}/messages`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
@@ -143,15 +145,16 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         finally { setBusy(false); }
     };
 
-    const reset = () => { setStep('input'); setRows([]); setUnmatched([]); setApplied(null); setWhatsapp(''); setPushMsg(''); setErr(''); setGkText(''); };
+    const reset = () => { setStep('input'); setRows([]); setApplied(null); setWhatsapp(''); setPushMsg(''); setErr(''); setGkText(''); };
 
-    const panel = { marginTop: 0, color: '#0f1b33' };
     const btn = (bg) => ({ background: bg, color: '#fff', border: 'none', padding: '0.7rem 1.3rem', borderRadius: 8, cursor: busy ? 'wait' : 'pointer', fontWeight: 'bold' });
-    const isGk = mode === 'gk';
     const accent = isGk ? '#a855f7' : '#ff7a18';
+    const cell = { padding: '0.3rem 0.4rem', borderTop: '1px solid #eef2f7' };
+    const inp = { width: '100%', padding: '0.3rem 0.4rem', borderRadius: 6, border: '1px solid #cbd5e1', fontFamily: 'inherit', fontSize: '0.84rem', background: '#fff', color: '#0f1b33' };
+    const readyCount = rows.filter((r) => r.team && r.time).length;
 
     return (
-        <div className="report-panel" style={panel}>
+        <div className="report-panel" style={{ marginTop: 0, color: '#0f1b33' }}>
             <h3 style={{ marginTop: 0 }}>{isGk ? '🧤 לו"ז שוערים' : '🏀 פרסום משחקים'}</h3>
 
             {step === 'input' && (
@@ -159,8 +162,8 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
                     {isGk ? (
                         <>
                             <p style={{ color: '#666', maxWidth: 680 }}>
-                                הדבק את הטקסט של מאמן השוערים (קבוצות + שעות). בשלב הבא תראה בדיוק מה ייכנס ולאן, תאשר,
-                                ותוכל לשלוח פוש לקבוצות שעודכנו. גם מכין טקסט וואטסאפ מסודר.
+                                הדבק את הטקסט של מאמן השוערים (קבוצות + שעות). בשלב הבא תוכל <b>לבדוק ולתקן</b> כל שורה
+                                לפני אישור, ואז לשלוח פוש לקבוצות שעודכנו. גם מכין טקסט וואטסאפ מסודר.
                             </p>
                             <textarea value={gkText} onChange={(e) => setGkText(e.target.value)} rows={8}
                                 placeholder={'לדוגמה:\nאימון שוערים יום ראשון\nנוער\n15:00 - 15:30\nילדים א + ילדים ב\n16:00 - 16:30'}
@@ -170,8 +173,8 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
                     ) : (
                         <>
                             <p style={{ color: '#666', maxWidth: 680 }}>
-                                העלה את קובץ המשחקים (PDF). בשלב הבא תראה בדיוק אילו משחקים זוהו, לאיזו קבוצה וליום,
-                                ולאיזה שבוע — <b>תאשר לפני שמשהו נכנס</b>.
+                                העלה את קובץ המשחקים (PDF). בשלב הבא תראה טבלה <b>שאפשר לערוך</b> — קבוצה, יום, שעה, שבוע
+                                ופרטים — ו<b>תאשר לפני שמשהו נכנס</b>.
                             </p>
                             <label style={{ ...btn(accent), display: 'inline-block' }}>
                                 {busy ? 'קורא…' : '⬆ העלה קובץ משחקים (PDF)'}
@@ -186,54 +189,59 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
 
             {step === 'review' && (
                 <>
-                    {/* Default week for rows the file gave NO date — dated rows route themselves. */}
-                    {rows.some((r) => !r.target) && (
-                        <div style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 10, padding: '0.8rem 1rem', marginBottom: '1rem' }}>
-                            <div style={{ fontWeight: 800, marginBottom: '0.5rem' }}>רשומות ללא תאריך בקובץ — לאיזה שבוע?</div>
-                            <label style={{ display: 'block', marginBottom: '0.4rem', cursor: 'pointer' }}>
-                                <input type="radio" checked={defaultTarget === 'live'} onChange={() => setDefaultTarget('live')} />{' '}
-                                🔴 <b>עכשיו — השבוע הנוכחי</b> (מיד ללו"ז שההורים רואים)
-                            </label>
-                            <label style={{ display: 'block', cursor: 'pointer' }}>
-                                <input type="radio" checked={defaultTarget === 'draft'} onChange={() => setDefaultTarget('draft')} />{' '}
-                                🗓️ <b>שבוע הבא</b> (לטיוטה)
-                            </label>
-                        </div>
-                    )}
-
-                    <div style={{ fontWeight: 800, marginBottom: '0.4rem' }}>זוהו {rows.length} רשומות — בדוק ואשר:</div>
-                    <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                    <div style={{ fontWeight: 800, marginBottom: '0.5rem' }}>
+                        זוהו {rows.length} רשומות — אפשר לתקן כל שורה, ואז לאשר ({readyCount} מוכנות).
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                        שורה בלי קבוצה או בלי שעה לא תתווסף. 🔴 = מתווסף עכשיו ללו"ז החי · 🗓️ = לטיוטה (שבוע הבא).
+                    </div>
+                    <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                             <thead><tr style={{ background: '#f8fafc', textAlign: 'right' }}>
-                                <th style={{ padding: '0.4rem 0.6rem' }}>קבוצה</th><th>יום</th><th>שעה</th><th>שבוע</th><th>פרטים</th>
+                                <th style={{ padding: '0.4rem', minWidth: 150 }}>קבוצה</th>
+                                <th style={{ minWidth: 90 }}>יום</th>
+                                <th style={{ minWidth: 90 }}>שעה</th>
+                                <th style={{ minWidth: 95 }}>שבוע</th>
+                                <th>פרטים</th>
+                                <th></th>
                             </tr></thead>
                             <tbody>
-                                {rows.map((r, i) => {
-                                    const tgt = resolved(r);
-                                    return (
-                                        <tr key={i} style={{ borderTop: '1px solid #eef2f7' }}>
-                                            <td style={{ padding: '0.35rem 0.6rem', fontWeight: 700 }}>{r.team}</td>
-                                            <td>{DOW_HE[r.dow]}</td>
-                                            <td style={{ direction: 'ltr' }}>{r.time}</td>
-                                            <td style={{ fontWeight: 700, color: tgt === 'live' ? '#dc2626' : '#2563eb', whiteSpace: 'nowrap' }}>
-                                                {tgt === 'live' ? '🔴 עכשיו' : '🗓️ הבא'}
-                                            </td>
-                                            <td style={{ color: '#475569' }}>{(r.note || '').replace(/^🏀 |^🧤 /, '')}</td>
-                                        </tr>
-                                    );
-                                })}
+                                {rows.map((r, i) => (
+                                    <tr key={i} style={{ background: (!r.team || !r.time) ? '#fff7ed' : 'transparent' }}>
+                                        <td style={cell}>
+                                            <select value={r.team} onChange={(e) => update(i, 'team', e.target.value)} style={{ ...inp, borderColor: r.team ? '#cbd5e1' : '#f59e0b' }}>
+                                                <option value="">— בחר קבוצה{r.hint ? ` (${r.hint})` : ''} —</option>
+                                                {teamsList.map((t) => <option key={t.name} value={t.name}>{t.name}</option>)}
+                                            </select>
+                                        </td>
+                                        <td style={cell}>
+                                            <select value={r.dow} onChange={(e) => update(i, 'dow', Number(e.target.value))} style={inp}>
+                                                {DOW_HE.map((d, k) => <option key={k} value={k}>{d}</option>)}
+                                            </select>
+                                        </td>
+                                        <td style={cell}>
+                                            <input value={r.time} onChange={(e) => update(i, 'time', e.target.value)} placeholder="16:00" dir="ltr"
+                                                style={{ ...inp, borderColor: r.time ? '#cbd5e1' : '#f59e0b' }} />
+                                        </td>
+                                        <td style={cell}>
+                                            <select value={r.target} onChange={(e) => update(i, 'target', e.target.value)}
+                                                style={{ ...inp, fontWeight: 700, color: r.target === 'live' ? '#dc2626' : '#2563eb' }}>
+                                                <option value="live">🔴 עכשיו</option>
+                                                <option value="draft">🗓️ הבא</option>
+                                            </select>
+                                        </td>
+                                        <td style={cell}>
+                                            {!isGk && <input value={r.details} onChange={(e) => update(i, 'details', e.target.value)} placeholder="נגד … (בית/חוץ) · מגרש" style={inp} />}
+                                        </td>
+                                        <td style={cell}>
+                                            <button onClick={() => removeRow(i)} title="הסר שורה" style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 800 }}>✕</button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
 
-                    {unmatched.length > 0 && (
-                        <div style={{ marginTop: '0.8rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '0.6rem 0.8rem' }}>
-                            <b>{unmatched.length} לא שויכו לקבוצה (לא יתווספו):</b>
-                            <ul style={{ margin: '0.3rem 0 0', paddingInlineStart: '1.2rem' }}>
-                                {unmatched.map((u, i) => <li key={i}>{u.team} — {DOW_HE[u.dow]} {u.time}</li>)}
-                            </ul>
-                        </div>
-                    )}
                     {warnings.length > 0 && (
                         <ul style={{ margin: '0.6rem 0 0', paddingInlineStart: '1.2rem', color: '#92400e', fontSize: '0.84rem' }}>
                             {warnings.map((w, i) => <li key={i}>{w}</li>)}
@@ -241,8 +249,8 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
                     )}
 
                     <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                        <button onClick={confirmApply} disabled={busy || !rows.length} style={btn('#16a34a')}>
-                            {busy ? 'מוסיף…' : '✅ אשר והוסף'}
+                        <button onClick={confirmApply} disabled={busy || !readyCount} style={btn('#16a34a')}>
+                            {busy ? 'מוסיף…' : `✅ אשר והוסף (${readyCount})`}
                         </button>
                         <button onClick={reset} disabled={busy} style={btn('#64748b')}>ביטול</button>
                     </div>
