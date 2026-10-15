@@ -51,7 +51,9 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         for (const e of entries) {
             const hit = matchTeam(e.team, names);
             const [start, end] = (kind === 'gk' ? e.timeRange : e.time || '').split('-');
-            const base = { dow: e.dow, time: e.timeRange || e.time, note: e.line, start: start || '', end: end || '', type: kind === 'gk' ? 'training' : 'match', date: e.date || null, target: targetOf(e.date) };
+            // GK entries already carry a `line`; game entries don't — build it with gameLine(e).
+            const note = kind === 'gk' ? e.line : gameLine(e);
+            const base = { dow: e.dow, time: e.timeRange || e.time || '', note, start: start || '', end: end || '', type: kind === 'gk' ? 'training' : 'match', date: e.date || null, target: targetOf(e.date) };
             if (!hit) { miss.push({ ...base, team: e.team }); continue; }
             const t = byName[hit] || {};
             rowsOut.push({ ...base, team: hit, matched: true, gender: t.gender || 'M', coach: t.coach || '' });
@@ -216,7 +218,7 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
                                             <td style={{ fontWeight: 700, color: tgt === 'live' ? '#dc2626' : '#2563eb', whiteSpace: 'nowrap' }}>
                                                 {tgt === 'live' ? '🔴 עכשיו' : '🗓️ הבא'}
                                             </td>
-                                            <td style={{ color: '#475569' }}>{r.note.replace(/^🏀 |^🧤 /, '')}</td>
+                                            <td style={{ color: '#475569' }}>{(r.note || '').replace(/^🏀 |^🧤 /, '')}</td>
                                         </tr>
                                     );
                                 })}
