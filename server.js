@@ -14,7 +14,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
-import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft, resetDraftFromLive } from './server/draft.js';
+import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
@@ -285,6 +285,11 @@ app.post('/api/:club/draft/import', requireManager, async (req, res) => {
 // Reset the draft to a clean copy of the live schedule (undo unpublished draft edits).
 app.post('/api/:club/draft/reset-from-live', requireManager, async (req, res) => {
     try { res.json(await resetDraftFromLive(req.params.club)); }
+    catch (e) { res.status(400).json({ error: e.message }); }
+});
+// Append extra sessions (games / goalkeeper) to the live schedule or the draft, by target.
+app.post('/api/:club/schedule/append', requireManager, async (req, res) => {
+    try { res.json(await appendSessions(req.params.club, req.body?.target === 'live' ? 'live' : 'draft', req.body?.sessions || [])); }
     catch (e) { res.status(400).json({ error: e.message }); }
 });
 // Publish by promoting the current draft → live (the new DB-only flow).

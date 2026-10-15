@@ -114,6 +114,60 @@ export async function resetDraftFromLive(slug) {
     });
 }
 
+// Append extra sessions (games / goalkeeper trainings) to an existing schedule WITHOUT
+// rebuilding it — used by the games/GK importers. target='live' adds straight to the schedule
+// parents see now (current week); target='draft' adds to next week's draft. Each session's date
+// is derived from the target publication's week + day_of_week when not given. Idempotent per
+// (team, day_of_week, note) so re-running the same import doesn't duplicate. Returns the distinct
+// teams that were actually updated (for the manager's "notify these teams" push).
+export async function appendSessions(slug, target, sessions = []) {
+    const clubId = await clubIdOf(slug);
+    if (!clubId) throw new Error('Unknown club: ' + slug);
+    let pub;
+    if (target === 'live') {
+        const r = await pool.query(
+            `SELECT id, week_start::text FROM schedule_publications WHERE club_id=$1 AND status='live' ORDER BY week_start DESC LIMIT 1`,
+            [clubId],
+        );
+        if (!r.rows.length) throw new Error('אין לו"ז חי לפרסם אליו — פרסם לו"ז קודם, או טען לשבוע הבא (טיוטה).');
+        pub = { id: r.rows[0].id, weekStart: r.rows[0].week_start };
+    } else {
+        const d = await getOrCreateDraft(slug);
+        pub = { id: d.id, weekStart: d.weekStart };
+    }
+    return withTx(async (cx) => {
+        const dateFor = (s) => {
+            if (s.date) return s.date;
+            if (pub.weekStart && s.day_of_week !== null && s.day_of_week !== undefined) {
+                const d = new Date(pub.weekStart + 'T00:00:00'); d.setDate(d.getDate() + Number(s.day_of_week));
+                return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            }
+            return null;
+        };
+        const affected = new Set();
+        let inserted = 0, skipped = 0;
+        for (const s of sessions) {
+            const team = (s.team || '').trim();
+            if (!team || s.day_of_week === null || s.day_of_week === undefined) { skipped++; continue; }
+            const note = (s.note || '').trim();
+            // Skip an identical line already present (re-run safety).
+            const dup = await cx.query(
+                `SELECT 1 FROM sessions WHERE publication_id=$1 AND team=$2 AND day_of_week=$3 AND coalesce(note,'')=$4 LIMIT 1`,
+                [pub.id, team, s.day_of_week, note],
+            );
+            if (dup.rows.length) { skipped++; affected.add(team); continue; }
+            await cx.query(
+                `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'active',$12)`,
+                [pub.id, clubId, team, s.coach || null, s.gender || 'M', s.hall || null,
+                 dateFor(s), s.day_of_week, s.start_time || null, s.end_time || null, s.type || 'training', note],
+            );
+            inserted++; affected.add(team);
+        }
+        return { ok: true, target, inserted, skipped, affectedTeams: [...affected], weekStart: pub.weekStart };
+    });
+}
+
 // Seed the draft from an uploaded Excel/CSV (reuses the live-publish parser).
 export async function importCsvToDraft(slug, csvText) {
     const { sessions, weekStart } = parseSheetToSessions(csvText);

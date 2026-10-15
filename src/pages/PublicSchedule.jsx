@@ -105,6 +105,14 @@ function PublicSchedule() {
     const [selectedSessionForEdit, setSelectedSessionForEdit] = useState(null);
     const { t, localizeDay, localizeHall } = useI18n();
 
+    // Per-device view prefs: show games / goalkeeper-training lines. GK is niche → hidden by default;
+    // games shown. Saved in localStorage so each parent's choice sticks across visits.
+    const prefBool = (k, def) => { try { const v = localStorage.getItem(k); return v === null ? def : v === '1'; } catch { return def; } };
+    const [showGames, setShowGames] = useState(() => prefBool('pref:showGames', true));
+    const [showGK, setShowGK] = useState(() => prefBool('pref:showGK', false));
+    const toggleGames = () => setShowGames((v) => { const n = !v; try { localStorage.setItem('pref:showGames', n ? '1' : '0'); } catch { /* */ } return n; });
+    const toggleGK = () => setShowGK((v) => { const n = !v; try { localStorage.setItem('pref:showGK', n ? '1' : '0'); } catch { /* */ } return n; });
+
     useEffect(() => {
         // Shared: take an array-of-arrays sheet model (from the DB or from CSV) and
         // populate all the view state. Identical logic for both data sources.
@@ -663,7 +671,20 @@ function PublicSchedule() {
                             </section>
 
                             {/* ===== full weekly schedule ===== */}
-                            <h2 className="section-title">{t('full_week')}</h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', margin: '1.4rem 0 0.2rem' }}>
+                                <h2 className="section-title" style={{ margin: 0 }}>{t('full_week')}</h2>
+                                <div style={{ display: 'flex', gap: '0.4rem', marginInlineStart: 'auto' }}>
+                                    {/* Per-parent filters — show/hide games & goalkeeper trainings (saved on this device). */}
+                                    <button onClick={toggleGames} title="הצג/הסתר משחקים"
+                                        style={{ border: '1px solid var(--hair)', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: showGames ? 'rgba(251,191,36,0.2)' : 'transparent', color: showGames ? '#fde68a' : 'var(--text-dim)' }}>
+                                        {showGames ? '🏀 משחקים' : '🏀 משחקים ✕'}
+                                    </button>
+                                    <button onClick={toggleGK} title="הצג/הסתר אימון שוערים"
+                                        style={{ border: '1px solid var(--hair)', borderRadius: 999, padding: '0.3rem 0.7rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', background: showGK ? 'rgba(168,85,247,0.22)' : 'transparent', color: showGK ? '#e9d5ff' : 'var(--text-dim)' }}>
+                                        {showGK ? '🧤 שוערים' : '🧤 שוערים ✕'}
+                                    </button>
+                                </div>
+                            </div>
                             <div className="schedule-grid">
                                 {!hasWeek && <div className="empty-state"><h3>{t('no_week')} {sportEmoji()}</h3></div>}
                                 {headers.slice(dayStart, dayStart + 7).map((dayHeader, index) => {
@@ -676,7 +697,14 @@ function PublicSchedule() {
                                     const isOffDay = !content || content.trim() === '' || content.toLowerCase().includes('xxx');
                                     if (isOffDay) return null;
 
-                                    const lines = content.split('\n').filter(l => l.trim().length > 0);
+                                    const allLines = content.split('\n').filter(l => l.trim().length > 0);
+                                    // Apply the parent's per-device filters (hide games / GK lines).
+                                    const lines = allLines.filter(l => {
+                                        if ((/משחק/.test(l) || l.includes('🏀')) && !showGames) return false;
+                                        if ((/שוער/.test(l) || l.includes('🧤')) && !showGK) return false;
+                                        return true;
+                                    });
+                                    if (lines.length === 0) return null; // whole day hidden by the filters
                                     const anyMatch = lines.some(l => l.includes('משחק') || l.includes('🏀'));
                                     const anyGK = lines.some(l => /שוער/.test(l) || l.includes('🧤'));
                                     const anyChanged = lines.some(l => l.includes('!') || l.includes('⚠️') || l.includes('שינוי'));

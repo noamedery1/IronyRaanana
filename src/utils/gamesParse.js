@@ -27,6 +27,42 @@ const firstTime = (s) => { const m = glueTime(s).match(/\d{1,2}:\d{2}(?:-\d{1,2}
 // Strip apostrophes/quotes + collapse spaces for team-name matching against the draft.
 export const normTeam = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
 
+const pad2 = (n) => String(n).padStart(2, '0');
+const fmtYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const dmyToDate = (d, mo, y) => {
+    if (y < 100) y += 2000;
+    if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+    return new Date(y, mo - 1, d);
+};
+// Parse a date out of text → { date, hasYear } or null. A dd/mm/yy (with year) is stronger than a
+// bare dd/mm, so callers can prefer it over a false dd/mm pulled from split digits.
+const parseDMY = (str) => {
+    const m = (str || '').match(/(\d{1,2})\s*[./-]\s*(\d{1,2})(?:\s*[./-]\s*(\d{2,4}))?/);
+    if (!m) return null;
+    const date = dmyToDate(+m[1], +m[2], m[3] ? +m[3] : new Date().getFullYear());
+    return date ? { date, hasYear: !!m[3] } : null;
+};
+// Glue consecutive all-digit tokens into one number ("1","9","/","10" → "19/10"), so a date whose
+// digits pdfjs split across items reassembles.
+const glueDigits = (toks) => {
+    const out = [];
+    for (const t of toks) {
+        if (/^\d+$/.test(t) && out.length && /^\d+$/.test(out[out.length - 1])) out[out.length - 1] += t;
+        else out.push(t);
+    }
+    return out.join('');
+};
+// Find a date in a line's tokens. pdfjs emits Hebrew (RTL) date tokens split AND sometimes reversed
+// ("6","2","/","4","0","/","25" = 25/04/26), so glue the digit/slash tokens both forward and
+// reversed and prefer whichever yields a full dd/mm/yy (with year).
+const findDate = (strs) => {
+    const toks = (strs || []).map((s) => (s || '').trim()).filter((s) => /^[\d/.\-]+$/.test(s));
+    if (!toks.length) return null;
+    const cands = [parseDMY(glueDigits(toks)), parseDMY(glueDigits([...toks].reverse()))].filter(Boolean);
+    if (!cands.length) return null;
+    return (cands.find((c) => c.hasYear) || cands[0]).date;
+};
+
 // Cluster y-values into fine rows (one visual text line each).
 function fineRows(items, tol = 5) {
     const sorted = [...items].sort((a, b) => a.y - b.y);
@@ -63,6 +99,18 @@ export function extractGames(items, mainDow = 6 /* שבת */) {
     }
     const colOf = (x) => centres.reduce((bk, c) => Math.abs(c.x - x) < Math.abs(bk.x - x) ? c : bk, centres[0]).key;
 
+    // Title/main date: the first dd/mm/yy in the rows above the header (e.g. "25/04/26 שבת").
+    // Gives the baseline week (its Sunday) so every game without its own date lands on the right
+    // week, and the main weekday fallback for day-less rows.
+    let mainDate = null;
+    for (const r of rows) {
+        if (r.y > header.y) break;
+        const d = findDate(r.items.map((i) => i.str));
+        if (d) { mainDate = d; break; }
+    }
+    const weekSunday = mainDate ? (() => { const s = new Date(mainDate); s.setDate(s.getDate() - s.getDay()); return s; })() : null;
+    if (mainDate) mainDow = mainDate.getDay();
+
     const entries = [];
     const warnings = [];
     // A team name sometimes wraps onto its own line ("צו פיוס" / "צפון" below "נערים ב'"),
@@ -77,10 +125,18 @@ export function extractGames(items, mainDow = 6 /* שבת */) {
         const val = (k) => clean((buckets[k] || []).join(' '));
         const teamRaw = val('team');
         const time = firstTime(val('time'));
-        const dayName = (val('day').match(DAY_RE) || [])[0] || '';
+        const dayCell = val('day');
+        const dayName = (dayCell.match(DAY_RE) || [])[0] || '';
+        const rowDate = findDate((buckets.day || [])); // explicit per-row date (midweek games)
 
-        // Pure suffix wrap → append to the previous line's team, consume (no new row).
-        if (prev && SUFFIX_RE.test(teamRaw) && !time && !dayName) { prev.setTeam(`${prev.text} ${teamRaw}`); continue; }
+        // A continuation line below a game carries its DATE and/or a team-suffix (צו פיוס / צפון),
+        // with no time and no day-name of its own — fold both into the previous game. This is how
+        // midweek games get their real (next-week) date, which sits on the suffix line below.
+        if (prev && !time && !dayName && (SUFFIX_RE.test(teamRaw) || (!teamRaw && rowDate))) {
+            if (SUFFIX_RE.test(teamRaw)) prev.setTeam(`${prev.text} ${teamRaw}`);
+            if (rowDate) prev.setDate(rowDate);
+            continue;
+        }
         if (!teamRaw) { prev = null; continue; }
 
         // A real game line carries a team AND (a time or a day). A team with neither is a
@@ -90,25 +146,36 @@ export function extractGames(items, mainDow = 6 /* שבת */) {
         if (!time && !dayName) {
             const w = { team: normTeam(teamRaw) };
             warnings.push(w);
-            prev = { text: w.team, setTeam: (t) => { w.team = normTeam(t); } };
+            prev = { text: w.team, setTeam: (t) => { w.team = normTeam(t); prev.text = w.team; }, setDate: () => {} };
             continue;
         }
 
+        const dow = dayName ? DAY_IDX[dayName] : mainDow;
+        // Date: the row's own date if present, else baseline week's Sunday + weekday (no own date =
+        // a weekend game on the main weekend). hasOwnDate marks games that carry an explicit date
+        // (midweek → possibly a different/next week), which the caller routes by.
+        const weekendDate = weekSunday ? fmtYMD(new Date(weekSunday.getFullYear(), weekSunday.getMonth(), weekSunday.getDate() + dow)) : null;
         const entry = {
             team: normTeam(teamRaw),
-            dow: dayName ? DAY_IDX[dayName] : mainDow,
+            dow,
+            date: rowDate ? fmtYMD(rowDate) : weekendDate,
+            hasOwnDate: !!rowDate,
             time,
             opponent: val('opponent'),
             homeAway: /חוץ/.test(val('homeAway')) ? 'חוץ' : /בית/.test(val('homeAway')) ? 'בית' : '',
             field: val('field'),
         };
         entries.push(entry);
-        prev = { text: entry.team, setTeam: (t) => { entry.team = normTeam(t); } };
+        prev = {
+            text: entry.team,
+            setTeam: (t) => { entry.team = normTeam(t); prev.text = entry.team; },
+            setDate: (d) => { entry.date = fmtYMD(d); entry.hasOwnDate = true; },
+        };
     }
     // Resolve warnings to strings now that suffixes have folded in.
-    const warn = warnings.map((w) => `לא זוהה משחק ברור עבור "${w.team}" — בדוק/הוסף ידנית בתצוגה המקדימה אם צריך.`);
+    const warn = warnings.map((w) => `לא זוהה משחק ברור עבור "${w.team}" — בדוק/הוסף ידנית אם צריך.`);
     if (!entries.length) warn.push('לא נמצאו משחקים בקובץ.');
-    return { entries, warnings: warn };
+    return { entries, warnings: warn, weekStart: weekSunday ? fmtYMD(weekSunday) : null };
 }
 
 // Build the schedule cell line parents see. "משחק" marks it as a game (amber card + badge);
