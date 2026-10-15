@@ -140,13 +140,13 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
             const segments = applied.liveTeams.map((t) => 'team:' + t);
             const r = await fetch(`/api/${slug}/messages`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
-                body: JSON.stringify({ title: 'עדכון לו"ז', body, target: `קבוצות: ${applied.affectedTeams.join(', ')}`, segments, channel: 'all' }),
+                body: JSON.stringify({ title: 'עדכון לו"ז', body, target: `קבוצות: ${applied.liveTeams.join(', ')}`, segments, channel: 'all' }),
             });
             const d = await r.json().catch(() => ({}));
-            if (d.error) throw new Error();
+            if (!r.ok || d.error) throw new Error(d.error || ('HTTP ' + r.status));
             const n = (d.sent || 0) + (d.nativeSent || 0);
             setPushMsg(`✓ פוש נשלח ל-${n} מכשירים (${applied.liveTeams.length} קבוצות)`);
-        } catch { setPushMsg('⚠️ שליחת הפוש נכשלה'); }
+        } catch (e) { setPushMsg('⚠️ שליחת הפוש נכשלה' + (e?.message ? ': ' + e.message : '')); }
         finally { setBusy(false); }
     };
 
