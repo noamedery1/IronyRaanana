@@ -8,7 +8,7 @@ import ErrorPage from './pages/ErrorPage.jsx'
 import { setupClubPwa } from './clubPwa.js'
 import { loadClubs, isKnownClub, getClub } from './clubConfig.js'
 import { initTheme } from './theme.js'
-import { installNativeDeepLinks } from './native.js'
+import { installNativeDeepLinks, installNativePushTap } from './native.js'
 import './pwaInstall.js' // capture the browser's install prompt as early as possible
 
 // On a per-club subdomain (<slug>.squadio.techbynoam.com) the club lives at the ORIGIN root, but
@@ -171,6 +171,7 @@ async function boot() {
     applySubdomainClub() // carry a subdomain's club into the path before routing/PWA identity
     setupClubPwa()
     installNativeDeepLinks() // native app: a tapped invite link (warm) navigates the WebView to it
+    installNativePushTap()   // native app: a tapped push (backgrounded, on the live site) opens its link
   } catch (err) {
     console.error('Boot failed:', err)
     createRoot(document.getElementById('root')).render(<ErrorPage mode="error" />)

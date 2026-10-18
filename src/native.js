@@ -39,3 +39,35 @@ export function installNativeDeepLinks() {
         });
     } catch { /* not native */ }
 }
+
+// When a native push is TAPPED while the app is already running (backgrounded), Capacitor fires
+// `pushNotificationActionPerformed` on whatever page the WebView currently shows — i.e. this live-site
+// bundle. The launcher (native-shell/index.html) also registers this, but once the app has navigated
+// here its listener is gone, so without this the tapped link was dropped (app came forward on the old
+// page). Cold-start taps are still handled by the launcher before it navigates here, so this only adds
+// the missing warm/background path. External links (an Instagram/Facebook post) open in the system
+// browser; a squadio link/path navigates the WebView. No-op on the web. Safe to call once at boot.
+export function installNativePushTap() {
+    if (!isNativeApp() || window.__nativePushTapInstalled) return;
+    window.__nativePushTapInstalled = true;
+    try {
+        const PN = window.Capacitor?.Plugins?.PushNotifications;
+        if (!PN?.addListener) return;
+        PN.addListener('pushNotificationActionPerformed', (a) => {
+            try {
+                const d = (a && a.notification && a.notification.data) || {};
+                const url = d.url || d.link || '';
+                if (!url) return;
+                const base = window.location.origin;
+                const full = /^https?:\/\//i.test(url) ? url : (base + (url.charAt(0) === '/' ? '' : '/') + url);
+                let host = '';
+                try { host = new URL(full).hostname.toLowerCase(); } catch { /* bad url */ }
+                if (/(^|\.)squadio\.techbynoam\.com$/i.test(host)) {
+                    if (full !== window.location.href) window.location.href = full; // in-app page
+                } else {
+                    try { window.open(full, '_system'); } catch { window.location.href = full; } // external → system browser
+                }
+            } catch { /* ignore malformed action */ }
+        });
+    } catch { /* not native / plugin missing */ }
+}
