@@ -84,6 +84,76 @@ export async function ensureStore() {
             )`);
         await pool.query('CREATE INDEX IF NOT EXISTS native_push_seg_idx ON native_push_tokens (club_id, segment)');
     } catch (e) { console.error('[native-push] table init failed (non-fatal):', e.message); }
+    // FA (Israel FA) games sync — tracked fixtures + their approval state. Additive; created here
+    // too because deploys skip migrations. See server/faGames.js.
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS fa_game_sync (
+              id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+              club_id       uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+              fa_key        text NOT NULL,
+              team          text,
+              league        text,
+              game_name     text,
+              opponent      text,
+              home_away     text,
+              field         text,
+              round         int,
+              game_date     text,
+              game_time     text,
+              status        text NOT NULL DEFAULT 'tracking',
+              session_id    uuid,
+              notified_date text,
+              notified_time text,
+              created_at    timestamptz NOT NULL DEFAULT now(),
+              updated_at    timestamptz NOT NULL DEFAULT now(),
+              UNIQUE (club_id, fa_key)
+            )`);
+        await pool.query('CREATE INDEX IF NOT EXISTS fa_game_sync_status_idx ON fa_game_sync (club_id, status)');
+    } catch (e) { console.error('[fa-games] table init failed (non-fatal):', e.message); }
+    // Enable FA-games sync for the live Hapoel Raanana football club. Prod-only row (seeded via the
+    // super-user screen, not here) so this is a no-op on a dev DB. Fills these keys only when absent
+    // (`defaults || config` lets config win), so a later manual edit of the map/emails persists.
+    try {
+        const FC_DEFAULTS = {
+            faClubId: 2203,
+            faLeagueMap: {
+                'ליגת העל לנוער': 'נוער',
+                "נערים א' על": "נערים א'",
+                "נערים ב' על": "נערים ב'",
+                "נערים ב' לאומית דרום": 'נערים ב צו פיוס',
+                "נערים ג' על": "נערים ג'",
+                "נערים ג' לאומית דרום": 'נערים ג צו פיוס',
+                "ליגת ילדים א' מרכז": "ילדים א'",
+                "ליגת ילדים א' שרון 1": 'ילדים א צו פיוס',
+                "ליגת ילדים ב' מרכז": "ילדים ב'",
+                "ליגת ילדים ב' שרון 1": 'ילדים ב צו פיוס',
+                "ליגת ילדים ג' מרכז": "ילדים ג'",
+                "ליגת ילדים ג' שרון 1": "ילדים ג' צפון",
+                "ליגת ילדים טרום א' שרון": "טרום א'",
+                "ליגת ילדים טרום א' שרון 1": "טרום א' צפון",
+                "ליגת ילדים טרום ב' שרון": "טרום ב'",
+            },
+            // Cup games have no 1:1 league, so map them by the (unique) Raanana-side display name.
+            // Punctuation is normalized on both sides. Deliberately omits the ambiguous bare names
+            // ("הפועל רעננה", "...צפון", "...צו פיוס", "...2 צו פיוס") which can't be resolved by name
+            // alone — those stay unmapped and surface to the manager instead of risking a wrong team.
+            faNameMap: {
+                "הפ' רעננה רועי": 'נוער',
+                'הפועל רעננה אביתר עטואר': "נערים א'",
+                'הפועל רעננה ליאור אסולין': "נערים ב'",
+                'הפ. רעננה דן ווידנבאום צו פיוס': 'נערים ב צו פיוס',
+                "הפ' רעננה רחמים צו פיוס": 'ילדים ב צו פיוס',
+                'הפועל רעננה אור': "טרום א'",
+                "הפ' רעננה ניצן": "טרום ב'",
+            },
+            managerEmails: ['Dani.tankel@gmail.com'],
+        };
+        await pool.query(
+            `UPDATE clubs SET config = $1::jsonb || coalesce(config,'{}'::jsonb) WHERE slug='fcraanana'`,
+            [JSON.stringify(FC_DEFAULTS)],
+        );
+    } catch (e) { console.error('[fa-games] fcraanana config init failed (non-fatal):', e.message); }
 }
 
 export async function listClubs() {
