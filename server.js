@@ -14,6 +14,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
+import { pollClub, pollAllClubs, approveFaGame, rejectFaGame, listFaGames, faDiag, faVerify } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
@@ -576,6 +577,35 @@ app.get('/api/:club/requests/:id/reject', async (req, res) => {
     catch (e) { res.send(resultPage('שגיאה', e.message)); }
 });
 
+// FA (Israel FA) games sync — manager queue + approval. Approval writes the game to the live board
+// and pushes the team; nothing is pushed without the manager's click (phase 1).
+app.get('/api/:club/fa', requireManager, async (req, res) => {
+    try { ok(res, { games: await listFaGames(req.params.club, req.query.status || 'pending') }); } catch (e) { fail(res, e); }
+});
+app.get('/api/:club/fa/diag', requireManager, async (req, res) => {
+    try { ok(res, await faDiag(req.params.club)); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/fa/poll', requireManager, async (req, res) => {
+    try { ok(res, await pollClub(req.params.club)); } catch (e) { fail(res, e); }
+});
+app.post('/api/:club/fa/:id/approve', requireManager, async (req, res) => {
+    try { ok(res, await approveFaGame(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/:club/fa/:id/reject', requireManager, async (req, res) => {
+    try { ok(res, await rejectFaGame(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
+});
+// Signed one-click approve/reject from the manager's email link (resultPage/esc defined below).
+app.get('/api/:club/fa/:id/approve', async (req, res) => {
+    if (!faVerify(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
+    try { const r = await approveFaGame(req.params.club, req.params.id); res.send(resultPage('✅ המשחק פורסם ונשלח להורים', r.message || '')); }
+    catch (e) { res.send(resultPage('לא ניתן לאשר', e.message)); }
+});
+app.get('/api/:club/fa/:id/reject', async (req, res) => {
+    if (!faVerify(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
+    try { await rejectFaGame(req.params.club, req.params.id); res.send(resultPage('המשחק נדחה — לא נשלח')); }
+    catch (e) { res.send(resultPage('שגיאה', e.message)); }
+});
+
 // Dynamic per-club Web App Manifest (must be registered before the dist static handler).
 app.get(/^\/clubs\/([a-z0-9-]+)\.webmanifest$/, async (req, res) => {
     const club = await getClub(req.params[0]);
@@ -884,6 +914,19 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+// FA-games poller: a few times a day, fetch each FA-enabled club's fixtures and queue manager
+// approvals for newly-finalized times. In-process on the single Railway web dyno (no scheduler infra
+// exists). ponytail: assumes one instance — if ever scaled >1, move this to a dedicated cron/worker.
+// Off-switch: FA_SYNC_ENABLED=0.
+if (process.env.FA_SYNC_ENABLED !== '0') {
+    const FA_POLL_MS = Number(process.env.FA_POLL_MS) || 8 * 60 * 60 * 1000; // ~3x/day
+    const runFaPolls = () => pollAllClubs()
+        .then((r) => { const active = r.filter((x) => !x.skipped); if (active.length) console.log('[fa] poll:', JSON.stringify(active)); })
+        .catch((e) => console.error('[fa] poll run failed:', e.message));
+    setTimeout(runFaPolls, 30_000).unref(); // once shortly after boot
+    setInterval(runFaPolls, FA_POLL_MS).unref();
+}
 
 // Graceful shutdown on redeploy: Railway sends SIGTERM to the old container.
 // Close cleanly and exit 0 so it isn't reported as a crash ("npm error signal SIGTERM").

@@ -1,0 +1,6 @@
+# Additive Nixpacks config — keeps the auto-detected Node build/start, only ensures `curl` is present
+# at runtime. server/faGames.js shells out to curl to reach the Israel FA site: its Cloudflare WAF
+# rejects Node's TLS fingerprint (403) but accepts curl's. If curl were missing the FA poller simply
+# no-ops (the manual games-import flow is unaffected), but this guarantees it works.
+[phases.setup]
+aptPkgs = ["curl"]
