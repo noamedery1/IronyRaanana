@@ -15,22 +15,6 @@ import { sendEmail } from './mailer.js';
 import { getClub, listClubs } from './clubsStore.js';
 import { getSetting, setSetting } from './settings.js';
 
-const FA_API = 'https://www.football.org.il/__svws__/SvService.asmx/GetClubGames';
-// Chrome-like TLS fingerprint (JA3) for cycletls — see faFetch for why.
-const CHROME_JA3 = '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-
-// cycletls spins a small Go client (uTLS) that presents a real browser TLS fingerprint. Lazy
-// singleton — started on the first fetch, reused, and torn down with the container. Never started
-// at boot, so a problem here can never affect the rest of the server.
-let _cycle = null;
-async function getCycle() {
-    if (!_cycle) {
-        const initCycleTLS = (await import('cycletls')).default;
-        _cycle = await initCycleTLS();
-    }
-    return _cycle;
-}
 
 // Signed approve/reject links (same HMAC scheme as change requests, namespaced so tokens don't cross).
 const SIGN_SECRET = process.env.REQUEST_SIGN_SECRET || process.env.PUSH_SECRET || 'dev-secret';
@@ -112,26 +96,39 @@ export function faNote(row) {
 
 // ===== FA fetch =====
 
-// The FA host is behind Cloudflare, which blocks requests by TLS fingerprint (JA3): any OpenSSL
-// client — Node's fetch/undici AND Linux curl — gets a 403, while a browser (or Windows/Schannel
-// curl) is let through. Since the server runs on Linux, we fetch through cycletls, whose Go uTLS
-// backend presents a real Chrome fingerprint. Any failure throws and is swallowed by the caller:
-// no FA updates that cycle, while the manual games-import flow is completely unaffected.
+// Reaching the FA fixtures needs to defeat TWO Cloudflare blocks:
+//  1. football.org.il blocks every datacenter/cloud egress IP (Railway AND Google both get a 403
+//     challenge; only residential IPs pass) — so a tiny Cloudflare Worker (FA_PROXY_URL) fetches FA
+//     from Cloudflare's own edge, which IS allowed through, and returns the JSON.
+//  2. That worker, on its custom domain, still sits behind Cloudflare's bot/TLS-fingerprint challenge,
+//     which 403s any OpenSSL client (Node's undici, Linux curl). So we call the worker through cycletls,
+//     whose Go uTLS backend presents a real Chrome fingerprint.
+// cycletls ships a prebuilt linux binary; lazy singleton, started on first poll (never at boot), torn
+// down with the container. Any failure throws and is swallowed by the caller — the manual games-import
+// flow is unaffected.
+const CHROME_JA3 = '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+let _cycle = null;
+async function getCycle() {
+    if (!_cycle) { const initCycleTLS = (await import('cycletls')).default; _cycle = await initCycleTLS(); }
+    return _cycle;
+}
+
 async function faFetch(clubFaId, week) {
+    const base = process.env.FA_PROXY_URL;
+    if (!base) throw new Error('FA_PROXY_URL not set');
+    const u = new URL(base);
+    u.searchParams.set('key', process.env.FA_PROXY_SECRET || '');
+    u.searchParams.set('clubId', String(Number(clubFaId)));
+    if (week) u.searchParams.set('week', week);
     const cycle = await getCycle();
-    const r = await cycle(FA_API, {
-        body: JSON.stringify({ clubGamesSearcher: { ClubId: Number(clubFaId), Week: week || null } }),
-        headers: { 'Content-Type': 'application/json', 'User-Agent': UA, Referer: 'https://www.football.org.il/clubs/club/?club_id=' + Number(clubFaId) },
-        ja3: CHROME_JA3,
-        timeout: 25,
-    }, 'post');
-    if (r.status !== 200) throw new Error('FA ' + r.status);
-    // cycletls 2.x returns a fetch-like response (json()/text()); tolerate older shapes too.
+    const r = await cycle(u.toString(), { ja3: CHROME_JA3, headers: { 'User-Agent': UA }, timeout: 25 }, 'get');
+    if (r.status !== 200) throw new Error('FA proxy ' + r.status);
     let j;
     if (typeof r.json === 'function') j = await r.json();
     else if (typeof r.text === 'function') j = JSON.parse(await r.text());
     else if (r.body != null) j = typeof r.body === 'string' ? JSON.parse(r.body) : r.body;
-    else throw new Error('FA empty response');
+    else throw new Error('FA proxy empty response');
     return j.d || { Games: [], NextRound: null };
 }
 
