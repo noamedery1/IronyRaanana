@@ -8,8 +8,6 @@
 // Change-detection is driven off `notified_*` (the last date/time we queued or applied), not the
 // raw latest snapshot, so a value we've already surfaced is never re-sent, but a genuine change is.
 import crypto from 'crypto';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { pool, withTx } from './db.js';
 import { clubId } from './people.js';
 import { broadcast } from './notify.js';
@@ -18,7 +16,21 @@ import { getClub, listClubs } from './clubsStore.js';
 import { getSetting, setSetting } from './settings.js';
 
 const FA_API = 'https://www.football.org.il/__svws__/SvService.asmx/GetClubGames';
-const pexec = promisify(execFile);
+// Chrome-like TLS fingerprint (JA3) for cycletls — see faFetch for why.
+const CHROME_JA3 = '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+// cycletls spins a small Go client (uTLS) that presents a real browser TLS fingerprint. Lazy
+// singleton — started on the first fetch, reused, and torn down with the container. Never started
+// at boot, so a problem here can never affect the rest of the server.
+let _cycle = null;
+async function getCycle() {
+    if (!_cycle) {
+        const initCycleTLS = (await import('cycletls')).default;
+        _cycle = await initCycleTLS();
+    }
+    return _cycle;
+}
 
 // Signed approve/reject links (same HMAC scheme as change requests, namespaced so tokens don't cross).
 const SIGN_SECRET = process.env.REQUEST_SIGN_SECRET || process.env.PUSH_SECRET || 'dev-secret';
@@ -100,25 +112,26 @@ export function faNote(row) {
 
 // ===== FA fetch =====
 
-// The FA host is behind Cloudflare, which blocks Node's TLS fingerprint (JA3 bot-fight) with a 403
-// HTML page regardless of headers — but allows curl's TLS. So we shell out to curl (present on the
-// Railway/Nixpacks runtime). Any failure throws and is swallowed by the caller: no FA updates that
-// cycle, while the manual games-import flow is completely unaffected (additive feature).
+// The FA host is behind Cloudflare, which blocks requests by TLS fingerprint (JA3): any OpenSSL
+// client — Node's fetch/undici AND Linux curl — gets a 403, while a browser (or Windows/Schannel
+// curl) is let through. Since the server runs on Linux, we fetch through cycletls, whose Go uTLS
+// backend presents a real Chrome fingerprint. Any failure throws and is swallowed by the caller:
+// no FA updates that cycle, while the manual games-import flow is completely unaffected.
 async function faFetch(clubFaId, week) {
-    const body = JSON.stringify({ clubGamesSearcher: { ClubId: Number(clubFaId), Week: week || null } });
-    let stdout;
-    try {
-        ({ stdout } = await pexec('curl', [
-            '-sS', '--fail', '--max-time', '25',
-            '-H', 'Content-Type: application/json',
-            '-H', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            '-H', 'Referer: https://www.football.org.il/clubs/club/?club_id=' + Number(clubFaId),
-            '--data', body, FA_API,
-        ], { maxBuffer: 8 * 1024 * 1024, timeout: 30000 }));
-    } catch (e) {
-        throw new Error(e.code === 'ENOENT' ? 'curl not available on host' : ('FA fetch failed: ' + (e.stderr || e.message)));
-    }
-    const j = JSON.parse(stdout);
+    const cycle = await getCycle();
+    const r = await cycle(FA_API, {
+        body: JSON.stringify({ clubGamesSearcher: { ClubId: Number(clubFaId), Week: week || null } }),
+        headers: { 'Content-Type': 'application/json', 'User-Agent': UA, Referer: 'https://www.football.org.il/clubs/club/?club_id=' + Number(clubFaId) },
+        ja3: CHROME_JA3,
+        timeout: 25,
+    }, 'post');
+    if (r.status !== 200) throw new Error('FA ' + r.status);
+    // cycletls 2.x returns a fetch-like response (json()/text()); tolerate older shapes too.
+    let j;
+    if (typeof r.json === 'function') j = await r.json();
+    else if (typeof r.text === 'function') j = JSON.parse(await r.text());
+    else if (r.body != null) j = typeof r.body === 'string' ? JSON.parse(r.body) : r.body;
+    else throw new Error('FA empty response');
     return j.d || { Games: [], NextRound: null };
 }
 
