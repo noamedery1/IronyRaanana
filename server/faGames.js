@@ -178,7 +178,9 @@ export async function ingestGames(slug, games = []) {
             else summary.tracking++;
         } catch (e) { console.error('[fa] sync game failed', slug, faKey(g), e.message); }
     }
-    if (firstPoll) await setSetting(slug, 'faBaselinedAt', new Date().toISOString());
+    // Mark the club baselined only once we've actually processed a non-empty batch — an empty ingest
+    // (e.g. the clearing half of a reset) must NOT trip the flag, or the real batch would then alert.
+    if (firstPoll && games.length) await setSetting(slug, 'faBaselinedAt', new Date().toISOString());
     console.log('[fa] ingest:', JSON.stringify(summary));
     return summary;
 }
