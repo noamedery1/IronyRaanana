@@ -14,7 +14,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
-import { ingestGames, approveFaGame, rejectFaGame, listFaGames, faDiag, faVerify } from './server/faGames.js';
+import { ingestGames, resetClub, approveFaGame, rejectFaGame, listFaGames, faDiag, faVerify } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
@@ -592,8 +592,12 @@ app.get('/api/:club/fa/diag', requireManager, async (req, res) => {
 // not a manager session). Reached on the direct Railway host to bypass Cloudflare.
 app.post('/api/:club/fa/ingest', async (req, res) => {
     if ((req.query.key || '') !== (process.env.FA_PROXY_SECRET || '\0')) return res.status(403).json({ error: 'forbidden' });
-    try { ok(res, await ingestGames(req.params.club, Array.isArray(req.body?.games) ? req.body.games : [])); }
-    catch (e) { fail(res, e); }
+    try {
+        let reset;
+        if (req.query.reset === '1') reset = await resetClub(req.params.club);
+        const summary = await ingestGames(req.params.club, Array.isArray(req.body?.games) ? req.body.games : []);
+        ok(res, reset ? { ...summary, reset } : summary);
+    } catch (e) { fail(res, e); }
 });
 app.post('/api/:club/fa/:id/approve', requireManager, async (req, res) => {
     try { ok(res, await approveFaGame(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }

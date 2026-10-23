@@ -183,6 +183,15 @@ export async function ingestGames(slug, games = []) {
     return summary;
 }
 
+// Wipe a club's FA state so the NEXT ingest re-baselines from scratch (silently). Used to recover
+// from a partial/incomplete first baseline without alerting the manager for games that already exist.
+export async function resetClub(slug) {
+    const cid = await clubId(slug);
+    const r = await pool.query('DELETE FROM fa_game_sync WHERE club_id=$1', [cid]);
+    await setSetting(slug, 'faBaselinedAt', '');
+    return { ok: true, cleared: r.rowCount };
+}
+
 // ===== manager approval (email + push), mirrors server/requests.js =====
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
