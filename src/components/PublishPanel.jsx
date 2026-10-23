@@ -3,7 +3,7 @@ import { authHeaders } from '../adminApi.js';
 
 // Manager tool: take the current Google Sheet (the draft) and publish it to the DB
 // as the live schedule for its week. Shows the result + publication history.
-export default function PublishPanel({ clubSlug }) {
+export default function PublishPanel({ clubSlug, onResetDraft }) {
     const [busy, setBusy] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
@@ -117,6 +117,17 @@ export default function PublishPanel({ clubSlug }) {
                     ))}
                 </tbody>
             </table>
+
+            {onResetDraft && (
+                <div style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ color: '#64748b', fontSize: '0.85rem', maxWidth: 560, marginBottom: '0.5rem' }}>
+                        טעית בבניית הטיוטה? אפשר לשחזר אותה בחזרה ללו"ז החי הנוכחי (מוחק שינויים שלא פורסמו — ההורים לא מושפעים).
+                    </div>
+                    <button onClick={onResetDraft} style={{ background: '#fff', color: '#64748b', border: '1px solid #cbd5e1', padding: '0.5rem 1rem', borderRadius: 9, fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer' }}>
+                        ↩ שחזר טיוטה נקייה מהלו"ז החי
+                    </button>
+                </div>
+            )}
 
             {viewing && (
                 <div onClick={() => setViewing(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '1rem' }}>

@@ -17,6 +17,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import QuickStart from '../components/QuickStart';
 import PublishPanel from '../components/PublishPanel';
 import ApprovalsPanel from '../components/ApprovalsPanel';
+import FaGamesPanel from '../components/FaGamesPanel';
 import SpecialSchedule from '../components/SpecialSchedule';
 import { getActiveClub } from '../clubConfig.js';
 import { venues } from '../sportLabels.js';
@@ -47,6 +48,7 @@ const AdminDashboard = () => {
     const [teamConfig, setTeamConfig] = useState([]);
     const [coachOf, setCoachOf] = useState({}); // team name → coach, derived from the trainers table
     const [pendingCount, setPendingCount] = useState(0); // pending trainer requests → sidebar badge
+    const [faPendingCount, setFaPendingCount] = useState(0); // FA games awaiting approval → sidebar badge
     const [currentSchedule, setCurrentSchedule] = useState(null);
     const [hallConfig, setHallConfig] = useState({});
     const [pw, setPw] = useState({ cur: '', next: '', confirm: '' });
@@ -242,9 +244,16 @@ const AdminDashboard = () => {
             .then((d) => setPendingCount(Array.isArray(d.requests) ? d.requests.length : 0))
             .catch(() => { /* view-only / offline — leave the badge as is */ });
     };
+    // FA games awaiting approval → the "משחקי ליגה" sidebar badge (same cadence as trainer requests).
+    const loadFaPending = () => {
+        fetch(`/api/${club.slug}/fa?status=pending`, { headers: authHeaders(club.slug) })
+            .then((r) => (r.ok ? r.json() : { games: [] }))
+            .then((d) => setFaPendingCount(Array.isArray(d.games) ? d.games.length : 0))
+            .catch(() => { /* view-only / offline */ });
+    };
     useEffect(() => {
-        loadPending();
-        const id = setInterval(loadPending, 60000);
+        loadPending(); loadFaPending();
+        const id = setInterval(() => { loadPending(); loadFaPending(); }, 60000);
         return () => clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [club.slug]);
@@ -900,13 +909,15 @@ const AdminDashboard = () => {
             case 'trainersAdmin':
                 return <TrainerManager />;
             case 'publish':
-                return <PublishPanel clubSlug={getActiveClub().slug} />;
+                return <PublishPanel clubSlug={getActiveClub().slug} onResetDraft={resetDraftFromLive} />;
             case 'games':
                 return <SpecialSchedule mode="games" onApplied={() => loadDraft({ silent: true })} goPreview={() => selectTab('preview')} />;
             case 'goalkeeper':
                 return <SpecialSchedule mode="gk" onApplied={() => loadDraft({ silent: true })} goPreview={() => selectTab('preview')} />;
             case 'approvals':
                 return <ApprovalsPanel clubSlug={getActiveClub().slug} onChange={loadPending} />;
+            case 'faGames':
+                return <FaGamesPanel clubSlug={getActiveClub().slug} />;
             default:
                 return null;
         }
@@ -994,9 +1005,6 @@ const AdminDashboard = () => {
                         <button style={menuButtonStyle(activeTab === 'goalkeeper')} onClick={() => selectTab('goalkeeper')}>
                             🧤 לו"ז שוערים
                         </button>
-                        <button style={menuButtonStyle(false)} onClick={resetDraftFromLive}>
-                            ↩ שחזר טיוטה נקייה
-                        </button>
                         <button style={menuButtonStyle(activeTab === 'publish')} onClick={() => selectTab('publish')}>
                             🚀 פרסם לוז
                         </button>
@@ -1005,6 +1013,14 @@ const AdminDashboard = () => {
                             {pendingCount > 0 && (
                                 <span style={{ marginInlineStart: 'auto', background: '#ef4444', color: '#fff', fontSize: '0.75rem', fontWeight: 800, minWidth: 20, height: 20, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', boxShadow: '0 0 0 2px rgba(239,68,68,0.25)' }}>
                                     {pendingCount}
+                                </span>
+                            )}
+                        </button>
+                        <button style={menuButtonStyle(activeTab === 'faGames')} onClick={() => selectTab('faGames')}>
+                            ⚽ משחקי ליגה (FA)
+                            {faPendingCount > 0 && (
+                                <span style={{ marginInlineStart: 'auto', background: '#f59e0b', color: '#fff', fontSize: '0.75rem', fontWeight: 800, minWidth: 20, height: 20, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px', boxShadow: '0 0 0 2px rgba(245,158,11,0.25)' }}>
+                                    {faPendingCount}
                                 </span>
                             )}
                         </button>
