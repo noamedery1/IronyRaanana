@@ -146,19 +146,31 @@ export default function FaGamesPanel({ clubSlug }) {
                     <div key={w} style={{ border: '1px solid #e2e8f0', borderRadius: 10, marginBottom: '0.6rem', overflow: 'hidden' }}>
                         <button onClick={() => setOpenWeeks({ ...openWeeks, [w]: !open })} style={{ width: '100%', textAlign: 'right', background: '#f8fafc', border: 'none', padding: '0.6rem 0.9rem', fontWeight: 800, cursor: 'pointer', color: '#334155', display: 'flex', justifyContent: 'space-between' }}>
                             <span>{open ? '▾' : '▸'} שבוע {w === 'other' ? '—' : heDate(w)}</span>
-                            <span style={{ color: '#94a3b8', fontWeight: 600 }}>{weeks[w].length} משחקים</span>
+                            <span style={{ color: '#94a3b8', fontWeight: 600 }}>{weeks[w].filter((g) => g.opponent && g.opponent !== 'חופשית').length} משחקים</span>
                         </button>
                         {open && (
                             <div style={{ padding: '0.3rem 0.9rem 0.6rem' }}>
-                                {weeks[w].sort((a, b) => (a.game_date + a.game_time).localeCompare(b.game_date + b.game_time)).map((g) => (
-                                    <div key={g.id} style={{ padding: '0.45rem 0', borderBottom: '1px solid #f1f5f9', fontSize: '0.9rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                            <span>{gameLine(g)}</span>
-                                            <button onClick={() => (editing === g.id ? setEditing('') : startEdit(g))} style={{ background: '#eef2ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 8, padding: '0.3rem 0.7rem', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>✏️ ערוך</button>
+                                {(() => {
+                                    // Group this week's games BY TEAM, so each club team appears once with its
+                                    // games under it (not the same name repeated). Byes ("חופשית") are hidden.
+                                    const real = weeks[w].filter((g) => g.opponent && g.opponent !== 'חופשית');
+                                    const byTeam = {};
+                                    real.forEach((g) => { const k = g.team || '—'; (byTeam[k] = byTeam[k] || []).push(g); });
+                                    return Object.keys(byTeam).sort().map((team) => (
+                                        <div key={team} style={{ marginBottom: '0.5rem' }}>
+                                            <div style={{ fontWeight: 800, color: '#1e3a8a', fontSize: '0.9rem', margin: '0.3rem 0' }}>{team}</div>
+                                            {byTeam[team].sort((a, b) => (a.game_date + a.game_time).localeCompare(b.game_date + b.game_time)).map((g) => (
+                                                <div key={g.id} style={{ padding: '0.35rem 0 0.35rem 0.8rem', borderBottom: '1px solid #f1f5f9', fontSize: '0.88rem' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                        <span><span style={{ color: '#64748b' }}>נגד {g.opponent}{g.home_away ? ` (${g.home_away})` : ''}</span> · {g.game_date ? heDate(g.game_date) : <span style={{ color: '#d97706' }}>חסר תאריך</span>} · <b style={{ color: hasTime(g.game_time) ? '#0f1b33' : '#d97706' }}>{hasTime(g.game_time) ? g.game_time : 'חסר שעה'}</b></span>
+                                                        <button onClick={() => (editing === g.id ? setEditing('') : startEdit(g))} style={{ background: '#eef2ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 8, padding: '0.3rem 0.7rem', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>✏️ ערוך</button>
+                                                    </div>
+                                                    {editing === g.id && editBox(g, true)}
+                                                </div>
+                                            ))}
                                         </div>
-                                        {editing === g.id && editBox(g, true)}
-                                    </div>
-                                ))}
+                                    ));
+                                })()}
                             </div>
                         )}
                     </div>
