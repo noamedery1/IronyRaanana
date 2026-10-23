@@ -306,6 +306,20 @@ export async function approveFaGame(slug, id) {
     return { ok: true, message: `המשחק פורסם ונשלח להורים: ${result.team} ${body}` };
 }
 
+// Manager manually edits a game (set/fix team, date, time) then saves it to the board + pushes.
+// Reuses approveFaGame for the write+push, so notified_* is set and the auto-sync won't re-queue the
+// same value — it re-alerts only if FA later reports a DIFFERENT time/date.
+export async function manualApply(slug, id, edits = {}) {
+    const cid = await clubId(slug);
+    const vals = [id, cid]; const sets = []; let i = 3;
+    for (const k of ['team', 'game_date', 'game_time']) {
+        if (edits[k] !== undefined && edits[k] !== null) { sets.push(`${k}=$${i++}`); vals.push(String(edits[k])); }
+    }
+    sets.push("status='pending'");
+    await pool.query(`UPDATE fa_game_sync SET ${sets.join(', ')}, updated_at=now() WHERE id=$1 AND club_id=$2`, vals);
+    return approveFaGame(slug, id); // writes to the live board + pushes the team + sets notified_*
+}
+
 export async function rejectFaGame(slug, id) {
     const cid = await clubId(slug);
     // Mark rejected AND treat the current value as "surfaced" so we don't nag again for the same

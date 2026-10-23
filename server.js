@@ -14,7 +14,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
-import { ingestGames, resetClub, approveFaGame, rejectFaGame, listFaGames, faDiag, faVerify } from './server/faGames.js';
+import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
@@ -601,6 +601,16 @@ app.post('/api/:club/fa/ingest', async (req, res) => {
 });
 app.post('/api/:club/fa/:id/approve', requireManager, async (req, res) => {
     try { ok(res, await approveFaGame(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+// Manual edit (team/date/time) → save to the board + push, from the FA tab.
+app.post('/api/:club/fa/:id/apply', requireManager, async (req, res) => {
+    try { ok(res, await manualApply(req.params.club, req.params.id, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+// "Pull now": hand the manager's browser the worker URL so IT (residential IP, not blocked) triggers
+// a fresh FA fetch → ingest. Manager-only; the worker then re-syncs on the server.
+app.get('/api/:club/fa/pull-url', requireManager, (req, res) => {
+    const base = process.env.FA_PROXY_URL || 'https://fa.techbynoam.com/';
+    ok(res, { url: `${base}?key=${encodeURIComponent(process.env.FA_PROXY_SECRET || '')}` });
 });
 app.post('/api/:club/fa/:id/reject', requireManager, async (req, res) => {
     try { ok(res, await rejectFaGame(req.params.club, req.params.id)); } catch (e) { fail(res, e); }
