@@ -12,7 +12,7 @@ import { pool, withTx } from './db.js';
 import { clubId } from './people.js';
 import { broadcast } from './notify.js';
 import { sendEmail } from './mailer.js';
-import { getClub, listClubs } from './clubsStore.js';
+import { getClub } from './clubsStore.js';
 import { getSetting, setSetting } from './settings.js';
 
 
@@ -94,61 +94,12 @@ export function faNote(row) {
     return `⚽ משחק ${row.game_time}${bits.length ? ' ' + bits.join(' ') : ''}`.trim();
 }
 
-// ===== FA fetch =====
-
-// Reaching the FA fixtures needs to defeat TWO Cloudflare blocks:
-//  1. football.org.il blocks every datacenter/cloud egress IP (Railway AND Google both get a 403
-//     challenge; only residential IPs pass) — so a tiny Cloudflare Worker (FA_PROXY_URL) fetches FA
-//     from Cloudflare's own edge, which IS allowed through, and returns the JSON.
-//  2. That worker, on its custom domain, still sits behind Cloudflare's bot/TLS-fingerprint challenge,
-//     which 403s any OpenSSL client (Node's undici, Linux curl). So we call the worker through cycletls,
-//     whose Go uTLS backend presents a real Chrome fingerprint.
-// cycletls ships a prebuilt linux binary; lazy singleton, started on first poll (never at boot), torn
-// down with the container. Any failure throws and is swallowed by the caller — the manual games-import
-// flow is unaffected.
-const CHROME_JA3 = '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-let _cycle = null;
-async function getCycle() {
-    if (!_cycle) { const initCycleTLS = (await import('cycletls')).default; _cycle = await initCycleTLS(); }
-    return _cycle;
-}
-
-async function faFetch(clubFaId, week) {
-    const base = process.env.FA_PROXY_URL;
-    if (!base) throw new Error('FA_PROXY_URL not set');
-    const u = new URL(base);
-    u.searchParams.set('key', process.env.FA_PROXY_SECRET || '');
-    u.searchParams.set('clubId', String(Number(clubFaId)));
-    if (week) u.searchParams.set('week', week);
-    const cycle = await getCycle();
-    const r = await cycle(u.toString(), { ja3: CHROME_JA3, headers: { 'User-Agent': UA }, timeout: 25 }, 'get');
-    if (r.status !== 200) throw new Error('FA proxy ' + r.status);
-    let j;
-    if (typeof r.json === 'function') j = await r.json();
-    else if (typeof r.text === 'function') j = JSON.parse(await r.text());
-    else if (r.body != null) j = typeof r.body === 'string' ? JSON.parse(r.body) : r.body;
-    else throw new Error('FA proxy empty response');
-    return j.d || { Games: [], NextRound: null };
-}
-
-// Fetch the tracked window of fixtures (exported for diagnostics / manual checks).
-export async function fetchFaGames(clubFaId, weeks = 2) { return faFetchWindow(clubFaId, weeks); }
-
-// Current week + the next `weeks-1` rounds, deduped by fa_key. Time usually lands 1-2 weeks out.
-async function faFetchWindow(clubFaId, weeks = 2) {
-    const seen = new Map();
-    let week = null;
-    for (let i = 0; i < weeks; i++) {
-        const d = await faFetch(clubFaId, week);
-        for (const g of d.Games || []) seen.set(faKey(g), g);
-        if (!d.NextRound) break;
-        week = d.NextRound;
-    }
-    return [...seen.values()];
-}
-
 // ===== DB sync =====
+// The FA fetch does NOT happen here: football.org.il's Cloudflare blocks every datacenter/cloud egress
+// IP (Railway, Google — only residential IPs pass), and the proxy worker's own domain challenges
+// Railway's IP too. So a Cloudflare Worker (running on Cloudflare's own clean IPs, on a cron) fetches FA
+// from Cloudflare's edge and POSTs the raw game objects to our `/fa/ingest` endpoint, which calls
+// ingestGames below. The server never reaches out to football.org.il at all.
 
 async function liveTeamIndex(cid) {
     const r = await pool.query('SELECT name, coalesce(gender,$2) gender FROM teams WHERE club_id=$1', [cid, 'M']);
@@ -209,15 +160,14 @@ async function syncGame(slug, cid, club, g, firstPoll) {
     return 'tracked';
 }
 
-export async function pollClub(slug) {
+// Process a batch of raw FA game objects (fetched + POSTed by the Cloudflare Worker). Same detection,
+// mapping and manager-approval queueing as before — only the fetching moved to the worker. The first
+// batch for a club baselines silently (so it doesn't alert for every existing fixture).
+export async function ingestGames(slug, games = []) {
     const club = await getClub(slug);
     if (!club?.faClubId) return { slug, skipped: 'no faClubId' };
     const cid = await clubId(slug);
     const firstPoll = !(await getSetting(slug, 'faBaselinedAt'));
-    const weeks = Number(club.faPollWeeks) || 2;
-    let games;
-    try { games = await faFetchWindow(club.faClubId, weeks); }
-    catch (e) { console.error('[fa] fetch failed for', slug, e.message); return { slug, error: e.message }; }
     const summary = { slug, games: games.length, queued: 0, tracking: 0, unmapped: 0, pending: 0 };
     for (const g of games) {
         try {
@@ -229,19 +179,8 @@ export async function pollClub(slug) {
         } catch (e) { console.error('[fa] sync game failed', slug, faKey(g), e.message); }
     }
     if (firstPoll) await setSetting(slug, 'faBaselinedAt', new Date().toISOString());
+    console.log('[fa] ingest:', JSON.stringify(summary));
     return summary;
-}
-
-// Poll every club that has an faClubId configured (the in-process scheduler calls this).
-export async function pollAllClubs() {
-    const clubs = await listClubs();
-    const out = [];
-    for (const c of clubs) {
-        if (!c.faClubId) continue;
-        try { out.push(await pollClub(c.slug)); }
-        catch (e) { console.error('[fa] pollClub failed', c.slug, e.message); out.push({ slug: c.slug, error: e.message }); }
-    }
-    return out;
 }
 
 // ===== manager approval (email + push), mirrors server/requests.js =====

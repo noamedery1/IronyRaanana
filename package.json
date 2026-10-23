@@ -14,7 +14,6 @@
     "db:publish": "node scripts/publish-cli.mjs"
   },
   "dependencies": {
-    "cycletls": "^2.0.5",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",

@@ -14,7 +14,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
-import { pollClub, pollAllClubs, approveFaGame, rejectFaGame, listFaGames, faDiag, faVerify } from './server/faGames.js';
+import { ingestGames, approveFaGame, rejectFaGame, listFaGames, faDiag, faVerify } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
@@ -82,6 +82,9 @@ app.use((req, res, next) => {
     const rawHost = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
     const host = rawHost.split(':')[0].toLowerCase();
     if (!host || host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]') return next();
+    // FA ingest is called by the Cloudflare Worker on the direct Railway host (squadio.up.railway.app)
+    // to bypass Cloudflare entirely — must NOT be redirected to the canonical (CF-proxied) host.
+    if (req.path.endsWith('/fa/ingest')) return next();
     // Club subdomains (<slug>.squadio.techbynoam.com) are their own origins — serve them, don't
     // bounce them to the canonical root (that would defeat the whole point).
     if (host === CANONICAL_HOST || host.endsWith(CANONICAL_SUB_SUFFIX)) return next();
@@ -585,8 +588,12 @@ app.get('/api/:club/fa', requireManager, async (req, res) => {
 app.get('/api/:club/fa/diag', requireManager, async (req, res) => {
     try { ok(res, await faDiag(req.params.club)); } catch (e) { fail(res, e); }
 });
-app.post('/api/:club/fa/poll', requireManager, async (req, res) => {
-    try { ok(res, await pollClub(req.params.club)); } catch (e) { fail(res, e); }
+// Ingest endpoint: the Cloudflare Worker POSTs the FA games it fetched (gated by the shared secret,
+// not a manager session). Reached on the direct Railway host to bypass Cloudflare.
+app.post('/api/:club/fa/ingest', async (req, res) => {
+    if ((req.query.key || '') !== (process.env.FA_PROXY_SECRET || '\0')) return res.status(403).json({ error: 'forbidden' });
+    try { ok(res, await ingestGames(req.params.club, Array.isArray(req.body?.games) ? req.body.games : [])); }
+    catch (e) { fail(res, e); }
 });
 app.post('/api/:club/fa/:id/approve', requireManager, async (req, res) => {
     try { ok(res, await approveFaGame(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }
@@ -915,18 +922,8 @@ const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
-// FA-games poller: a few times a day, fetch each FA-enabled club's fixtures and queue manager
-// approvals for newly-finalized times. In-process on the single Railway web dyno (no scheduler infra
-// exists). ponytail: assumes one instance — if ever scaled >1, move this to a dedicated cron/worker.
-// Off-switch: FA_SYNC_ENABLED=0.
-if (process.env.FA_SYNC_ENABLED !== '0') {
-    const FA_POLL_MS = Number(process.env.FA_POLL_MS) || 8 * 60 * 60 * 1000; // ~3x/day
-    const runFaPolls = () => pollAllClubs()
-        .then((r) => { const active = r.filter((x) => !x.skipped); if (active.length) console.log('[fa] poll:', JSON.stringify(active)); })
-        .catch((e) => console.error('[fa] poll run failed:', e.message));
-    setTimeout(runFaPolls, 30_000).unref(); // once shortly after boot
-    setInterval(runFaPolls, FA_POLL_MS).unref();
-}
+// FA-games fetching runs in a Cloudflare Worker (on a cron), which POSTs fixtures to /fa/ingest —
+// see server/faGames.js. Nothing to schedule in-process; Railway never reaches football.org.il.
 
 // Graceful shutdown on redeploy: Railway sends SIGTERM to the old container.
 // Close cleanly and exit 0 so it isn't reported as a crash ("npm error signal SIGTERM").
