@@ -1,0 +1,27 @@
+name: FA fixtures sync
+
+# The Cloudflare Worker's own cron egress IP is blocked (403) by football.org.il's
+# Cloudflare, while an on-demand fetch to the worker egresses from an allowed IP.
+# So we schedule the trigger here instead: a plain GET to the worker fetch handler,
+# which then fetches FA from the good egress and POSTs fixtures to Railway.
+on:
+  schedule:
+    - cron: '0 */3 * * *'   # every 3h (UTC)
+  workflow_dispatch: {}
+
+concurrency:
+  group: fa-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger fa-proxy worker
+        env:
+          FA_WORKER_URL: ${{ secrets.FA_WORKER_URL }}
+        run: |
+          code=$(curl -sS -o /tmp/out.json -w '%{http_code}' --max-time 120 "$FA_WORKER_URL")
+          echo "HTTP $code"
+          cat /tmp/out.json; echo
+          test "$code" = "200"
