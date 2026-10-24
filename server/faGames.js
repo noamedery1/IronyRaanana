@@ -269,6 +269,11 @@ export async function approveFaGame(slug, id) {
         const canon = teamIdx.get(norm(row.team)) || { name: row.team, gender: 'M' };
         const dow = new Date(row.game_date + 'T00:00:00Z').getUTCDay();
         const note = faNote(row);
+        // Carry the team's coach so the match merges into the team's row (the public board groups by
+        // team; a coach-less match would split the team into a second row and hide its trainings).
+        const coach = (await cx.query(
+            `SELECT coach FROM sessions WHERE club_id=$1 AND team=$2 AND coach IS NOT NULL AND coach <> '' ORDER BY date DESC LIMIT 1`,
+            [cid, canon.name])).rows[0]?.coach || null;
 
         // Publication for the game's week: the latest live week that has already started by that date,
         // else the earliest live week, else the open draft. Date is stored explicitly so the public
@@ -286,12 +291,26 @@ export async function approveFaGame(slug, id) {
         const ins = await cx.query(
             `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'match','active',$11) RETURNING id`,
-            [pub.id, cid, canon.name, null, canon.gender, row.field || null, row.game_date, dow, row.game_time || null, null, note],
+            [pub.id, cid, canon.name, coach, canon.gender, row.field || null, row.game_date, dow, row.game_time || null, null, note],
         );
         await cx.query(
             `UPDATE fa_game_sync SET status='applied', session_id=$2, notified_date=game_date, notified_time=game_time, updated_at=now() WHERE id=$1`,
             [id, ins.rows[0].id],
         );
+        // Mirror the match into the open draft too, so a later re-publish keeps it (additive to both
+        // boards). Dedup our own prior FA match for this fixture so re-applies don't pile up.
+        const draft = (await cx.query(
+            `SELECT id FROM schedule_publications WHERE club_id=$1 AND status='draft' AND week_start <= $2 ORDER BY week_start DESC LIMIT 1`,
+            [cid, row.game_date])).rows[0]
+            || (await cx.query(`SELECT id FROM schedule_publications WHERE club_id=$1 AND status='draft' ORDER BY week_start DESC LIMIT 1`, [cid])).rows[0];
+        if (draft && draft.id !== pub.id) {
+            await cx.query(`DELETE FROM sessions WHERE publication_id=$1 AND club_id=$2 AND team=$3 AND date=$4 AND type='match'`,
+                [draft.id, cid, canon.name, row.game_date]);
+            await cx.query(
+                `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'match','active',$11)`,
+                [draft.id, cid, canon.name, coach, canon.gender, row.field || null, row.game_date, dow, row.game_time || null, null, note]);
+        }
         await cx.query(
             `INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff) VALUES ($1,'manager','approve','fa_game',$2,$3)`,
             [cid, id, JSON.stringify({ team: canon.name, date: row.game_date, time: row.game_time, opponent: row.opponent })],

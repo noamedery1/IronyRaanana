@@ -150,12 +150,16 @@ export const sessionsToRows = (sessions, weekStart) => {
     const map = new Map();
     const order = [];
     for (const s of sessions) {
-        const key = `${s.team || ''}||${s.coach || ''}`;
+        // Group by team only. A team's match (inserted with no coach) and its trainings (with a
+        // coach) must land in the SAME row — keying on coach split them into two rows, one of which
+        // the parent board would show while hiding the other (match OR trainings disappeared).
+        const key = s.team || '';
         if (!map.has(key)) {
             map.set(key, { team: s.team || '', coach: s.coach || '', gender: s.gender || 'M', days: Array.from({ length: 7 }, () => []) });
             order.push(key);
         }
         const rec = map.get(key);
+        if (!rec.coach && s.coach) rec.coach = s.coach; // fill coach from whichever session has one
         // Prefer day_of_week; otherwise derive it from the date (so days never collapse to Sunday).
         let idx = Number.isInteger(s.day_of_week) ? s.day_of_week : (s.date ? new Date(s.date + 'T00:00:00').getDay() : 0);
         if (!Number.isInteger(idx) || idx < 0 || idx > 6) idx = 0;
