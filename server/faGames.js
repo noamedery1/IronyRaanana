@@ -108,16 +108,13 @@ async function liveTeamIndex(cid) {
     return idx;
 }
 
-// End date (YMD) of the furthest LIVE published week = how far ahead we notify/apply. A game beyond it
-// isn't on any published board yet, so we don't alert parents or write it (it would land on the wrong
-// week). It re-queues once its week is published (horizon advances). null = nothing published yet.
-async function publishedHorizon(cid) {
-    const r = await pool.query(`SELECT max(week_start) ws FROM schedule_publications WHERE club_id=$1 AND status='live'`, [cid]);
-    const ws = r.rows[0]?.ws;
-    if (!ws) return null;
-    const d = new Date(ws); d.setUTCDate(d.getUTCDate() + 6);
-    return d.toISOString().slice(0, 10);
-}
+// The Sunday (YMD) of the week containing a date — matches how publications store week_start.
+const weekSundayOf = (ymd) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - d.getUTCDay()); return d.toISOString().slice(0, 10); };
+const addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+// We email the manager only for games in THIS week + NEXT week (a fixed 2-week window), regardless of
+// whether next week's schedule is published — an approved game lands in the publication for its own
+// week (live now, or the draft that goes live when the manager publishes).
+function emailHorizon() { return addDays(weekSundayOf(new Date().toISOString().slice(0, 10)), 13); }
 
 // Upsert one FA game's tracked state; queue an approval when a change crosses the notify threshold.
 // firstPoll=true seeds the baseline silently (so the very first run doesn't alert for every existing
@@ -181,7 +178,7 @@ export async function ingestGames(slug, games = []) {
     if (!club?.faClubId) return { slug, skipped: 'no faClubId' };
     const cid = await clubId(slug);
     const firstPoll = !(await getSetting(slug, 'faBaselinedAt'));
-    const horizon = await publishedHorizon(cid);
+    const horizon = emailHorizon(); // this week + next week
     const summary = { slug, games: games.length, queued: 0, tracking: 0, unmapped: 0, pending: 0 };
     for (const g of games) {
         try {
@@ -192,17 +189,35 @@ export async function ingestGames(slug, games = []) {
             else summary.tracking++;
         } catch (e) { console.error('[fa] sync game failed', slug, faKey(g), e.message); }
     }
-    // Un-apply FA games now beyond the published window (FA moved them to a later month). Remove the
-    // FA-created match sessions (note starts with the ⚽ marker faNote uses) from EVERY publication —
-    // live AND the open draft (approveFaGame mirrors the match into the draft) — so they don't show on a
-    // wrong date, and re-track the rows so they re-queue once their week is published. Never touches
-    // non-FA sessions (trainings, or manual/other-sport matches like 🏀).
-    if (horizon) {
-        const del = await pool.query(
-            `DELETE FROM sessions WHERE club_id=$1 AND type='match' AND date > $2 AND note LIKE '⚽%' RETURNING id`, [cid, horizon]);
-        await pool.query(
-            `UPDATE fa_game_sync SET status='tracking', session_id=NULL, notified_date=NULL, notified_time=NULL, updated_at=now() WHERE club_id=$1 AND status='applied' AND game_date > $2`, [cid, horizon]);
-        summary.unapplied = del.rowCount;
+    // Reconcile FA matches to the publication that actually covers their week (FA-created matches carry
+    // the ⚽ marker faNote uses; trainings and 🏀/manual matches are never touched).
+    // 1) Remove any FA match sitting in a publication whose week does NOT contain its date (mis-filed —
+    //    e.g. a next-month game that got written into the current week's publication and showed on the
+    //    wrong day). This clears both live and draft.
+    const del = await pool.query(
+        `DELETE FROM sessions s USING schedule_publications p
+         WHERE s.publication_id = p.id AND s.club_id = $1 AND s.type = 'match' AND s.note LIKE '⚽%'
+           AND (s.date < p.week_start OR s.date > p.week_start + 6) RETURNING s.id`, [cid]);
+    summary.unapplied = del.rowCount;
+    // 2) Ensure each APPROVED FA game has a session in the live/draft publication for its OWN week, once
+    //    such a publication exists (so an approved next-week game appears in the draft the manager builds,
+    //    then goes live when they publish it). No matching publication yet → it just waits, correctly.
+    const applied = await pool.query(`SELECT * FROM fa_game_sync WHERE club_id=$1 AND status='applied'`, [cid]);
+    const tIdx = applied.rows.length ? await liveTeamIndex(cid) : null;
+    for (const r of applied.rows) {
+        if (!r.team || !r.game_date) continue;
+        const wk = weekSundayOf(r.game_date);
+        const pubs = (await pool.query(`SELECT id FROM schedule_publications WHERE club_id=$1 AND week_start=$2 AND status IN ('live','draft')`, [cid, wk])).rows;
+        for (const p of pubs) {
+            const has = await pool.query(`SELECT 1 FROM sessions WHERE publication_id=$1 AND club_id=$2 AND team=$3 AND date=$4 AND type='match' LIMIT 1`, [p.id, cid, r.team, r.game_date]);
+            if (has.rows.length) continue;
+            const canon = tIdx.get(norm(r.team)) || { name: r.team, gender: 'M' };
+            const coach = (await pool.query(`SELECT coach FROM sessions WHERE club_id=$1 AND team=$2 AND coach IS NOT NULL AND coach<>'' ORDER BY date DESC LIMIT 1`, [cid, canon.name])).rows[0]?.coach || null;
+            const dow = new Date(r.game_date + 'T00:00:00Z').getUTCDay();
+            await pool.query(`INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'match','active',$11)`,
+                [p.id, cid, canon.name, coach, canon.gender, r.field || null, r.game_date, dow, r.game_time || null, null, faNote(r)]);
+            summary.reconciled = (summary.reconciled || 0) + 1;
+        }
     }
     // Mark the club baselined only once we've actually processed a non-empty batch — an empty ingest
     // (e.g. the clearing half of a reset) must NOT trip the flag, or the real batch would then alert.
@@ -301,54 +316,44 @@ export async function approveFaGame(slug, id) {
             `SELECT coach FROM sessions WHERE club_id=$1 AND team=$2 AND coach IS NOT NULL AND coach <> '' ORDER BY date DESC LIMIT 1`,
             [cid, canon.name])).rows[0]?.coach || null;
 
-        // Publication for the game's week: the latest live week that has already started by that date,
-        // else the earliest live week, else the open draft. Date is stored explicitly so the public
-        // board (which groups by date with a week switcher) places it correctly.
-        let pub = (await cx.query(
-            `SELECT id FROM schedule_publications WHERE club_id=$1 AND status='live' AND week_start <= $2 ORDER BY week_start DESC LIMIT 1`,
-            [cid, row.game_date])).rows[0]
-            || (await cx.query(`SELECT id FROM schedule_publications WHERE club_id=$1 AND status='live' ORDER BY week_start ASC LIMIT 1`, [cid])).rows[0]
-            || (await cx.query(`SELECT id FROM schedule_publications WHERE club_id=$1 AND status='draft' LIMIT 1`, [cid])).rows[0];
-        if (!pub) throw new Error('אין לו"ז לפרסם אליו — פרסם לו"ז קודם');
-
-        // Replace our own prior row for this fixture (time/date changes make a NEW note, which the
-        // generic (team,day,note) dedup would otherwise leave as a duplicate).
+        // Write into the publication(s) whose week actually CONTAINS this game: the live one (parents
+        // see it now + we push) and/or the matching draft (goes live when the manager publishes). If
+        // neither exists yet (a next-week game before its week is built), store it approved with no board
+        // session — ingest's reconcile adds it once a publication for its week appears. Placing by the
+        // game's own week is what stops the "wrong Saturday" mis-dating.
+        const wk = weekSundayOf(row.game_date);
+        const livePub = (await cx.query(`SELECT id FROM schedule_publications WHERE club_id=$1 AND status='live' AND week_start=$2 LIMIT 1`, [cid, wk])).rows[0];
+        const draftPub = (await cx.query(`SELECT id FROM schedule_publications WHERE club_id=$1 AND status='draft' AND week_start=$2 LIMIT 1`, [cid, wk])).rows[0];
+        // clear our own prior session(s) for this fixture (any publication) so re-applies don't pile up
         if (row.session_id) await cx.query('DELETE FROM sessions WHERE id=$1', [row.session_id]);
-        const ins = await cx.query(
+        await cx.query(`DELETE FROM sessions WHERE club_id=$1 AND team=$2 AND date=$3 AND type='match' AND note LIKE '⚽%'`, [cid, canon.name, row.game_date]);
+        const insInto = async (pid) => (await cx.query(
             `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'match','active',$11) RETURNING id`,
-            [pub.id, cid, canon.name, coach, canon.gender, row.field || null, row.game_date, dow, row.game_time || null, null, note],
-        );
+            [pid, cid, canon.name, coach, canon.gender, row.field || null, row.game_date, dow, row.game_time || null, null, note])).rows[0].id;
+        let sid = null;
+        if (livePub) sid = await insInto(livePub.id);
+        if (draftPub) { const d = await insInto(draftPub.id); if (!sid) sid = d; }
         await cx.query(
             `UPDATE fa_game_sync SET status='applied', session_id=$2, notified_date=game_date, notified_time=game_time, updated_at=now() WHERE id=$1`,
-            [id, ins.rows[0].id],
+            [id, sid],
         );
-        // Mirror the match into the open draft too, so a later re-publish keeps it (additive to both
-        // boards). Dedup our own prior FA match for this fixture so re-applies don't pile up.
-        const draft = (await cx.query(
-            `SELECT id FROM schedule_publications WHERE club_id=$1 AND status='draft' AND week_start <= $2 ORDER BY week_start DESC LIMIT 1`,
-            [cid, row.game_date])).rows[0]
-            || (await cx.query(`SELECT id FROM schedule_publications WHERE club_id=$1 AND status='draft' ORDER BY week_start DESC LIMIT 1`, [cid])).rows[0];
-        if (draft && draft.id !== pub.id) {
-            await cx.query(`DELETE FROM sessions WHERE publication_id=$1 AND club_id=$2 AND team=$3 AND date=$4 AND type='match'`,
-                [draft.id, cid, canon.name, row.game_date]);
-            await cx.query(
-                `INSERT INTO sessions (publication_id, club_id, team, coach, gender, hall, date, day_of_week, start_time, end_time, type, status, note)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'match','active',$11)`,
-                [draft.id, cid, canon.name, coach, canon.gender, row.field || null, row.game_date, dow, row.game_time || null, null, note]);
-        }
         await cx.query(
             `INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff) VALUES ($1,'manager','approve','fa_game',$2,$3)`,
             [cid, id, JSON.stringify({ team: canon.name, date: row.game_date, time: row.game_time, opponent: row.opponent })],
         );
-        return { team: canon.name, row };
+        return { team: canon.name, row, pushed: !!livePub };
     });
 
-    // Push the team's parents (best-effort, outside the tx).
+    // Push the team's parents only when the game went onto the LIVE board (its week is published).
+    // A game approved into the draft (next week not yet published) pushes when the manager publishes.
     const r = result.row;
     const body = `נגד ${r.opponent} · ${heDate(r.game_date)} בשעה ${r.game_time}${r.field ? ` · ${r.field}` : ''}`;
-    broadcast(slug, { segment: 'team:' + result.team, title: `⚽ עודכן משחק — ${result.team}`, body }).catch(() => {});
-    return { ok: true, message: `המשחק פורסם ונשלח להורים: ${result.team} ${body}` };
+    if (result.pushed) {
+        broadcast(slug, { segment: 'team:' + result.team, title: `⚽ עודכן משחק — ${result.team}`, body }).catch(() => {});
+        return { ok: true, message: `המשחק פורסם ונשלח להורים: ${result.team} ${body}` };
+    }
+    return { ok: true, message: `המשחק אושר ונכנס לטיוטה — יפורסם להורים כשתפרסם את הלו"ז: ${result.team} ${body}` };
 }
 
 // Manager manually edits a game (set/fix team, date, time) then saves it to the board + pushes.
