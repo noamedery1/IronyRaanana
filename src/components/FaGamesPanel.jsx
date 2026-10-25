@@ -74,8 +74,11 @@ export default function FaGamesPanel({ clubSlug }) {
         } catch (e) { setMsg('⚠️ ' + e.message); } finally { setBusy(''); }
     };
 
+    const today = new Date().toISOString().slice(0, 10);
     const pending = games.filter((g) => g.status === 'pending');
-    const tracked = games.filter((g) => g.status === 'tracking' || g.status === 'applied');
+    // Tracked = upcoming only. Hide games already played (game_date before today); keep ones with no
+    // date yet (still awaiting a time). Past games are clutter once a new week starts.
+    const tracked = games.filter((g) => (g.status === 'tracking' || g.status === 'applied') && (!g.game_date || g.game_date >= today));
     const unmapped = games.filter((g) => g.status === 'unmapped');
 
     // tracked grouped by week, weeks sorted ascending; nearest-future week open by default.
