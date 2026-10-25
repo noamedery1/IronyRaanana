@@ -202,7 +202,7 @@ export async function ingestGames(slug, games = []) {
     // team+date anymore (the game moved, leaving its old-date session behind).
     const del2 = await pool.query(
         `DELETE FROM sessions s WHERE s.club_id=$1 AND s.type='match' AND s.note LIKE '⚽%'
-           AND NOT EXISTS (SELECT 1 FROM fa_game_sync f WHERE f.club_id=$1 AND f.status='applied' AND f.team=s.team AND f.game_date=s.date) RETURNING s.id`, [cid]);
+           AND NOT EXISTS (SELECT 1 FROM fa_game_sync f WHERE f.club_id=$1 AND f.status='applied' AND f.team=s.team AND f.game_date=s.date::text) RETURNING s.id`, [cid]);
     summary.unapplied = del.rowCount + del2.rowCount;
     // 2) Ensure each APPROVED FA game has a session in the live/draft publication for its OWN week, once
     //    such a publication exists (so an approved next-week game appears in the draft the manager builds,
