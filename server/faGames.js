@@ -108,14 +108,27 @@ async function liveTeamIndex(cid) {
     return idx;
 }
 
+// End date (YMD) of the furthest LIVE published week = how far ahead we notify/apply. A game beyond it
+// isn't on any published board yet, so we don't alert parents or write it (it would land on the wrong
+// week). It re-queues once its week is published (horizon advances). null = nothing published yet.
+async function publishedHorizon(cid) {
+    const r = await pool.query(`SELECT max(week_start) ws FROM schedule_publications WHERE club_id=$1 AND status='live'`, [cid]);
+    const ws = r.rows[0]?.ws;
+    if (!ws) return null;
+    const d = new Date(ws); d.setUTCDate(d.getUTCDate() + 6);
+    return d.toISOString().slice(0, 10);
+}
+
 // Upsert one FA game's tracked state; queue an approval when a change crosses the notify threshold.
 // firstPoll=true seeds the baseline silently (so the very first run doesn't alert for every existing
 // fixture). Returns a short action tag for the poll summary.
-async function syncGame(slug, cid, club, g, firstPoll) {
+async function syncGame(slug, cid, club, g, firstPoll, horizon) {
     const team = mapTeam(g, club.faLeagueMap || {}, club.faNameMap || {});
     const key = faKey(g);
     const date = faDateToYMD(g.GameDate);
     const time = (g.GameTime || '').trim();
+    // Only notify/apply games within the published window; far-future games stay tracked silently.
+    const inWindow = !!date && !!horizon && date <= horizon;
     const fields = {
         team: team || '', league: g.LeagueName || '', game_name: g.GameName || '',
         opponent: opponentOf(g.GameName), home_away: homeAway(g.GameName),
@@ -127,11 +140,11 @@ async function syncGame(slug, cid, club, g, firstPoll) {
     if (!cur.rows.length) {
         // New fixture. Baseline-timed games silently on the first run (or any time it's unmapped);
         // a genuinely new, mapped, already-timed fixture after baseline is queued.
-        const queue = team && timeSet(time) && !firstPoll;
+        const queue = team && timeSet(time) && !firstPoll && inWindow;
         const status = queue ? 'pending' : (team ? 'tracking' : 'unmapped');
-        // Baseline notified_* to the current time only when NOT queuing, so we don't re-alert a value
-        // we're treating as already-known; a queued game leaves them null until approval sets them.
-        const baseline = (!queue && timeSet(time));
+        // Baseline notified_* only on the first (seeding) poll, so later real changes still alert. A
+        // far-future game left un-baselined (notified null) so it queues once its week is published.
+        const baseline = firstPoll && timeSet(time);
         const ins = await pool.query(
             `INSERT INTO fa_game_sync (club_id, fa_key, team, league, game_name, opponent, home_away, field, round, game_date, game_time, status, notified_date, notified_time)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
@@ -150,7 +163,7 @@ async function syncGame(slug, cid, club, g, firstPoll) {
     );
     if (row.status === 'pending') return 'pending'; // already waiting on the manager; approve the latest
 
-    if (team && shouldNotify(row.notified_date, row.notified_time, date, time)) {
+    if (team && inWindow && shouldNotify(row.notified_date, row.notified_time, date, time)) {
         await pool.query(`UPDATE fa_game_sync SET status='pending', updated_at=now() WHERE id=$1`, [row.id]);
         await queueApproval(slug, row.id, fields);
         return 'queued';
@@ -168,15 +181,28 @@ export async function ingestGames(slug, games = []) {
     if (!club?.faClubId) return { slug, skipped: 'no faClubId' };
     const cid = await clubId(slug);
     const firstPoll = !(await getSetting(slug, 'faBaselinedAt'));
+    const horizon = await publishedHorizon(cid);
     const summary = { slug, games: games.length, queued: 0, tracking: 0, unmapped: 0, pending: 0 };
     for (const g of games) {
         try {
-            const a = await syncGame(slug, cid, club, g, firstPoll);
+            const a = await syncGame(slug, cid, club, g, firstPoll, horizon);
             if (a === 'queued') summary.queued++;
             else if (a === 'unmapped') summary.unmapped++;
             else if (a === 'pending') summary.pending++;
             else summary.tracking++;
         } catch (e) { console.error('[fa] sync game failed', slug, faKey(g), e.message); }
+    }
+    // Un-apply FA games now beyond the published window (FA moved them to a later month). Remove them
+    // from the board + re-track, so they re-queue when their week is published instead of showing on a
+    // wrong date. Only touches our own FA-created session (by session_id); never manual sessions.
+    if (horizon) {
+        const stale = await pool.query(
+            `SELECT id, session_id FROM fa_game_sync WHERE club_id=$1 AND status='applied' AND game_date > $2`, [cid, horizon]);
+        for (const r of stale.rows) {
+            if (r.session_id) await pool.query('DELETE FROM sessions WHERE id=$1', [r.session_id]);
+            await pool.query(`UPDATE fa_game_sync SET status='tracking', session_id=NULL, notified_date=NULL, notified_time=NULL, updated_at=now() WHERE id=$1 AND club_id=$2`, [r.id, cid]);
+            summary.unapplied = (summary.unapplied || 0) + 1;
+        }
     }
     // Mark the club baselined only once we've actually processed a non-empty batch — an empty ingest
     // (e.g. the clearing half of a reset) must NOT trip the flag, or the real batch would then alert.
