@@ -245,6 +245,21 @@ function PublicSchedule() {
 
     useEffect(() => { loadWeek(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
+    // Phase-1 FA auto-sync: on load, opportunistically poke the fa-proxy worker. Parents sit on
+    // many different Israeli connections, so across them at least one lands on an FA-trusted
+    // Cloudflare colo each window; the worker throttles real pulls to ~1/3h per club and arms the
+    // throttle only on success. Fire-and-forget (no-cors), no key, per club. Unknown clubs 404 (noop).
+    useEffect(() => {
+        try {
+            const k = 'faKick:' + club.slug;
+            if (Date.now() - (+localStorage.getItem(k) || 0) > 30 * 60 * 1000) {
+                localStorage.setItem(k, String(Date.now()));
+                fetch('https://fa-proxy.techbynoam.workers.dev/?club=' + encodeURIComponent(club.slug), { mode: 'no-cors' }).catch(() => { });
+            }
+        } catch { /* localStorage/fetch unavailable — ignore */ }
+        /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    }, []);
+
     // Club settings: banners (general + per-team) + hall addresses (bridged to localStorage for nav).
     useEffect(() => {
         fetch(`/api/${club.slug}/banners`).then((r) => r.json())
