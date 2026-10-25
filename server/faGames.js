@@ -192,17 +192,17 @@ export async function ingestGames(slug, games = []) {
             else summary.tracking++;
         } catch (e) { console.error('[fa] sync game failed', slug, faKey(g), e.message); }
     }
-    // Un-apply FA games now beyond the published window (FA moved them to a later month). Remove them
-    // from the board + re-track, so they re-queue when their week is published instead of showing on a
-    // wrong date. Only touches our own FA-created session (by session_id); never manual sessions.
+    // Un-apply FA games now beyond the published window (FA moved them to a later month). Remove the
+    // FA-created match sessions (note starts with the ⚽ marker faNote uses) from EVERY publication —
+    // live AND the open draft (approveFaGame mirrors the match into the draft) — so they don't show on a
+    // wrong date, and re-track the rows so they re-queue once their week is published. Never touches
+    // non-FA sessions (trainings, or manual/other-sport matches like 🏀).
     if (horizon) {
-        const stale = await pool.query(
-            `SELECT id, session_id FROM fa_game_sync WHERE club_id=$1 AND status='applied' AND game_date > $2`, [cid, horizon]);
-        for (const r of stale.rows) {
-            if (r.session_id) await pool.query('DELETE FROM sessions WHERE id=$1', [r.session_id]);
-            await pool.query(`UPDATE fa_game_sync SET status='tracking', session_id=NULL, notified_date=NULL, notified_time=NULL, updated_at=now() WHERE id=$1 AND club_id=$2`, [r.id, cid]);
-            summary.unapplied = (summary.unapplied || 0) + 1;
-        }
+        const del = await pool.query(
+            `DELETE FROM sessions WHERE club_id=$1 AND type='match' AND date > $2 AND note LIKE '⚽%' RETURNING id`, [cid, horizon]);
+        await pool.query(
+            `UPDATE fa_game_sync SET status='tracking', session_id=NULL, notified_date=NULL, notified_time=NULL, updated_at=now() WHERE club_id=$1 AND status='applied' AND game_date > $2`, [cid, horizon]);
+        summary.unapplied = del.rowCount;
     }
     // Mark the club baselined only once we've actually processed a non-empty batch — an empty ingest
     // (e.g. the clearing half of a reset) must NOT trip the flag, or the real batch would then alert.
