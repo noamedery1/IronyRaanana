@@ -255,7 +255,8 @@ function managerLinks(slug, id) {
     const base = process.env.APP_BASE_URL || '';
     const tok = faSign(id);
     return {
-        approve: `${base}/api/${slug}/fa/${id}/approve?token=${tok}`,
+        approve: `${base}/api/${slug}/fa/${id}/approve?token=${tok}`,            // אשר ופרסם (with push)
+        approveSilent: `${base}/api/${slug}/fa/${id}/approve?token=${tok}&push=0`, // אשר (no push)
         reject: `${base}/api/${slug}/fa/${id}/reject?token=${tok}`,
         base,
     };
@@ -269,7 +270,7 @@ async function notifyManagerFa(slug, id, f) {
     else if (club?.managerEmail) emails.push(club.managerEmail);
     const to = [...new Set(emails.filter(Boolean))];
     if (!to.length) return;
-    const { approve, reject } = managerLinks(slug, id);
+    const { approve, approveSilent, reject } = managerLinks(slug, id);
     const html = `
       <div dir="rtl" style="font-family:Arial,sans-serif">
         <h3>⚽ עודכן משחק — ${esc(f.team)}</h3>
@@ -277,10 +278,13 @@ async function notifyManagerFa(slug, id, f) {
         <p><b>תאריך:</b> ${esc(heDate(f.game_date))} · <b>שעה:</b> ${esc(f.game_time)}${f.field ? ` · <b>מגרש:</b> ${esc(f.field)}` : ''}</p>
         <p style="color:#666">${esc(f.league || '')}</p>
         <p style="margin-top:18px">
-          <a href="${approve}" style="background:#16a34a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">✅ אשר ושלח להורים</a>
+          <a href="${approve}" style="background:#16a34a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">✅ אשר ופרסם (שלח פוש)</a>
+          &nbsp;&nbsp;
+          <a href="${approveSilent}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">➕ אשר (ללו"ז בלבד)</a>
           &nbsp;&nbsp;
           <a href="${reject}" style="background:#dc2626;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">❌ דחה</a>
         </p>
+        <p style="color:#999;font-size:12px">"אשר ופרסם" = מוסיף ללו"ז ושולח התראה להורים. "אשר" = מוסיף ללו"ז בלבד, בלי פוש.</p>
       </div>`;
     await sendEmail({ to, subject: `⚽ עדכון משחק — ${f.team} (${heDate(f.game_date)} ${f.game_time})`, html, fromName: `${club?.name || slug}` });
 }
@@ -299,7 +303,7 @@ async function pushManagerFa(slug, id, f) {
 
 // ===== apply / reject =====
 
-export async function approveFaGame(slug, id) {
+export async function approveFaGame(slug, id, push = true) {
     const cid = await clubId(slug);
     const teamIdx = await liveTeamIndex(cid);
     const result = await withTx(async (cx) => {
@@ -347,18 +351,20 @@ export async function approveFaGame(slug, id) {
             `INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff) VALUES ($1,'manager','approve','fa_game',$2,$3)`,
             [cid, id, JSON.stringify({ team: canon.name, date: row.game_date, time: row.game_time, opponent: row.opponent })],
         );
-        return { team: canon.name, row, pushed: !!livePub };
+        return { team: canon.name, row, onLive: !!livePub };
     });
 
-    // Push the team's parents only when the game went onto the LIVE board (its week is published).
-    // A game approved into the draft (next week not yet published) pushes when the manager publishes.
+    // "אשר ופרסם" (push=true) sends the parent push, but only when the game is on the LIVE board (its
+    // week is published). "אשר" (push=false) just places it on the schedule, no push. A game that only
+    // reached the draft (next week not published) never pushes here — it pushes when the manager publishes.
     const r = result.row;
     const body = `נגד ${r.opponent} · ${heDate(r.game_date)} בשעה ${r.game_time}${r.field ? ` · ${r.field}` : ''}`;
-    if (result.pushed) {
+    if (result.onLive && push) {
         broadcast(slug, { segment: 'team:' + result.team, title: `⚽ עודכן משחק — ${result.team}`, body }).catch(() => {});
         return { ok: true, message: `המשחק פורסם ונשלח להורים: ${result.team} ${body}` };
     }
-    return { ok: true, message: `המשחק אושר ונכנס לטיוטה — יפורסם להורים כשתפרסם את הלו"ז: ${result.team} ${body}` };
+    if (result.onLive) return { ok: true, message: `המשחק נכנס ללו"ז (ללא פוש): ${result.team} ${body}` };
+    return { ok: true, message: `המשחק אושר ונכנס לטיוטה — יפורסם כשתפרסם את הלו"ז: ${result.team} ${body}` };
 }
 
 // Manager manually edits a game (set/fix team, date, time) then saves it to the board + pushes.

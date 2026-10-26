@@ -600,7 +600,7 @@ app.post('/api/:club/fa/ingest', async (req, res) => {
     } catch (e) { fail(res, e); }
 });
 app.post('/api/:club/fa/:id/approve', requireManager, async (req, res) => {
-    try { ok(res, await approveFaGame(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }
+    try { ok(res, await approveFaGame(req.params.club, req.params.id, (req.body || {}).push !== false)); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 // Manual edit (team/date/time) → save to the board + push, from the FA tab.
 app.post('/api/:club/fa/:id/apply', requireManager, async (req, res) => {
@@ -618,7 +618,7 @@ app.post('/api/:club/fa/:id/reject', requireManager, async (req, res) => {
 // Signed one-click approve/reject from the manager's email link (resultPage/esc defined below).
 app.get('/api/:club/fa/:id/approve', async (req, res) => {
     if (!faVerify(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
-    try { const r = await approveFaGame(req.params.club, req.params.id); res.send(resultPage('✅ המשחק פורסם ונשלח להורים', r.message || '')); }
+    try { const r = await approveFaGame(req.params.club, req.params.id, req.query.push !== '0'); res.send(resultPage('✅ בוצע', r.message || '')); }
     catch (e) { res.send(resultPage('לא ניתן לאשר', e.message)); }
 });
 app.get('/api/:club/fa/:id/reject', async (req, res) => {

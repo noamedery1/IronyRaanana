@@ -46,13 +46,17 @@ export default function FaGamesPanel({ clubSlug }) {
         } catch (e) { setMsg('⚠️ ' + e.message); setBusy(''); }
     };
 
-    const act = async (id, action) => {
+    const act = async (id, action, push) => {
         setBusy(id); setMsg('');
         try {
-            const r = await fetch(`/api/${clubSlug}/fa/${id}/${action}`, { method: 'POST', headers: authHeaders(clubSlug) });
+            const r = await fetch(`/api/${clubSlug}/fa/${id}/${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeaders(clubSlug) },
+                body: action === 'approve' ? JSON.stringify({ push: push !== false }) : undefined,
+            });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.error || 'הפעולה נכשלה');
-            setMsg(action === 'approve' ? (d.message || '✓ אושר ונשלח להורים') : '✓ נדחה');
+            setMsg(action === 'approve' ? (d.message || '✓ אושר') : '✓ נדחה');
             load();
         } catch (e) { setMsg('⚠️ ' + e.message); } finally { setBusy(''); }
     };
@@ -131,7 +135,8 @@ export default function FaGamesPanel({ clubSlug }) {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>{gameLine(g)}{g.field ? <span style={{ color: '#64748b' }}> · {g.field}</span> : ''}<div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{g.league}</div></div>
                         <div style={{ display: 'flex', gap: '0.4rem' }}>
-                            <button disabled={busy === g.id} onClick={() => act(g.id, 'approve')} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '0.55rem 1rem', fontWeight: 800, cursor: 'pointer' }}>✅ אשר ושלח</button>
+                            <button disabled={busy === g.id} onClick={() => act(g.id, 'approve', true)} title="מוסיף ללו&quot;ז ושולח פוש להורים" style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '0.55rem 1rem', fontWeight: 800, cursor: 'pointer' }}>✅ אשר ופרסם</button>
+                            <button disabled={busy === g.id} onClick={() => act(g.id, 'approve', false)} title="מוסיף ללו&quot;ז בלבד, בלי פוש" style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 9, padding: '0.55rem 1rem', fontWeight: 800, cursor: 'pointer' }}>➕ אשר</button>
                             <button onClick={() => (editing === g.id ? setEditing('') : startEdit(g))} style={{ background: '#eef2ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 9, padding: '0.55rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}>✏️ ערוך</button>
                             <button disabled={busy === g.id} onClick={() => act(g.id, 'reject')} style={{ background: '#fff', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 9, padding: '0.55rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}>דחה</button>
                         </div>
