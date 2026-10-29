@@ -119,13 +119,15 @@ function emailHorizon() { return addDays(weekSundayOf(new Date().toISOString().s
 // Upsert one FA game's tracked state; queue an approval when a change crosses the notify threshold.
 // firstPoll=true seeds the baseline silently (so the very first run doesn't alert for every existing
 // fixture). Returns a short action tag for the poll summary.
-async function syncGame(slug, cid, club, g, firstPoll, horizon) {
+async function syncGame(slug, cid, club, g, firstPoll, horizon, today) {
     const team = mapTeam(g, club.faLeagueMap || {}, club.faNameMap || {});
     const key = faKey(g);
     const date = faDateToYMD(g.GameDate);
     const time = (g.GameTime || '').trim();
-    // Only notify/apply games within the published window; far-future games stay tracked silently.
-    const inWindow = !!date && !!horizon && date <= horizon;
+    // Only notify for UPCOMING games in the window: from today up to the horizon. Past games (played
+    // yesterday etc.) must never re-alert — FA edits them post-game (result/time), which would
+    // otherwise spam the manager with approvals for games that already happened.
+    const inWindow = !!date && !!horizon && date >= today && date <= horizon;
     const fields = {
         team: team || '', league: g.LeagueName || '', game_name: g.GameName || '',
         opponent: opponentOf(g.GameName), home_away: homeAway(g.GameName),
@@ -178,17 +180,21 @@ export async function ingestGames(slug, games = []) {
     if (!club?.faClubId) return { slug, skipped: 'no faClubId' };
     const cid = await clubId(slug);
     const firstPoll = !(await getSetting(slug, 'faBaselinedAt'));
+    const today = new Date().toISOString().slice(0, 10);
     const horizon = emailHorizon(); // this week + next week
     const summary = { slug, games: games.length, queued: 0, tracking: 0, unmapped: 0, pending: 0 };
     for (const g of games) {
         try {
-            const a = await syncGame(slug, cid, club, g, firstPoll, horizon);
+            const a = await syncGame(slug, cid, club, g, firstPoll, horizon, today);
             if (a === 'queued') summary.queued++;
             else if (a === 'unmapped') summary.unmapped++;
             else if (a === 'pending') summary.pending++;
             else summary.tracking++;
         } catch (e) { console.error('[fa] sync game failed', slug, faKey(g), e.message); }
     }
+    // Drop stale pending approvals for games already played (date < today) — they no longer need the
+    // manager's approval, so clear them from the pending list instead of leaving dead approval emails.
+    await pool.query(`UPDATE fa_game_sync SET status='tracking', updated_at=now() WHERE club_id=$1 AND status='pending' AND game_date < $2`, [cid, today]);
     // Reconcile FA matches to the publication that actually covers their week (FA-created matches carry
     // the ⚽ marker faNote uses; trainings and 🏀/manual matches are never touched).
     // 1) Remove any FA match sitting in a publication whose week does NOT contain its date (mis-filed —
