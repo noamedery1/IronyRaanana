@@ -194,7 +194,10 @@ export async function ingestGames(slug, games = []) {
     }
     // Drop stale pending approvals for games already played (date < today) — they no longer need the
     // manager's approval, so clear them from the pending list instead of leaving dead approval emails.
-    await pool.query(`UPDATE fa_game_sync SET status='tracking', updated_at=now() WHERE club_id=$1 AND status='pending' AND game_date < $2`, [cid, today]);
+    const reverted = await pool.query(`UPDATE fa_game_sync SET status='tracking', updated_at=now() WHERE club_id=$1 AND status='pending' AND game_date < $2 RETURNING id`, [cid, today]);
+    summary.revertedPending = reverted.rowCount;
+    // summary.pending above was tallied in-loop, before this revert — report the TRUE current pending.
+    summary.pending = (await pool.query(`SELECT count(*)::int AS n FROM fa_game_sync WHERE club_id=$1 AND status='pending'`, [cid])).rows[0].n;
     // Reconcile FA matches to the publication that actually covers their week (FA-created matches carry
     // the ⚽ marker faNote uses; trainings and 🏀/manual matches are never touched).
     // 1) Remove any FA match sitting in a publication whose week does NOT contain its date (mis-filed —
