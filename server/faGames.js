@@ -115,6 +115,13 @@ const addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDa
 // whether next week's schedule is published — an approved game lands in the publication for its own
 // week (live now, or the draft that goes live when the manager publishes).
 function emailHorizon() { return addDays(weekSundayOf(new Date().toISOString().slice(0, 10)), 13); }
+// Israel wall-clock now (DST-safe), as {date:'YYYY-MM-DD', time:'HH:MM'} — the kickoff cutoff is in
+// local time, so a 09:00 game is "past" from 09:00 Israel time, not from UTC midnight.
+function ilNow() {
+    const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    const p = Object.fromEntries(f.formatToParts(new Date()).map((x) => [x.type, x.value]));
+    return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
+}
 
 // Upsert one FA game's tracked state; queue an approval when a change crosses the notify threshold.
 // firstPoll=true seeds the baseline silently (so the very first run doesn't alert for every existing
@@ -124,10 +131,12 @@ async function syncGame(slug, cid, club, g, firstPoll, horizon, today) {
     const key = faKey(g);
     const date = faDateToYMD(g.GameDate);
     const time = (g.GameTime || '').trim();
-    // Only notify for UPCOMING games in the window: from today up to the horizon. Past games (played
-    // yesterday etc.) must never re-alert — FA edits them post-game (result/time), which would
-    // otherwise spam the manager with approvals for games that already happened.
-    const inWindow = !!date && !!horizon && date >= today && date <= horizon;
+    // Only notify for UPCOMING games in the window: kickoff still ahead, up to the horizon. A game whose
+    // start (date+time, Israel local) has already passed must never alert — FA edits it post-game
+    // (result/time) and the date alone is still "today", which used to spam approvals after kickoff.
+    const il = ilNow();
+    const notStarted = !!date && (date > il.date || (date === il.date && (!timeSet(time) || time > il.time)));
+    const inWindow = !!date && !!horizon && notStarted && date <= horizon;
     const fields = {
         team: team || '', league: g.LeagueName || '', game_name: g.GameName || '',
         opponent: opponentOf(g.GameName), home_away: homeAway(g.GameName),
