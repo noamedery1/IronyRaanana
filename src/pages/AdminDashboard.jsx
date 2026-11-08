@@ -56,6 +56,7 @@ const AdminDashboard = () => {
     const [importMapping, setImportMapping] = useState(null); // { fileTeams:[], existing:[], choices:{} } team mapping
     const [importCsv, setImportCsv] = useState('');            // the parsed file, held during mapping
     const [mapBusy, setMapBusy] = useState(false);
+    const [importConflicts, setImportConflicts] = useState(null); // { csv, items:[{key,team,dayName,faText,fileText}], decisions:{key:'keep'|'overwrite'|'merge'} }
 
     const changePassword = async () => {
         if (!pw.cur || !pw.next) { setPwMsg('מלא סיסמה נוכחית וחדשה'); return; }
@@ -411,14 +412,30 @@ const AdminDashboard = () => {
         return list;
     };
 
-    // POST CSV text → the DB draft, then refresh the preview from the draft.
+    // POST CSV text → the DB draft, then refresh the preview. First checks whether the file would
+    // clobber any auto-entered FA games; if so, pauses on the conflicts panel for the manager to decide.
     const importCsvToDraft = async (csv) => {
+        const plan = await fetch(`/api/${club.slug}/draft/import`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
+            body: JSON.stringify({ csv, plan: true }),
+        }).then((r) => r.json()).catch(() => ({}));
+        if (plan.conflicts?.length) {
+            const decisions = Object.fromEntries(plan.conflicts.map((c) => [c.key, 'keep']));
+            setImportConflicts({ csv, items: plan.conflicts, decisions });
+            return;
+        }
+        await applyImport(csv, {});
+    };
+
+    // Apply the import with the manager's conflict decisions (empty = no conflicts).
+    const applyImport = async (csv, decisions) => {
         const r = await fetch(`/api/${club.slug}/draft/import`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(club.slug) },
-            body: JSON.stringify({ csv }),
+            body: JSON.stringify({ csv, decisions }),
         });
         const d = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(d.error || 'ייבוא נכשל');
+        setImportConflicts(null);
         await loadDraft();
         setActiveTab('preview');
     };
@@ -816,7 +833,46 @@ const AdminDashboard = () => {
                             </div>
                             );
                         })()}
-                        {!importMapping && (
+                        {importConflicts && (
+                            <div style={{ marginTop: '1rem', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 12, padding: '1rem' }}>
+                                <div style={{ fontWeight: 800, color: '#92400e', marginBottom: '0.2rem' }}>⚽ משחקים אוטומטיים בהתנגשות ({importConflicts.items.length})</div>
+                                <div style={{ color: '#78716c', fontSize: '0.85rem', marginBottom: '0.8rem' }}>
+                                    במשבצות האלה כבר יש משחק שנכנס אוטומטית מההתאחדות (עם פרטים מלאים), והקובץ מנסה לכתוב עליהן.
+                                    בחר לכל אחת מה לעשות. משחקים אחרים מההתאחדות שאין עליהם התנגשות <b>יישמרו אוטומטית</b>.
+                                </div>
+                                <div style={{ display: 'grid', gap: '0.4rem', maxHeight: 340, overflowY: 'auto' }}>
+                                    {importConflicts.items.map((c) => (
+                                        <div key={c.key} style={{ background: '#fff', border: '1px solid #fde68a', borderRadius: 8, padding: '0.5rem 0.7rem' }}>
+                                            <div style={{ fontWeight: 700, marginBottom: '0.3rem' }}>{c.team} · יום {c.dayName}</div>
+                                            <div style={{ fontSize: '0.82rem', color: '#475569', marginBottom: '0.45rem' }}>
+                                                <div>⚽ מההתאחדות: <b>{c.faText || '(משחק)'}</b></div>
+                                                <div>📄 מהקובץ: {c.fileText || '(משחק)'}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                {[['keep', 'השאר את משחק ההתאחדות', '#16a34a'], ['overwrite', 'דרוס לפי הקובץ', '#dc2626'], ['merge', 'מזג (שניהם)', '#2563eb']].map(([val, label, color]) => {
+                                                    const on = (importConflicts.decisions[c.key] || 'keep') === val;
+                                                    return (
+                                                        <button key={val} onClick={() => setImportConflicts((s) => ({ ...s, decisions: { ...s.decisions, [c.key]: val } }))}
+                                                            style={{ padding: '0.35rem 0.7rem', borderRadius: 6, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', border: `1px solid ${color}`, background: on ? color : '#fff', color: on ? '#fff' : color }}>
+                                                            {label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.9rem' }}>
+                                    <button onClick={async () => { setMapBusy(true); setError(''); try { await applyImport(importConflicts.csv, importConflicts.decisions); } catch (e) { setError('ייבוא נכשל: ' + e.message); } finally { setMapBusy(false); } }} disabled={mapBusy}
+                                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '0.6rem 1.3rem', borderRadius: 8, fontWeight: 700, cursor: mapBusy ? 'wait' : 'pointer' }}>
+                                        {mapBusy ? 'מייבא…' : '✓ אשר וייבא'}
+                                    </button>
+                                    <button onClick={() => setImportConflicts(null)}
+                                        style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', marginInlineStart: 'auto' }}>ביטול</button>
+                                </div>
+                            </div>
+                        )}
+                        {!importMapping && !importConflicts && (
                             <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#4b5563' }}>
                                 לעריכה ופרסום — עברו ל<b>תצוגה מקדימה</b> ואז <b>פרסם לוז</b>.
                             </div>

@@ -173,13 +173,81 @@ export async function appendSessions(slug, target, sessions = []) {
 }
 
 // Seed the draft from an uploaded Excel/CSV (reuses the live-publish parser).
-export async function importCsvToDraft(slug, csvText) {
+// ===== FA-game-aware import =====================================================
+// A weekly schedule file REBUILDS the draft from scratch, which used to wipe the games the
+// FA auto-sync had already placed in it (the file only marks "there's a game" — the real
+// opponent/time/field come from the FA). So before rebuilding we read the draft's FA games
+// (⚽-marked matches) for the target week and fold them back in: slots the file leaves empty
+// keep their FA game silently; a slot where the file ALSO puts a game is a conflict the
+// manager resolves (keep the FA game / overwrite with the file / merge both).
+const FA_MARK = '⚽';
+const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const slugNorm = (s) => (s || '').toString().replace(/['"׳״\s]/g, '');
+const slotKey = (team, dow) => `${slugNorm(team)}|${dow}`;
+// (team,dow) slots where the FILE places a game — the only slots that can conflict.
+const fileMatchSlots = (sessions) => new Set(
+    sessions.filter((s) => s.type === 'match').map((s) => slotKey(s.team, s.day_of_week)));
+
+// FA games (⚽ matches) in the current draft whose date falls in the target week — the ones
+// at risk of being wiped by a rebuild to that same week.
+async function faGamesInDraft(draftId, weekStart) {
+    const r = await pool.query(
+        `SELECT ${SESSION_COLS} FROM sessions
+         WHERE publication_id=$1 AND type='match' AND note LIKE $2
+           AND date >= $3::date AND date <= $3::date + 6`,
+        [draftId, FA_MARK + '%', weekStart]);
+    return r.rows;
+}
+
+// Dry run: what FA games would collide with the incoming file. No DB change.
+export async function planImport(slug, csvText) {
     const { sessions, weekStart } = parseSheetToSessions(csvText);
+    const draft = await getOrCreateDraft(slug);
+    const ws = weekStart || draft.weekStart || upcomingSunday();
+    const slots = fileMatchSlots(sessions);
+    const conflicts = (await faGamesInDraft(draft.id, ws))
+        .filter((g) => slots.has(slotKey(g.team, g.day_of_week)))
+        .map((g) => ({
+            key: slotKey(g.team, g.day_of_week),
+            team: g.team, dow: g.day_of_week, dayName: DAY_NAMES[g.day_of_week] || '',
+            faText: g.note || '', time: g.start_time || '',
+            fileText: sessions.filter((s) => s.type === 'match' && slotKey(s.team, s.day_of_week) === slotKey(g.team, g.day_of_week))
+                .map((s) => s.note).join(' | '),
+        }));
+    return { conflicts };
+}
+
+// Pure fold: merge the draft's FA games into the file's sessions per the manager's decisions.
+// decisions: { [slotKey]: 'keep' | 'overwrite' | 'merge' } — default 'keep'. No conflict (file
+// slot empty of a game) → the FA game is kept silently ('auto').
+export function foldFaGames(sessions, faGames, decisions = {}) {
+    const slots = fileMatchSlots(sessions);
+    const out = [...sessions];
+    for (const g of faGames) {
+        const key = slotKey(g.team, g.day_of_week);
+        const conflict = slots.has(key);
+        const dec = conflict ? (decisions[key] || 'keep') : 'auto';
+        if (dec === 'overwrite') continue;            // drop the FA game, file's game wins
+        if (dec === 'keep') {                          // FA game wins — remove the file's game at this slot
+            for (let i = out.length - 1; i >= 0; i--) {
+                if (out[i].type === 'match' && slotKey(out[i].team, out[i].day_of_week) === key) out.splice(i, 1);
+            }
+        }
+        out.push(g);                                   // auto / keep / merge → FA game present
+    }
+    return out;
+}
+
+// Fold the draft's FA games back in per the manager's decisions, then rebuild the draft.
+export async function importCsvToDraft(slug, csvText, decisions = {}) {
+    const { sessions, weekStart } = parseSheetToSessions(csvText);
+    const draft = await getOrCreateDraft(slug);
     // A "permanent" file has day columns but no dates → parser returns no weekStart. Default to the
-    // UPCOMING week (today if Sunday, else the coming Sunday) — the same default a from-scratch draft
-    // uses — so a schedule prepared late in the week lands on the week about to start, not the one
-    // ending. The manager can still pick any week in the preview's date picker before publishing.
-    return replaceDraftSessions(slug, sessions, weekStart || upcomingSunday());
+    // draft's own week, else the UPCOMING week — so a schedule prepared late in the week lands on
+    // the week about to start. The manager can still pick any week in the preview before publishing.
+    const ws = weekStart || draft.weekStart || upcomingSunday();
+    const fa = await faGamesInDraft(draft.id, ws);
+    return replaceDraftSessions(slug, foldFaGames(sessions, fa, decisions), ws);
 }
 
 // Promote the draft → live: archive the current live week, flip draft to live,

@@ -15,7 +15,7 @@ import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmai
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify } from './server/faGames.js';
-import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
+import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, planImport, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
@@ -283,7 +283,9 @@ app.put('/api/:club/draft', requireManager, async (req, res) => {
 app.post('/api/:club/draft/import', requireManager, async (req, res) => {
     try {
         if (!req.body?.csv) return res.status(400).json({ error: 'missing csv' });
-        res.json(await importCsvToDraft(req.params.club, req.body.csv));
+        // plan=true → just report FA-game conflicts (no DB change); else apply with the manager's decisions.
+        if (req.body.plan) return res.json(await planImport(req.params.club, req.body.csv));
+        res.json(await importCsvToDraft(req.params.club, req.body.csv, req.body.decisions || {}));
     } catch (e) { res.status(400).json({ error: e.message }); }
 });
 // Reset the draft to a clean copy of the live schedule (undo unpublished draft edits).
