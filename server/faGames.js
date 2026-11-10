@@ -369,7 +369,7 @@ export async function approveFaGame(slug, id, push = true) {
             `INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff) VALUES ($1,'manager','approve','fa_game',$2,$3)`,
             [cid, id, JSON.stringify({ team: canon.name, date: row.game_date, time: row.game_time, opponent: row.opponent })],
         );
-        return { team: canon.name, row, onLive: !!livePub };
+        return { team: canon.name, coach, row, onLive: !!livePub };
     });
 
     // "אשר ופרסם" (push=true) sends the parent push, but only when the game is on the LIVE board (its
@@ -379,7 +379,13 @@ export async function approveFaGame(slug, id, push = true) {
     const body = `נגד ${r.opponent} · ${heDate(r.game_date)} בשעה ${r.game_time}${r.field ? ` · ${r.field}` : ''}`;
     if (result.onLive && push) {
         broadcast(slug, { segment: 'team:' + result.team, title: `⚽ עודכן משחק — ${result.team}`, body }).catch(() => {});
-        return { ok: true, message: `המשחק פורסם ונשלח להורים: ${result.team} ${body}` };
+        // Also notify the team's coach — trainers subscribe under __TRAINER__:<name> (by coach name),
+        // which a team:<team> send never reaches. session.coach comes from trainers.name (same source
+        // the trainer registered with), so it matches the trainer's push segment.
+        if (result.coach) {
+            broadcast(slug, { segment: '__TRAINER__:' + result.coach, title: `⚽ עודכן משחק — ${result.team}`, body }).catch(() => {});
+        }
+        return { ok: true, message: `המשחק פורסם ונשלח להורים${result.coach ? ' ולמאמן' : ''}: ${result.team} ${body}` };
     }
     if (result.onLive) return { ok: true, message: `המשחק נכנס ללו"ז (ללא פוש): ${result.team} ${body}` };
     return { ok: true, message: `המשחק אושר ונכנס לטיוטה — יפורסם כשתפרסם את הלו"ז: ${result.team} ${body}` };
