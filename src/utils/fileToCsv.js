@@ -5,11 +5,16 @@
 const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const clean = (s) => (s || '').toString().replace(/\s+/g, ' ').trim();
 
-// Match a header cell to a day name by its letters, ignoring spaces AND order. A PDF often
-// splits a Hebrew day header into two text items ("ח" + "מישי", "ר" + "ביעי") that the grid
-// rebuilds as "מישי ח" / "ביעי ר" — an exact DAYS.includes() then misses them and that whole
-// day column is dropped (bug: רביעי/חמישי not imported). Compare the sorted letter multiset.
-const daySig = (s) => [...(s || '').toString().replace(/\s+/g, '')].sort().join('');
+// Match a header cell to a day name by its HEBREW LETTERS only, ignoring order, spaces, and
+// anything non-letter (digits, "/", "-"). Two reasons an exact DAYS.includes() misses a header:
+//   1. A PDF splits a day into two text items ("ח" + "מישי", "ר" + "ביעי") → rebuilt as
+//      "מישי ח" / "ביעי ר" (space + reversed order).
+//   2. The header carries a date ("ראשון 10/11", or the date line merges into the header band
+//      as "מישי ח 19/11").
+// Both dropped whole day columns (רביעי/חמישי not imported; or a dated header not recognized).
+// Stripping to letters + comparing the sorted multiset recovers the day in all these cases, and
+// the returned value is the clean canonical day name (the date is discarded from the column).
+const daySig = (s) => [...(s || '').toString().replace(/[^א-ת]/g, '')].sort().join('');
 const DAY_BY_SIG = new Map(DAYS.map((d) => [daySig(d), d]));
 const asDay = (c) => DAY_BY_SIG.get(daySig(c)) || null;
 
