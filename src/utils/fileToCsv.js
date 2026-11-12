@@ -5,6 +5,14 @@
 const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const clean = (s) => (s || '').toString().replace(/\s+/g, ' ').trim();
 
+// Match a header cell to a day name by its letters, ignoring spaces AND order. A PDF often
+// splits a Hebrew day header into two text items ("ח" + "מישי", "ר" + "ביעי") that the grid
+// rebuilds as "מישי ח" / "ביעי ר" — an exact DAYS.includes() then misses them and that whole
+// day column is dropped (bug: רביעי/חמישי not imported). Compare the sorted letter multiset.
+const daySig = (s) => [...(s || '').toString().replace(/\s+/g, '')].sort().join('');
+const DAY_BY_SIG = new Map(DAYS.map((d) => [daySig(d), d]));
+const asDay = (c) => DAY_BY_SIG.get(daySig(c)) || null;
+
 // Tidy a reconstructed PDF cell: collapse spaces, re-glue digits/time ranges the PDF
 // split into separate items (e.g. "1 9:30", "15:00 - 16:30").
 const tidyCell = (s) => (s || '')
@@ -28,10 +36,10 @@ const nearestIdx = (centers, v) => centers.reduce((bi, c, i) => Math.abs(c - v) 
 // קבוצות + the present day columns.
 export function tableToCsv(rows) {
     const grid = rows.map((r) => r.map(clean));
-    const hi = grid.findIndex((r) => r.filter((c) => DAYS.includes(c)).length >= 2);
+    const hi = grid.findIndex((r) => r.filter((c) => asDay(c)).length >= 2);
     if (hi < 0) throw new Error('לא זוהתה טבלת לו"ז (חסרות כותרות ימים: ראשון, שני …).');
     const header = grid[hi];
-    const dayCols = {}; header.forEach((c, ci) => { if (DAYS.includes(c)) dayCols[ci] = c; });
+    const dayCols = {}; header.forEach((c, ci) => { const d = asDay(c); if (d) dayCols[ci] = d; });
     const body = grid.slice(hi + 1);
     const nonDay = header.map((_, ci) => ci).filter((ci) => !(ci in dayCols));
     const teamCol = nonDay.sort((a, b) =>
