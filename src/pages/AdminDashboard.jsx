@@ -848,13 +848,14 @@ const AdminDashboard = () => {
                                                 <div>⚽ מההתאחדות: <b>{c.faText || '(משחק)'}</b></div>
                                                 <div>📄 מהקובץ: {c.fileText || '(משחק)'}</div>
                                             </div>
+                                            <div style={{ fontSize: '0.72rem', color: '#92400e', marginBottom: '0.3rem' }}>בחר מה לעשות:</div>
                                             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                                                 {[['keep', 'השאר את משחק ההתאחדות', '#16a34a'], ['overwrite', 'דרוס לפי הקובץ', '#dc2626'], ['merge', 'מזג (שניהם)', '#2563eb']].map(([val, label, color]) => {
                                                     const on = (importConflicts.decisions[c.key] || 'keep') === val;
                                                     return (
                                                         <button key={val} onClick={() => setImportConflicts((s) => ({ ...s, decisions: { ...s.decisions, [c.key]: val } }))}
-                                                            style={{ padding: '0.35rem 0.7rem', borderRadius: 6, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', border: `1px solid ${color}`, background: on ? color : '#fff', color: on ? '#fff' : color }}>
-                                                            {label}
+                                                            style={{ padding: '0.35rem 0.7rem', borderRadius: 999, fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', border: on ? `2px solid ${color}` : '1px solid #d6d3d1', background: on ? '#fff' : '#fafaf9', color: on ? color : '#78716c' }}>
+                                                            {on ? '✓ ' : ''}{label}
                                                         </button>
                                                     );
                                                 })}
@@ -862,13 +863,16 @@ const AdminDashboard = () => {
                                         </div>
                                     ))}
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', marginTop: '0.9rem' }}>
+                                <div style={{ borderTop: '1px dashed #fcd34d', marginTop: '0.9rem', paddingTop: '0.7rem' }}>
+                                    <div style={{ fontSize: '0.8rem', color: '#92400e', fontWeight: 700, marginBottom: '0.45rem' }}>⬇️ לסיום הייבוא — לחץ כאן:</div>
+                                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
                                     <button onClick={async () => { setMapBusy(true); setError(''); try { await applyImport(importConflicts.csv, importConflicts.decisions); } catch (e) { setError('ייבוא נכשל: ' + e.message); } finally { setMapBusy(false); } }} disabled={mapBusy}
-                                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '0.6rem 1.3rem', borderRadius: 8, fontWeight: 700, cursor: mapBusy ? 'wait' : 'pointer' }}>
-                                        {mapBusy ? 'מייבא…' : '✓ אשר וייבא'}
+                                        style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '0.75rem 1.6rem', borderRadius: 8, fontWeight: 800, fontSize: '1rem', cursor: mapBusy ? 'wait' : 'pointer' }}>
+                                        {mapBusy ? 'מייבא…' : '✓ אשר וייבא את כל המשחקים'}
                                     </button>
                                     <button onClick={() => setImportConflicts(null)}
                                         style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', marginInlineStart: 'auto' }}>ביטול</button>
+                                    </div>
                                 </div>
                             </div>
                         )}
