@@ -40,6 +40,15 @@ async function pushCoachToSessions(cx, cid, teamName, coach) {
             }
         }
     }
+    // Keep the team record's own coach in sync too, so the two coach sources (teams.coach and the
+    // trainer assignment) can't disagree — a disagreement is what left the OLD coach showing after a
+    // reassignment. Normalized match ("טרום א׳" ↔ "טרום א"); never blanks.
+    const tr = await cx.query('SELECT id, name FROM teams WHERE club_id=$1', [cid]);
+    for (const t of tr.rows) {
+        if (normTeam(t.name) === key) {
+            await cx.query(`UPDATE teams SET coach=$2 WHERE id=$1 AND coalesce(coach,'') <> $2`, [t.id, c]);
+        }
+    }
 }
 
 // ===== Trainers =====
