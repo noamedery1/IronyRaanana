@@ -78,11 +78,13 @@ export function mapTeam(g, leagueMap = {}, nameMap = {}) {
     return '';
 }
 
-// Should a change from (notifiedDate, notifiedTime) to (date, time) alert the manager?
-// Only when the new time is real AND differs from what we last surfaced (new date or new time).
-export function shouldNotify(notifiedDate, notifiedTime, date, time) {
+// Should a change alert the manager? Only when the new time is real AND something we last surfaced
+// changed: a new date, a new time, or a new field/venue (same kickoff, moved pitch). Field args are
+// optional + last so the existing 4-arg callers/tests keep working; a field move alone re-alerts once.
+export function shouldNotify(notifiedDate, notifiedTime, date, time, notifiedField = '', field = '') {
     if (!timeSet(time)) return false;
-    return time !== (notifiedTime || '') || date !== (notifiedDate || '');
+    if (time !== (notifiedTime || '') || date !== (notifiedDate || '')) return true;
+    return norm(field) !== norm(notifiedField || '');
 }
 
 // The board cell text parents see — "⚽ משחק" marks it as a game (amber card); the rest rides along.
@@ -154,10 +156,10 @@ async function syncGame(slug, cid, club, g, firstPoll, horizon, today) {
         // far-future game left un-baselined (notified null) so it queues once its week is published.
         const baseline = firstPoll && timeSet(time);
         const ins = await pool.query(
-            `INSERT INTO fa_game_sync (club_id, fa_key, team, league, game_name, opponent, home_away, field, round, game_date, game_time, status, notified_date, notified_time)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+            `INSERT INTO fa_game_sync (club_id, fa_key, team, league, game_name, opponent, home_away, field, round, game_date, game_time, status, notified_date, notified_time, notified_field)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
             [cid, key, fields.team, fields.league, fields.game_name, fields.opponent, fields.home_away, fields.field,
-             fields.round, fields.game_date, fields.game_time, status, baseline ? date : null, baseline ? time : null],
+             fields.round, fields.game_date, fields.game_time, status, baseline ? date : null, baseline ? time : null, baseline ? fields.field : null],
         );
         if (queue) { await queueApproval(slug, ins.rows[0].id, fields); return 'queued'; }
         return team ? 'tracking' : 'unmapped';
@@ -171,7 +173,7 @@ async function syncGame(slug, cid, club, g, firstPoll, horizon, today) {
     );
     if (row.status === 'pending') return 'pending'; // already waiting on the manager; approve the latest
 
-    if (team && inWindow && shouldNotify(row.notified_date, row.notified_time, date, time)) {
+    if (team && inWindow && shouldNotify(row.notified_date, row.notified_time, date, time, row.notified_field, fields.field)) {
         await pool.query(`UPDATE fa_game_sync SET status='pending', updated_at=now() WHERE id=$1`, [row.id]);
         await queueApproval(slug, row.id, fields);
         return 'queued';
@@ -362,7 +364,7 @@ export async function approveFaGame(slug, id, push = true) {
         if (livePub) sid = await insInto(livePub.id);
         if (draftPub) { const d = await insInto(draftPub.id); if (!sid) sid = d; }
         await cx.query(
-            `UPDATE fa_game_sync SET status='applied', session_id=$2, notified_date=game_date, notified_time=game_time, updated_at=now() WHERE id=$1`,
+            `UPDATE fa_game_sync SET status='applied', session_id=$2, notified_date=game_date, notified_time=game_time, notified_field=field, updated_at=now() WHERE id=$1`,
             [id, sid],
         );
         await cx.query(
@@ -410,7 +412,7 @@ export async function rejectFaGame(slug, id) {
     // Mark rejected AND treat the current value as "surfaced" so we don't nag again for the same
     // date/time — but a FURTHER change will cross the threshold and re-queue.
     const r = await pool.query(
-        `UPDATE fa_game_sync SET status='rejected', notified_date=game_date, notified_time=game_time, updated_at=now() WHERE id=$1 AND club_id=$2`,
+        `UPDATE fa_game_sync SET status='rejected', notified_date=game_date, notified_time=game_time, notified_field=field, updated_at=now() WHERE id=$1 AND club_id=$2`,
         [id, cid]);
     if (!r.rowCount) throw new Error('המשחק לא נמצא');
     return { ok: true };

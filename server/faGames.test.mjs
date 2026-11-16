@@ -69,6 +69,11 @@ assert.equal(shouldNotify(null, null, '2026-10-24', '11:00'), true, 'time newly 
 assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '11:00'), false, 'unchanged does not re-alert');
 assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '13:00'), true, 'time change alerts');
 assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-25', '11:00'), true, 'date change alerts');
+// field/venue change (same date+time) re-alerts once; noise-normalized; needs a real time
+assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '11:00', 'מגרש א', 'מגרש ב'), true, 'field change alerts');
+assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '11:00', 'מגרש א', 'מגרש  א'), false, 'same field (spacing) does not alert');
+assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '00:00', 'מגרש א', 'מגרש ב'), false, 'field change with no real time never alerts');
+assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '11:00', '', 'מגרש ב'), true, 'field newly set alerts');
 
 // ---- board note format (amber game card) ----
 assert.equal(

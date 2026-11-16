@@ -110,6 +110,9 @@ export async function ensureStore() {
               UNIQUE (club_id, fa_key)
             )`);
         await pool.query('CREATE INDEX IF NOT EXISTS fa_game_sync_status_idx ON fa_game_sync (club_id, status)');
+        // Last SURFACED field (venue), so a venue change on an already-timed game re-alerts the manager
+        // once — without this a field-only move (same date/time) was never detected. Additive backfill.
+        await pool.query('ALTER TABLE fa_game_sync ADD COLUMN IF NOT EXISTS notified_field text');
     } catch (e) { console.error('[fa-games] table init failed (non-fatal):', e.message); }
     // Enable FA-games sync for the live Hapoel Raanana football club. Prod-only row (seeded via the
     // super-user screen, not here) so this is a no-op on a dev DB. Fills these keys only when absent
