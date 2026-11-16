@@ -38,6 +38,27 @@ const SESSION_COLS = `team, coach, gender, hall, date::text,
     to_char(start_time,'HH24:MI') AS start_time, to_char(end_time,'HH24:MI') AS end_time,
     type, status, day_of_week, note`;
 
+// The coach a team is assigned to in "ניהול מאמנים" is the authoritative current coach. The draft
+// board, though, shows (and on save, persists) each session's OWN baked coach — so after a trainer
+// reassignment the OLD coach kept coming back: editing the team re-saved the stale sheet. Reconcile
+// the draft's coaches with the trainer assignment on read, so the board shows and saves the current
+// coach. Normalized team match ("טרום א׳" ↔ "טרום א"); teams without an assignment are left as-is.
+// ponytail: trainer assignment wins for any team it covers — a club that imports per-session coaches
+// AND assigns the same team to a trainer would see the trainer win (matches the app's coach model).
+const nrmTeam = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+async function coachByTeam(clubId) {
+    const r = await pool.query('SELECT name, teams FROM trainers WHERE club_id=$1', [clubId]);
+    const m = {};
+    r.rows.forEach((t) => (t.teams || '').split(/[,;\n]/).map((x) => x.trim()).filter(Boolean).forEach((tm) => {
+        const k = nrmTeam(tm); if (k && !m[k]) m[k] = t.name;
+    }));
+    return m;
+}
+const reconcileCoach = (sessions, map) => sessions.map((s) => {
+    const c = map[nrmTeam(s.team)];
+    return c ? { ...s, coach: c } : s;
+});
+
 // Read-only view of the draft (next week) — does NOT create one if missing.
 // Used by the trainer portal's "propose / enter schedule" tab.
 export async function getDraftView(slug) {
@@ -46,7 +67,7 @@ export async function getDraftView(slug) {
     const p = await pool.query(`SELECT id, week_start::text FROM schedule_publications WHERE club_id=$1 AND status='draft' LIMIT 1`, [clubId]);
     if (!p.rows.length) return { week_start: null, sessions: [] };
     const s = await pool.query(`SELECT ${SESSION_COLS} FROM sessions WHERE publication_id=$1 ORDER BY date, start_time, team`, [p.rows[0].id]);
-    return { week_start: p.rows[0].week_start, sessions: s.rows };
+    return { week_start: p.rows[0].week_start, sessions: reconcileCoach(s.rows, await coachByTeam(clubId)) };
 }
 
 // The draft schedule (publication meta + its sessions).
@@ -56,7 +77,7 @@ export async function getDraft(slug) {
         `SELECT ${SESSION_COLS} FROM sessions WHERE publication_id=$1 ORDER BY date, start_time, team`,
         [draft.id],
     );
-    return { publication: { id: draft.id, week_start: draft.weekStart, status: 'draft' }, sessions: s.rows };
+    return { publication: { id: draft.id, week_start: draft.weekStart, status: 'draft' }, sessions: reconcileCoach(s.rows, await coachByTeam(draft.clubId)) };
 }
 
 // Replace ALL draft sessions with the given set (the manager's preview "save draft").
