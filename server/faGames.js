@@ -87,6 +87,24 @@ export function shouldNotify(notifiedDate, notifiedTime, date, time, notifiedFie
     return norm(field) !== norm(notifiedField || '');
 }
 
+// A game that vanishes from FA may be cancelled or postponed to a distant round (out of the worker's
+// 2-round window). We flag — never auto-remove. ~4-6 missed polls (8h throttle, weekday-daytime only).
+export const FA_CANCEL_STALE_HOURS = 36;
+
+// Which APPLIED games have gone missing long enough to suspect a cancellation? Conservative on purpose:
+//  - only UPCOMING games inside the fetched window ([today, horizon] — what the worker actually covers);
+//  - stale past the threshold (last_seen older than staleHours);
+//  - and ONLY when this batch saw other in-window games (sawAnyInWindow) — so a partial/empty batch
+//    can't orphan everything. Returns the fa_game_sync ids to flag.
+export function cancelCandidates(rows, { nowMs, today, horizon, staleHours, sawAnyInWindow }) {
+    if (!sawAnyInWindow) return [];
+    const cutoff = nowMs - staleHours * 3600 * 1000;
+    return rows.filter((r) => r.status === 'applied' && r.game_date
+        && r.game_date >= today && r.game_date <= horizon
+        && r.last_seen_at && new Date(r.last_seen_at).getTime() < cutoff
+    ).map((r) => r.id);
+}
+
 // The board cell text parents see — "⚽ משחק" marks it as a game (amber card); the rest rides along.
 export function faNote(row) {
     const bits = [];
@@ -156,8 +174,8 @@ async function syncGame(slug, cid, club, g, firstPoll, horizon, today) {
         // far-future game left un-baselined (notified null) so it queues once its week is published.
         const baseline = firstPoll && timeSet(time);
         const ins = await pool.query(
-            `INSERT INTO fa_game_sync (club_id, fa_key, team, league, game_name, opponent, home_away, field, round, game_date, game_time, status, notified_date, notified_time, notified_field)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+            `INSERT INTO fa_game_sync (club_id, fa_key, team, league, game_name, opponent, home_away, field, round, game_date, game_time, status, notified_date, notified_time, notified_field, last_seen_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now()) RETURNING id`,
             [cid, key, fields.team, fields.league, fields.game_name, fields.opponent, fields.home_away, fields.field,
              fields.round, fields.game_date, fields.game_time, status, baseline ? date : null, baseline ? time : null, baseline ? fields.field : null],
         );
@@ -166,11 +184,18 @@ async function syncGame(slug, cid, club, g, firstPoll, horizon, today) {
     }
 
     const row = cur.rows[0];
-    // Keep the latest snapshot + re-evaluate mapping (map may have been edited).
+    // Keep the latest snapshot + re-evaluate mapping (map may have been edited). last_seen_at=now()
+    // marks the fixture as still present in FA (feeds the cancellation watch below).
     await pool.query(
-        `UPDATE fa_game_sync SET team=$3, league=$4, game_name=$5, opponent=$6, home_away=$7, field=$8, round=$9, game_date=$10, game_time=$11, updated_at=now() WHERE id=$1 AND club_id=$2`,
+        `UPDATE fa_game_sync SET team=$3, league=$4, game_name=$5, opponent=$6, home_away=$7, field=$8, round=$9, game_date=$10, game_time=$11, last_seen_at=now(), updated_at=now() WHERE id=$1 AND club_id=$2`,
         [row.id, cid, fields.team, fields.league, fields.game_name, fields.opponent, fields.home_away, fields.field, fields.round, fields.game_date, fields.game_time],
     );
+    // Back from the dead: a game we'd flagged as maybe-cancelled reappeared in FA → un-flag it (revert
+    // to applied) and let the normal change-eval below re-queue only if its time/field actually changed.
+    if (row.status === 'cancel_pending') {
+        await pool.query(`UPDATE fa_game_sync SET status='applied', updated_at=now() WHERE id=$1`, [row.id]);
+        row.status = 'applied';
+    }
     if (row.status === 'pending') return 'pending'; // already waiting on the manager; approve the latest
 
     if (team && inWindow && shouldNotify(row.notified_date, row.notified_time, date, time, row.notified_field, fields.field)) {
@@ -193,6 +218,7 @@ export async function ingestGames(slug, games = []) {
     const firstPoll = !(await getSetting(slug, 'faBaselinedAt'));
     const today = new Date().toISOString().slice(0, 10);
     const horizon = emailHorizon(); // this week + next week
+    const batchStart = new Date(); // fixtures seen in THIS batch get last_seen_at >= this
     const summary = { slug, games: games.length, queued: 0, tracking: 0, unmapped: 0, pending: 0 };
     for (const g of games) {
         try {
@@ -220,9 +246,11 @@ export async function ingestGames(slug, games = []) {
            AND (s.date < p.week_start OR s.date > p.week_start + 6) RETURNING s.id`, [cid]);
     // Also drop FA matches left stale by a date change: an ⚽ session with no APPLIED fixture at that
     // team+date anymore (the game moved, leaving its old-date session behind).
+    // 'cancel_pending' counts as still-present here: the session stays on the board until the manager
+    // decides (remove or keep), so a maybe-cancelled game doesn't silently vanish from parents first.
     const del2 = await pool.query(
         `DELETE FROM sessions s WHERE s.club_id=$1 AND s.type='match' AND s.note LIKE '⚽%'
-           AND NOT EXISTS (SELECT 1 FROM fa_game_sync f WHERE f.club_id=$1 AND f.status='applied' AND f.team=s.team AND f.game_date=s.date::text) RETURNING s.id`, [cid]);
+           AND NOT EXISTS (SELECT 1 FROM fa_game_sync f WHERE f.club_id=$1 AND f.status IN ('applied','cancel_pending') AND f.team=s.team AND f.game_date=s.date::text) RETURNING s.id`, [cid]);
     summary.unapplied = del.rowCount + del2.rowCount;
     // 2) Ensure each APPROVED FA game has a session in the live/draft publication for its OWN week, once
     //    such a publication exists (so an approved next-week game appears in the draft the manager builds,
@@ -243,6 +271,22 @@ export async function ingestGames(slug, games = []) {
                 [p.id, cid, canon.name, coach, canon.gender, r.field || null, r.game_date, dow, r.game_time || null, null, faNote(r)]);
             summary.reconciled = (summary.reconciled || 0) + 1;
         }
+    }
+    // Cancellation/postponement watch: an APPLIED game that vanished from FA for a while may be off.
+    // Flag it for the manager (email+push) — never auto-remove. Only on a non-empty, healthy batch and
+    // only when some in-window game WAS seen this batch (guards a partial batch from orphaning all).
+    if (games.length && !firstPoll) {
+        const appliedNow = (await pool.query(
+            `SELECT id, status, game_date, last_seen_at FROM fa_game_sync WHERE club_id=$1 AND status='applied'`, [cid])).rows;
+        const sawAnyInWindow = appliedNow.some((r) => r.game_date && r.game_date >= today && r.game_date <= horizon
+            && r.last_seen_at && new Date(r.last_seen_at) >= batchStart);
+        const flag = cancelCandidates(appliedNow, { nowMs: Date.now(), today, horizon, staleHours: FA_CANCEL_STALE_HOURS, sawAnyInWindow });
+        for (const id of flag) {
+            await pool.query(`UPDATE fa_game_sync SET status='cancel_pending', updated_at=now() WHERE id=$1`, [id]);
+            const f = (await pool.query('SELECT * FROM fa_game_sync WHERE id=$1', [id])).rows[0];
+            queueCancel(slug, id, f);
+        }
+        summary.cancelFlagged = flag.length;
     }
     // Mark the club baselined only once we've actually processed a non-empty batch — an empty ingest
     // (e.g. the clearing half of a reset) must NOT trip the flag, or the real batch would then alert.
@@ -318,6 +362,61 @@ async function pushManagerFa(slug, id, f) {
         url: `${base}/admin/dashboard`,
         data: { approveUrl: approve, rejectUrl: reject, label: `${f.team} נגד ${f.opponent}`, url: `${base}/admin/dashboard` },
         actions: [{ action: 'approve', title: '✅ אשר' }, { action: 'reject', title: '❌ דחה' }],
+    });
+}
+
+// ===== cancellation watch: alert the manager a game may be off (remove/keep) =====
+
+function cancelLinks(slug, id) {
+    const base = process.env.APP_BASE_URL || '';
+    const tok = faSign(id);
+    return {
+        remove: `${base}/api/${slug}/fa/${id}/remove?token=${tok}`,            // הסר + עדכן הורים
+        removeSilent: `${base}/api/${slug}/fa/${id}/remove?token=${tok}&push=0`, // הסר בלבד
+        keep: `${base}/api/${slug}/fa/${id}/keep?token=${tok}`,                 // השאר
+        base,
+    };
+}
+
+function queueCancel(slug, id, f) {
+    notifyManagerCancel(slug, id, f).catch((e) => console.error('[fa] cancel mail failed', e.message));
+    pushManagerCancel(slug, id, f).catch((e) => console.error('[fa] cancel push failed', e.message));
+}
+
+async function notifyManagerCancel(slug, id, f) {
+    const club = await getClub(slug);
+    const emails = [];
+    if (process.env.MANAGER_EMAIL) emails.push(process.env.MANAGER_EMAIL);
+    if (Array.isArray(club?.managerEmails)) emails.push(...club.managerEmails);
+    else if (club?.managerEmail) emails.push(club.managerEmail);
+    const to = [...new Set(emails.filter(Boolean))];
+    if (!to.length) return;
+    const { remove, removeSilent, keep } = cancelLinks(slug, id);
+    const html = `
+      <div dir="rtl" style="font-family:Arial,sans-serif">
+        <h3>⚠️ ייתכן שמשחק בוטל או נדחה — ${esc(f.team)}</h3>
+        <p><b>${esc(f.team)}</b> נגד <b>${esc(f.opponent)}</b>${f.home_away ? ` (${esc(f.home_away)})` : ''} · ${esc(heDate(f.game_date))} ${esc(f.game_time || '')}</p>
+        <p style="color:#666">המשחק נעלם מפרסום ההתאחדות. ייתכן שבוטל, או נדחה למועד רחוק. המשחק עדיין מופיע בלו"ז עד שתחליט.</p>
+        <p style="margin-top:18px">
+          <a href="${remove}" style="background:#dc2626;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">🗑️ הסר ועדכן הורים</a>
+          &nbsp;&nbsp;
+          <a href="${removeSilent}" style="background:#b45309;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">🗑️ הסר (בלי פוש)</a>
+          &nbsp;&nbsp;
+          <a href="${keep}" style="background:#16a34a;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">✅ השאר</a>
+        </p>
+      </div>`;
+    await sendEmail({ to, subject: `⚠️ ייתכן שמשחק בוטל — ${f.team} (${heDate(f.game_date)})`, html, fromName: `${club?.name || slug}` });
+}
+
+async function pushManagerCancel(slug, id, f) {
+    const { remove, keep, base } = cancelLinks(slug, id);
+    await broadcast(slug, {
+        segment: '__MANAGER__',
+        title: `⚠️ ייתכן שמשחק בוטל — ${f.team}`,
+        body: `נגד ${f.opponent} · ${heDate(f.game_date)} ${f.game_time || ''} — נעלם מההתאחדות`,
+        url: `${base}/admin/dashboard`,
+        data: { removeUrl: remove, keepUrl: keep, label: `${f.team} נגד ${f.opponent}`, url: `${base}/admin/dashboard` },
+        actions: [{ action: 'remove', title: '🗑️ הסר' }, { action: 'keep', title: '✅ השאר' }],
     });
 }
 
@@ -415,6 +514,53 @@ export async function rejectFaGame(slug, id) {
         `UPDATE fa_game_sync SET status='rejected', notified_date=game_date, notified_time=game_time, notified_field=field, updated_at=now() WHERE id=$1 AND club_id=$2`,
         [id, cid]);
     if (!r.rowCount) throw new Error('המשחק לא נמצא');
+    return { ok: true };
+}
+
+// Manager decided a maybe-cancelled game is really off → remove its board session(s) and (if it was
+// live) tell parents + the coach. status='cancelled' so the sync won't re-add it; a genuine FA
+// reappearance later re-tracks it as a brand-new fixture.
+export async function removeFaGame(slug, id, push = true) {
+    const cid = await clubId(slug);
+    const result = await withTx(async (cx) => {
+        const rq = await cx.query('SELECT * FROM fa_game_sync WHERE id=$1 AND club_id=$2 FOR UPDATE', [id, cid]);
+        if (!rq.rows.length) throw new Error('המשחק לא נמצא');
+        const row = rq.rows[0];
+        if (row.status === 'cancelled') throw new Error('כבר הוסר');
+        const team = row.team;
+        // Was it on the LIVE board (parents saw it)? → decides whether a cancellation push goes out.
+        const live = await cx.query(
+            `SELECT s.coach FROM sessions s JOIN schedule_publications p ON p.id=s.publication_id
+             WHERE s.club_id=$1 AND p.status='live' AND s.team=$2 AND s.date=$3 AND s.type='match' AND s.note LIKE '⚽%' LIMIT 1`,
+            [cid, team, row.game_date]);
+        const onLive = !!live.rows.length;
+        const coach = live.rows[0]?.coach
+            || (await cx.query(`SELECT coach FROM sessions WHERE club_id=$1 AND team=$2 AND coach IS NOT NULL AND coach<>'' ORDER BY date DESC LIMIT 1`, [cid, team])).rows[0]?.coach || null;
+        if (row.session_id) await cx.query('DELETE FROM sessions WHERE id=$1', [row.session_id]);
+        await cx.query(`DELETE FROM sessions WHERE club_id=$1 AND team=$2 AND date=$3 AND type='match' AND note LIKE '⚽%'`, [cid, team, row.game_date]);
+        await cx.query(`UPDATE fa_game_sync SET status='cancelled', session_id=NULL, updated_at=now() WHERE id=$1`, [id]);
+        await cx.query(`INSERT INTO audit_log (club_id, actor, action, entity, entity_id, diff) VALUES ($1,'manager','remove','fa_game',$2,$3)`,
+            [cid, id, JSON.stringify({ team, date: row.game_date, opponent: row.opponent })]);
+        return { team, coach, row, onLive };
+    });
+    const r = result.row;
+    const body = `המשחק מול ${r.opponent} (${heDate(r.game_date)}${r.game_time ? ' ' + r.game_time : ''}) בוטל/נדחה`;
+    if (result.onLive && push) {
+        broadcast(slug, { segment: 'team:' + result.team, title: `⚠️ בוטל משחק — ${result.team}`, body }).catch(() => {});
+        if (result.coach) broadcast(slug, { segment: '__TRAINER__:' + result.coach, title: `⚠️ בוטל משחק — ${result.team}`, body }).catch(() => {});
+        return { ok: true, message: `המשחק הוסר ונשלחה הודעה להורים${result.coach ? ' ולמאמן' : ''}: ${result.team}` };
+    }
+    return { ok: true, message: `המשחק הוסר מהלו"ז: ${result.team}` };
+}
+
+// Manager decided the vanished game is still on → un-flag it and treat it as freshly seen (so it won't
+// re-flag before another full stale window).
+export async function keepFaGame(slug, id) {
+    const cid = await clubId(slug);
+    const r = await pool.query(
+        `UPDATE fa_game_sync SET status='applied', last_seen_at=now(), updated_at=now() WHERE id=$1 AND club_id=$2 AND status='cancel_pending'`,
+        [id, cid]);
+    if (!r.rowCount) throw new Error('המשחק לא נמצא או כבר טופל');
     return { ok: true };
 }
 

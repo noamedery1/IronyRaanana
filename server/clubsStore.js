@@ -113,6 +113,11 @@ export async function ensureStore() {
         // Last SURFACED field (venue), so a venue change on an already-timed game re-alerts the manager
         // once — without this a field-only move (same date/time) was never detected. Additive backfill.
         await pool.query('ALTER TABLE fa_game_sync ADD COLUMN IF NOT EXISTS notified_field text');
+        // Last time this fixture was seen in an FA batch → cancellation detection (a game that vanishes
+        // from FA for a while may be cancelled/postponed). Backfill existing rows to now() so the first
+        // post-deploy sweep doesn't flag every current game as "gone".
+        await pool.query('ALTER TABLE fa_game_sync ADD COLUMN IF NOT EXISTS last_seen_at timestamptz');
+        await pool.query('UPDATE fa_game_sync SET last_seen_at = now() WHERE last_seen_at IS NULL');
     } catch (e) { console.error('[fa-games] table init failed (non-fatal):', e.message); }
     // Enable FA-games sync for the live Hapoel Raanana football club. Prod-only row (seeded via the
     // super-user screen, not here) so this is a no-op on a dev DB. Fills these keys only when absent

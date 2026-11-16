@@ -247,9 +247,10 @@ const AdminDashboard = () => {
     };
     // FA games awaiting approval → the "משחקי ליגה" sidebar badge (same cadence as trainer requests).
     const loadFaPending = () => {
-        fetch(`/api/${club.slug}/fa?status=pending`, { headers: authHeaders(club.slug) })
+        // badge = games awaiting the manager: time/date changes (pending) + maybe-cancelled (cancel_pending)
+        fetch(`/api/${club.slug}/fa?status=all`, { headers: authHeaders(club.slug) })
             .then((r) => (r.ok ? r.json() : { games: [] }))
-            .then((d) => setFaPendingCount(Array.isArray(d.games) ? d.games.length : 0))
+            .then((d) => setFaPendingCount(Array.isArray(d.games) ? d.games.filter((g) => g.status === 'pending' || g.status === 'cancel_pending').length : 0))
             .catch(() => { /* view-only / offline */ });
     };
     useEffect(() => {

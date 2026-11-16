@@ -52,11 +52,11 @@ export default function FaGamesPanel({ clubSlug }) {
             const r = await fetch(`/api/${clubSlug}/fa/${id}/${action}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...authHeaders(clubSlug) },
-                body: action === 'approve' ? JSON.stringify({ push: push !== false }) : undefined,
+                body: (action === 'approve' || action === 'remove') ? JSON.stringify({ push: push !== false }) : undefined,
             });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d.error || 'הפעולה נכשלה');
-            setMsg(action === 'approve' ? (d.message || '✓ אושר') : '✓ נדחה');
+            setMsg(d.message || '✓ בוצע');
             load();
         } catch (e) { setMsg('⚠️ ' + e.message); } finally { setBusy(''); }
     };
@@ -80,6 +80,7 @@ export default function FaGamesPanel({ clubSlug }) {
 
     const today = new Date().toISOString().slice(0, 10);
     const pending = games.filter((g) => g.status === 'pending');
+    const cancelPending = games.filter((g) => g.status === 'cancel_pending'); // vanished from FA — maybe off
     // Tracked = upcoming only. Hide games already played (game_date before today); keep ones with no
     // date yet (still awaiting a time). Past games are clutter once a new week starts.
     const tracked = games.filter((g) => (g.status === 'tracking' || g.status === 'applied') && (!g.game_date || g.game_date >= today));
@@ -144,6 +145,26 @@ export default function FaGamesPanel({ clubSlug }) {
                     {editing === g.id && editBox(g, true)}
                 </div>
             ))}
+
+            {/* Maybe-cancelled: a game that vanished from the FA publication (cancelled or postponed far) */}
+            {cancelPending.length > 0 && (
+                <div style={{ marginTop: '1.2rem' }}>
+                    <h4 style={{ marginBottom: '0.5rem', color: '#b91c1c' }}>⚠️ ייתכן שבוטלו / נדחו <span style={{ background: '#ef4444', color: '#fff', borderRadius: 999, padding: '0 8px', fontSize: '0.8rem' }}>{cancelPending.length}</span></h4>
+                    <p style={{ color: '#94a3b8', fontSize: '0.84rem', marginTop: 0 }}>נעלמו מפרסום ההתאחדות. עדיין בלו"ז עד שתחליט — הסר אם בוטל, או השאר.</p>
+                    {cancelPending.map((g) => (
+                        <div key={g.id} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '0.9rem 1rem', marginBottom: '0.7rem' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div>{gameLine(g)}{g.field ? <span style={{ color: '#64748b' }}> · {g.field}</span> : ''}<div style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{g.league}</div></div>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <button disabled={busy === g.id} onClick={() => act(g.id, 'remove', true)} title="מסיר מהלו&quot;ז ומודיע להורים" style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 9, padding: '0.55rem 1rem', fontWeight: 800, cursor: 'pointer' }}>🗑️ הסר ועדכן</button>
+                                    <button disabled={busy === g.id} onClick={() => act(g.id, 'remove', false)} title="מסיר מהלו&quot;ז בלי פוש" style={{ background: '#b45309', color: '#fff', border: 'none', borderRadius: 9, padding: '0.55rem 0.9rem', fontWeight: 700, cursor: 'pointer' }}>🗑️ הסר בלבד</button>
+                                    <button disabled={busy === g.id} onClick={() => act(g.id, 'keep')} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 9, padding: '0.55rem 1rem', fontWeight: 800, cursor: 'pointer' }}>✅ השאר</button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Tracked, collapsed by week */}
             <h4 style={{ marginTop: '1.6rem', marginBottom: '0.5rem' }}>במעקב ({tracked.length})</h4>

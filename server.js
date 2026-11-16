@@ -14,7 +14,7 @@ import {
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
-import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify } from './server/faGames.js';
+import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify, removeFaGame, keepFaGame } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, planImport, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
@@ -626,6 +626,23 @@ app.get('/api/:club/fa/:id/approve', async (req, res) => {
 app.get('/api/:club/fa/:id/reject', async (req, res) => {
     if (!faVerify(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
     try { await rejectFaGame(req.params.club, req.params.id); res.send(resultPage('המשחק נדחה — לא נשלח')); }
+    catch (e) { res.send(resultPage('שגיאה', e.message)); }
+});
+// Cancellation watch: a maybe-cancelled game — remove it from the board (+notify), or keep it.
+app.post('/api/:club/fa/:id/remove', requireManager, async (req, res) => {
+    try { ok(res, await removeFaGame(req.params.club, req.params.id, (req.body || {}).push !== false)); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/:club/fa/:id/keep', requireManager, async (req, res) => {
+    try { ok(res, await keepFaGame(req.params.club, req.params.id)); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/:club/fa/:id/remove', async (req, res) => {
+    if (!faVerify(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
+    try { const r = await removeFaGame(req.params.club, req.params.id, req.query.push !== '0'); res.send(resultPage('🗑️ המשחק הוסר', r.message || '')); }
+    catch (e) { res.send(resultPage('לא ניתן להסיר', e.message)); }
+});
+app.get('/api/:club/fa/:id/keep', async (req, res) => {
+    if (!faVerify(req.params.id, req.query.token)) return res.status(403).send(resultPage('קישור לא תקין'));
+    try { await keepFaGame(req.params.club, req.params.id); res.send(resultPage('✅ המשחק נשאר בלו"ז')); }
     catch (e) { res.send(resultPage('שגיאה', e.message)); }
 });
 

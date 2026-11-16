@@ -3,7 +3,7 @@
 // Covers the money logic: time-finalized detection, date parsing, stable keys, team mapping
 // (league 1:1 + cup-by-name), our-side extraction, and the notify threshold. Exits non-zero on fail.
 import assert from 'node:assert';
-import { norm, timeSet, faDateToYMD, faKey, ourSide, opponentOf, homeAway, mapTeam, shouldNotify, faNote } from './faGames.js';
+import { norm, timeSet, faDateToYMD, faKey, ourSide, opponentOf, homeAway, mapTeam, shouldNotify, faNote, cancelCandidates, FA_CANCEL_STALE_HOURS } from './faGames.js';
 
 // The real Hapoel Raanana league map (confirmed with the club).
 const leagueMap = {
@@ -74,6 +74,23 @@ assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '11:00', 'מגר�
 assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '11:00', 'מגרש א', 'מגרש  א'), false, 'same field (spacing) does not alert');
 assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '00:00', 'מגרש א', 'מגרש ב'), false, 'field change with no real time never alerts');
 assert.equal(shouldNotify('2026-10-24', '11:00', '2026-10-24', '11:00', '', 'מגרש ב'), true, 'field newly set alerts');
+
+// ---- cancellation candidates (vanished-from-FA watch) ----
+{
+    const now = Date.parse('2026-11-16T10:00:00Z');
+    const H = FA_CANCEL_STALE_HOURS;
+    const old = new Date(now - (H + 5) * 3600e3).toISOString();   // stale
+    const fresh = new Date(now - 1 * 3600e3).toISOString();        // just seen
+    const opts = { nowMs: now, today: '2026-11-16', horizon: '2026-11-29', staleHours: H, sawAnyInWindow: true };
+    const base = { id: 'x', status: 'applied', game_date: '2026-11-21', last_seen_at: old };
+    assert.deepEqual(cancelCandidates([base], opts), ['x'], 'stale in-window applied → flagged');
+    assert.deepEqual(cancelCandidates([{ ...base, last_seen_at: fresh }], opts), [], 'freshly seen → not flagged');
+    assert.deepEqual(cancelCandidates([{ ...base, game_date: '2026-11-10' }], opts), [], 'past game → not flagged');
+    assert.deepEqual(cancelCandidates([{ ...base, game_date: '2026-12-20' }], opts), [], 'beyond horizon → not flagged');
+    assert.deepEqual(cancelCandidates([{ ...base, status: 'cancel_pending' }], opts), [], 'already flagged → not re-flagged');
+    assert.deepEqual(cancelCandidates([{ ...base, last_seen_at: null }], opts), [], 'never-seen (null) → not flagged');
+    assert.deepEqual(cancelCandidates([base], { ...opts, sawAnyInWindow: false }), [], 'dead/partial batch → flag nothing');
+}
 
 // ---- board note format (amber game card) ----
 assert.equal(
