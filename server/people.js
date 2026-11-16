@@ -16,6 +16,32 @@ export async function clubId(slug, cx = pool) {
     return r.rows[0].id;
 }
 
+const normTeam = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+
+// Push a team's coach onto its existing draft + live sessions. The board's coach comes from the
+// session's own `coach` column — parents read it directly, and the draft board prefers it over the
+// trainers map — so changing a coach in "ניהול המועדון" (team edit) or "ניהול מאמנים" (reassignment)
+// left the OLD coach baked in the stored sessions until the next re-import. This re-syncs them.
+// Matches team names normalized (geresh/quotes/spaces) so "טרום א׳" hits "טרום א". Never blanks —
+// only a non-empty coach is written, and only where it differs.
+async function pushCoachToSessions(cx, cid, teamName, coach) {
+    const c = (coach || '').trim();
+    const key = normTeam(teamName);
+    if (!c || !key) return;
+    const pubs = await cx.query(
+        `SELECT id FROM schedule_publications WHERE club_id=$1 AND status IN ('draft','live')`, [cid]);
+    for (const pub of pubs.rows) {
+        const teams = await cx.query(`SELECT DISTINCT team FROM sessions WHERE publication_id=$1`, [pub.id]);
+        for (const { team } of teams.rows) {
+            if (normTeam(team) === key) {
+                await cx.query(
+                    `UPDATE sessions SET coach=$3 WHERE publication_id=$1 AND team=$2 AND coalesce(coach,'') <> $3`,
+                    [pub.id, team, c]);
+            }
+        }
+    }
+}
+
 // ===== Trainers =====
 export async function listTrainers(slug) {
     const cid = await clubId(slug);
@@ -49,6 +75,9 @@ export async function saveTrainer(slug, { name, code, teams }) {
             `INSERT INTO trainers (club_id, name, code, teams, color, token) VALUES ($1,$2,$3,$4,$5,$6)`,
             [cid, nm, (code || '').trim() || base.code || '', (teams || '').toString(), color, token],
         );
+        // This trainer now coaches these teams → update the stored draft+live sessions so the board
+        // and parents show the current coach (not whoever was baked in at the last publish/import).
+        for (const tm of splitTeams(teams)) await pushCoachToSessions(cx, cid, tm, nm);
         return { ok: true };
     });
 }
@@ -196,6 +225,7 @@ export async function upsertTeam(slug, { id, name, gender, coach, age, grade, ac
         );
         const row = r.rows[0];
         if (row && !row.join_code) row.join_code = await assignJoinCode(row.id);
+        await pushCoachToSessions(pool, cid, nm, coach); // reflect the coach change on the board + parents
         return row;
     }
     const r = await pool.query(
@@ -207,6 +237,7 @@ export async function upsertTeam(slug, { id, name, gender, coach, age, grade, ac
     const row = r.rows[0];
     // New team → mint its shareable join code right away (existing teams are backfilled on boot).
     if (row && !row.join_code) row.join_code = await assignJoinCode(row.id);
+    await pushCoachToSessions(pool, cid, nm, coach); // reflect the coach change on the board + parents
     return row;
 }
 
