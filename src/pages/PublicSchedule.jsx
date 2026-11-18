@@ -97,7 +97,7 @@ function PublicSchedule() {
     const [selectedTeamId, setSelectedTeamId] = useState('');
     const [banners, setBanners] = useState(null); // { general:{text,enabled}, teams:{name:{text,enabled}} }
     const [loading, setLoading] = useState(true);
-    const [rsvpStatus, setRsvpStatus] = useState(''); // '', 'in', 'out' — my RSVP for the next session
+    const [rsvpMap, setRsvpMap] = useState({}); // occurrence key -> 'in'|'out' (per team+date+time, so marking one child's team never shows on another)
     const [rsvpBusy, setRsvpBusy] = useState(false);
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -452,19 +452,23 @@ function PublicSchedule() {
     const activeMemberToken = () => memberships.find((m) => m.team === memberTeam)?.token || localStorage.getItem('userToken') || '';
     // A parent marks their player in/out for the NEXT session. Occurrence = its date + start time.
     const ymd = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+    const rsvpKey = (team, d, startTime) => `${team}|${ymd(d)}|${startTime}`;
     const markRsvp = async (status) => {
         const token = activeMemberToken();
-        if (!token || !next?.date) return;
+        if (!token || !next?.date || !memberTeam) return;
         const start_time = (String(next.time || '').match(/\d{1,2}:\d{2}/) || [''])[0];
         setRsvpBusy(true);
         try {
             const r = await fetch(`/api/${club.slug}/rsvp`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, date: ymd(next.date), start_time, status }),
+                body: JSON.stringify({ token, team: memberTeam, date: ymd(next.date), start_time, status }),
             });
-            if (r.ok) setRsvpStatus(status);
+            if (r.ok) setRsvpMap((m) => ({ ...m, [rsvpKey(memberTeam, next.date, start_time)]: status }));
         } catch { /* offline — ignore */ } finally { setRsvpBusy(false); }
     };
+    // My current mark for the active team's next session (keyed per occurrence).
+    const nextStart = (String(next?.time || '').match(/\d{1,2}:\d{2}/) || [''])[0];
+    const rsvpStatus = (memberTeam && next?.date) ? (rsvpMap[rsvpKey(memberTeam, next.date, nextStart)] || '') : '';
     const hasWeek = schedule && headers.slice(dayStart, dayStart + 7).some((h, i) => {
         const c = schedule[dayStart + i];
         return c && c.trim() && !c.toLowerCase().includes('xxx');

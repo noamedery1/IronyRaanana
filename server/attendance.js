@@ -28,15 +28,21 @@ export function isLastMinute(date, startTime, nowIl, windowH = 3) {
 // Parent marks their player in/out. Identity comes from the member token (never trust a client-sent
 // name/team). Upsert one row per (member, occurrence). Fires a coach push only on a last-minute 'out'
 // and only if that team's coach opted in.
-export async function setRsvp(slug, token, { date, start_time = '', status }) {
+export async function setRsvp(slug, token, { team: reqTeam, date, start_time = '', status }) {
     const tok = (token || '').trim();
     if (!tok) throw new Error('חסר מזהה משתמש');
     if (!VALID.has(status)) throw new Error('סטטוס לא תקין');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) throw new Error('תאריך לא תקין');
     const cid = await clubId(slug);
-    const u = await pool.query(`SELECT name, team FROM app_users WHERE club_id=$1 AND token=$2 AND role='member' LIMIT 1`, [cid, tok]);
-    if (!u.rows.length) throw new Error('משתמש לא נמצא');
-    const { name, team } = u.rows[0];
+    // One parent can hold several child registrations. Identify the child by the token AND the team
+    // being marked (a shared device token across kids, or distinct tokens — either way (token,team)
+    // picks the right child), so marking one team never marks the others.
+    const rows = (await pool.query(`SELECT name, team FROM app_users WHERE club_id=$1 AND token=$2 AND role='member'`, [cid, tok])).rows;
+    if (!rows.length) throw new Error('משתמש לא נמצא');
+    const nrm0 = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+    const match = reqTeam ? rows.find((r) => nrm0(r.team) === nrm0(reqTeam)) : (rows.length === 1 ? rows[0] : null);
+    if (!match) throw new Error('הקבוצה לא משויכת למשתמש');
+    const { name, team } = match;
     if (!team) throw new Error('למשתמש אין קבוצה');
     await pool.query(
         `INSERT INTO attendance (club_id, member_token, member_name, team, date, start_time, status, updated_at)
