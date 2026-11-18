@@ -73,6 +73,18 @@ async function pushCoachDropout(slug, cid, team, playerName, date, start_time) {
     }).catch(() => {});
 }
 
+// A member's own saved RSVPs (by their token), so the board can restore the marks after a reload.
+export async function getMemberRsvp(slug, token, { from } = {}) {
+    const tok = (token || '').trim();
+    if (!tok) return { responses: [] };
+    const cid = await clubId(slug);
+    const since = /^\d{4}-\d{2}-\d{2}$/.test(from || '') ? from : '0000-00-00';
+    const r = await pool.query(
+        `SELECT team, date, start_time, status FROM attendance WHERE club_id=$1 AND member_token=$2 AND date >= $3`,
+        [cid, tok, since]);
+    return { responses: r.rows };
+}
+
 // Coach view: every response for one of the coach's teams from `from` onward, plus the team roster
 // (names) so the UI can show "didn't reply". Trainer identity via token; a coach only reads a team
 // they coach.

@@ -249,6 +249,22 @@ function PublicSchedule() {
 
     useEffect(() => { loadWeek(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
+    // Restore my saved RSVP marks after a reload (POST persists to the DB; without this the buttons
+    // looked unmarked on refresh). Fetch per child token; existing in-session marks keep priority.
+    useEffect(() => {
+        const today = new Date().toISOString().slice(0, 10);
+        const toks = [...new Set(memberships.map((m) => m.token).filter(Boolean))];
+        if (!toks.length) return;
+        Promise.all(toks.map((tok) => fetch(`/api/${club.slug}/rsvp/mine?from=${today}`, { headers: { 'x-member-token': tok } })
+            .then((r) => r.ok ? r.json() : { responses: [] }).catch(() => ({ responses: [] }))))
+            .then((all) => {
+                const m = {};
+                all.forEach(({ responses }) => (responses || []).forEach((x) => { m[`${x.team}|${x.date}|${x.start_time || ''}`] = x.status; }));
+                setRsvpMap((prev) => ({ ...m, ...prev }));
+            });
+        /* eslint-disable-next-line react-hooks/exhaustive-deps */
+    }, [club.slug]);
+
     // Phase-1 FA auto-sync: on load, opportunistically poke the fa-proxy worker. Parents sit on
     // many different Israeli connections, so across them at least one lands on an FA-trusted
     // Cloudflare colo each window; the worker throttles real pulls to ~1/3h per club and arms the

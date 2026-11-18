@@ -29,6 +29,13 @@ export default function FamilyToday({ clubSlug, memberships }) {
                 .map((s) => ({ team: s.team, date: s.date, start_time: s.start_time || '', type: s.type || 'training', hall: s.hall || '', note: s.note || '' }))
                 .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
             setOccs(up);
+            // restore saved marks (survive reloads) — per child token
+            const toks = [...new Set(memberships.map((m) => m.token).filter(Boolean))];
+            const all = await Promise.all(toks.map((tok) => fetch(`/api/${clubSlug}/rsvp/mine?from=${today}`, { headers: { 'x-member-token': tok } })
+                .then((r) => r.ok ? r.json() : { responses: [] }).catch(() => ({ responses: [] }))));
+            const m = {};
+            all.forEach(({ responses }) => (responses || []).forEach((x) => { m[`${x.team}|${x.date}|${x.start_time || ''}`] = x.status; }));
+            setRsvpMap((prev) => ({ ...m, ...prev }));
         } finally { setLoading(false); }
     }, [clubSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
