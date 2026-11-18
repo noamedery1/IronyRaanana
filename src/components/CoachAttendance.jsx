@@ -59,6 +59,15 @@ export default function CoachAttendance({ clubSlug, trainer }) {
     };
 
     const dow = (ymd) => { const d = new Date(ymd + 'T00:00:00'); return DAY[d.getDay()]; };
+
+    // Share the lineup to WhatsApp — the coach sends who's coming to the team in one tap.
+    const shareWhatsApp = (o) => {
+        const { inN, outN, noReply } = buckets(o);
+        const head = `${o.type === 'match' ? '⚽ משחק' : 'אימון'} · ${o.team} · ${dow(o.date)} ${heDate(o.date)}${o.start_time ? ' ' + o.start_time : ''}`;
+        const sec = (emoji, label, arr) => arr.length ? `\n\n${emoji} ${label} (${arr.length}):\n${arr.join(', ')}` : '';
+        const text = head + sec('✅', 'מגיעים', inN) + sec('🚫', 'לא מגיעים', outN) + sec('⏳', 'לא ענו', noReply);
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    };
     const chip = (name, bg, color) => <span key={name} style={{ background: bg, color, fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: 7, margin: '0 0 4px' }}>{name}</span>;
 
     return (
@@ -89,6 +98,7 @@ export default function CoachAttendance({ clubSlug, trainer }) {
                             <div style={{ color: '#f1f6fc', fontWeight: 800, fontSize: '0.95rem' }}>
                                 {isMatch ? '⚽ ' : ''}{o.team} <span style={{ color: '#8aa0c2', fontWeight: 600, fontSize: '0.84rem' }}>· {dow(o.date)} {heDate(o.date)}{o.start_time ? ` · ${o.start_time}` : ''}</span>
                             </div>
+                            <button onClick={() => shareWhatsApp(o)} title="שתף הרכב בוואטסאפ" style={{ background: 'rgba(37,211,102,0.14)', border: '1px solid rgba(37,211,102,0.4)', color: '#4ade80', borderRadius: 8, padding: '0.3rem 0.6rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>💬 שתף</button>
                         </div>
                         <div style={{ display: 'flex', gap: 6, marginBottom: (outN.length || noReply.length) ? '0.6rem' : 0 }}>
                             <div style={{ flex: 1, textAlign: 'center', background: '#16251b', border: '1px solid #2b5236', borderRadius: 9, padding: '0.35rem' }}><div style={{ color: '#7ddfa0', fontWeight: 800, fontSize: '1.05rem' }}>{inN.length}</div><div style={{ color: '#79a98a', fontSize: '0.72rem' }}>מגיעים</div></div>
