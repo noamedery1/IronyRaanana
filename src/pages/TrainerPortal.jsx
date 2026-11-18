@@ -261,13 +261,20 @@ const TrainerPortal = () => {
                 if (week_start) { const d = new Date(week_start + 'T00:00:00'); d.setDate(d.getDate() + i); label = `${DAY_NAMES[i]} ${d.getDate()}/${d.getMonth() + 1}`; }
                 dayHdrs.push({ name: label, col: i });
             }
+            // Key rows by NORMALIZED team name so a geresh mismatch between the trainer's assignment
+            // ("טרום ב") and the board's team ("טרום ב׳") doesn't create a phantom duplicate row.
+            // When a real board session matches a seeded team, adopt the board's exact name (that's
+            // where proposals must be written).
+            const nrm = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
             const seed = Array.isArray(teams) ? teams : (teams ? [teams] : []);
             const rows = {};
-            seed.forEach((t) => { if (t) rows[t] = { team: t, row: t, days: {} }; });
+            seed.forEach((t) => { const k = nrm(t); if (k) rows[k] = { team: t, row: t, days: {} }; });
             (sessions || []).filter((s) => (s.coach || '').trim().toLowerCase() === nameL).forEach((s) => {
-                if (!rows[s.team]) rows[s.team] = { team: s.team, row: s.team, days: {} };
+                const k = nrm(s.team);
+                if (!rows[k]) rows[k] = { team: s.team, row: s.team, days: {} };
+                else { rows[k].team = s.team; rows[k].row = s.team; } // prefer the board's real team name
                 const dn = dayHdrs[s.day_of_week]?.name;
-                if (dn) { const v = (s.note && s.note.trim()) ? s.note.trim() : `${s.hall || ''} ${s.start_time || ''}`.trim(); rows[s.team].days[dn] = rows[s.team].days[dn] ? `${rows[s.team].days[dn]}\n${v}` : v; }
+                if (dn) { const v = (s.note && s.note.trim()) ? s.note.trim() : `${s.hall || ''} ${s.start_time || ''}`.trim(); rows[k].days[dn] = rows[k].days[dn] ? `${rows[k].days[dn]}\n${v}` : v; }
             });
             setDayHeaders(dayHdrs);
             setMyTeamRows(Object.values(rows));
