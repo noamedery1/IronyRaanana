@@ -15,6 +15,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName, venues } from '../sportLabels.js';
 import { getIdentity, getMemberships, setActiveTeam, membershipSegment, getOperatorToken, switchToOperator, switchToMember, removeMembership, removeOperator } from '../userIdentity.js';
+import FamilyToday from '../components/FamilyToday.jsx';
 import { encodePathSeg } from '../encodeSeg.js';
 import { isNativeApp } from '../native.js';
 
@@ -98,6 +99,7 @@ function PublicSchedule() {
     const [banners, setBanners] = useState(null); // { general:{text,enabled}, teams:{name:{text,enabled}} }
     const [loading, setLoading] = useState(true);
     const [rsvpMap, setRsvpMap] = useState({}); // occurrence key -> 'in'|'out' (per team+date+time, so marking one child's team never shows on another)
+    const [unified, setUnified] = useState(localStorage.getItem('squadioUnified') === '1'); // F1: merge all my kids into one agenda (opt-in)
     const [rsvpBusy, setRsvpBusy] = useState(false);
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -679,7 +681,21 @@ function PublicSchedule() {
                         );
                     })()}
 
-                    {viewMode === 'halls' ? (
+                    {memberships.length >= 2 && (
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, margin: '0 auto 1rem', maxWidth: 360 }}>
+                            {[['classic', 'לפי קבוצה'], ['unified', 'כל הילדים']].map(([mode, label]) => {
+                                const on = (mode === 'unified') === unified;
+                                return (
+                                    <button key={mode} onClick={() => { const u = mode === 'unified'; setUnified(u); localStorage.setItem('squadioUnified', u ? '1' : '0'); }}
+                                        style={{ flex: 1, padding: '0.5rem', borderRadius: 10, border: '1px solid var(--bd2)', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', background: on ? 'linear-gradient(135deg,#38bdf8,#0284c7)' : 'var(--ink2)', color: on ? '#fff' : 'var(--text-dim)' }}>{label}</button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {(unified && memberships.length >= 2) ? (
+                        <FamilyToday clubSlug={club.slug} memberships={memberships} />
+                    ) : viewMode === 'halls' ? (
                         <HallView data={data} headers={headers} teams={teams} dayStart={dayStart} defaultGender="M" />
                     ) : viewMode === 'daily' ? (
                         <DailyView data={data} headers={headers} teams={teams} dayStart={dayStart} defaultGender="M" />
