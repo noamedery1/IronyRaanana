@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { parseCellContent } from '../utils/scheduleUtils';
 import { getActiveClub } from '../clubConfig.js';
+import CoachAttendance from '../components/CoachAttendance.jsx';
 import BrandMark from '../components/BrandMark';
 import { venues } from '../sportLabels.js';
 import { subscribeToPush } from '../push.js';
@@ -76,7 +77,7 @@ const TrainerPortal = () => {
     };
 
     const applyAuth = (data, skipInit) => {
-        const info = { name: data.trainerName, teams: data.teams || [], color: data.color, token: data.token };
+        const info = { name: data.trainerName, teams: data.teams || [], color: data.color, token: data.token, notifyRsvp: !!data.notifyRsvp };
         setTrainer(info);
         if (data.token) localStorage.setItem('trainerToken', data.token);
         localStorage.setItem('trainerInfo', JSON.stringify(info)); // remembered across refreshes
@@ -428,7 +429,10 @@ const TrainerPortal = () => {
             <div style={{ maxWidth: 600, margin: '1rem auto 0', padding: '0 1rem', display: 'flex', gap: '0.4rem' }}>
                 <button onClick={() => setTab('requests')} style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'requests' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'requests' ? '#22d3ee' : '#94a3b8' }}>האימונים שלי</button>
                 <button onClick={() => setTab('propose')} style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'propose' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'propose' ? '#22d3ee' : '#94a3b8' }}>הזנת לו&quot;ז</button>
+                <button onClick={() => setTab('attendance')} style={{ flex: 1, minHeight: 44, padding: '0.6rem', borderRadius: '10px 10px 0 0', border: 'none', cursor: 'pointer', fontWeight: 'bold', background: tab === 'attendance' ? '#121b30' : 'rgba(255,255,255,0.05)', color: tab === 'attendance' ? '#22d3ee' : '#94a3b8' }}>נוכחות</button>
             </div>
+
+            {tab === 'attendance' && <CoachAttendance clubSlug={slug} trainer={trainer} />}
 
             {/* Schedule List */}
             {tab === 'requests' && (() => {

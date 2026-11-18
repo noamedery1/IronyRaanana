@@ -97,6 +97,8 @@ function PublicSchedule() {
     const [selectedTeamId, setSelectedTeamId] = useState('');
     const [banners, setBanners] = useState(null); // { general:{text,enabled}, teams:{name:{text,enabled}} }
     const [loading, setLoading] = useState(true);
+    const [rsvpStatus, setRsvpStatus] = useState(''); // '', 'in', 'out' — my RSVP for the next session
+    const [rsvpBusy, setRsvpBusy] = useState(false);
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
@@ -445,6 +447,24 @@ function PublicSchedule() {
     const dropdownTeams = teams.filter(t => t.type !== 'W');
     const next = (viewMode === 'team') ? getNextTraining() : null;
     const teamObj = getTeamObj();
+
+    // The active member's token (per-child token for the selected team, else the device token).
+    const activeMemberToken = () => memberships.find((m) => m.team === memberTeam)?.token || localStorage.getItem('userToken') || '';
+    // A parent marks their player in/out for the NEXT session. Occurrence = its date + start time.
+    const ymd = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+    const markRsvp = async (status) => {
+        const token = activeMemberToken();
+        if (!token || !next?.date) return;
+        const start_time = (String(next.time || '').match(/\d{1,2}:\d{2}/) || [''])[0];
+        setRsvpBusy(true);
+        try {
+            const r = await fetch(`/api/${club.slug}/rsvp`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, date: ymd(next.date), start_time, status }),
+            });
+            if (r.ok) setRsvpStatus(status);
+        } catch { /* offline — ignore */ } finally { setRsvpBusy(false); }
+    };
     const hasWeek = schedule && headers.slice(dayStart, dayStart + 7).some((h, i) => {
         const c = schedule[dayStart + i];
         return c && c.trim() && !c.toLowerCase().includes('xxx');
@@ -679,6 +699,16 @@ function PublicSchedule() {
                                         <div className="m"><b>{teamObj?.coach || '—'}</b><span>{t('coach')}</span></div>
                                     </div>
                                     <div className="hero-actions">
+                                        {memberTeam && next?.date && (
+                                            <>
+                                                <button onClick={() => markRsvp('in')} disabled={rsvpBusy} className="action-btn" style={{ background: rsvpStatus === 'in' ? '#16a34a' : 'rgba(34,197,94,0.16)', color: rsvpStatus === 'in' ? '#fff' : '#86efac', border: '1px solid rgba(34,197,94,0.4)' }}>
+                                                    <span>{rsvpStatus === 'in' ? 'מגיע ✓' : 'מגיע'}</span><span>✅</span>
+                                                </button>
+                                                <button onClick={() => markRsvp('out')} disabled={rsvpBusy} className="action-btn" style={{ background: rsvpStatus === 'out' ? '#dc2626' : 'rgba(239,68,68,0.16)', color: rsvpStatus === 'out' ? '#fff' : '#fca5a5', border: '1px solid rgba(239,68,68,0.4)' }}>
+                                                    <span>{rsvpStatus === 'out' ? 'לא מגיע ✓' : 'לא מגיע'}</span><span>🚫</span>
+                                                </button>
+                                            </>
+                                        )}
                                         <button onClick={shareWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                             <span>{t('share_whatsapp')}</span><span>💬</span>
                                         </button>
