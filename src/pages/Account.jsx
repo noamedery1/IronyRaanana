@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership, removeOperator, getNicknames, setNickname, getReminderPrefs, setReminder } from '../userIdentity.js';
+import { syncReminders } from '../nativeReminders.js';
 import { getActiveClub } from '../clubConfig.js';
 
 // "My account" screen — lets a registered user see what they're signed up for and DELETE their
@@ -107,7 +108,7 @@ export default function Account() {
                                     />
                                     <div style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.72rem', marginTop: 2 }}>{m.team}</div>
                                     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.8rem', color: 'var(--text-dim,#94a3b8)', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={!!rems[m.team]} onChange={(e) => { const on = e.target.checked; setRems((r) => ({ ...r, [m.team]: on })); setReminder(m.team, on); }} />
+                                        <input type="checkbox" checked={!!rems[m.team]} onChange={(e) => { const on = e.target.checked; setRems((r) => ({ ...r, [m.team]: on })); setReminder(m.team, on); syncReminders(slug, memberships); }} />
                                         🔔 תזכורת לפני אימון
                                     </label>
                                 </div>

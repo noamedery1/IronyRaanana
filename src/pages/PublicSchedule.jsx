@@ -16,6 +16,7 @@ import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName, venues } from '../sportLabels.js';
 import { getIdentity, getMemberships, setActiveTeam, membershipSegment, getOperatorToken, switchToOperator, switchToMember, removeMembership, removeOperator } from '../userIdentity.js';
 import FamilyToday from '../components/FamilyToday.jsx';
+import { syncReminders } from '../nativeReminders.js';
 import { encodePathSeg } from '../encodeSeg.js';
 import { isNativeApp } from '../native.js';
 
@@ -264,6 +265,9 @@ function PublicSchedule() {
             });
         /* eslint-disable-next-line react-hooks/exhaustive-deps */
     }, [club.slug]);
+
+    // Native app only: (re)schedule local reminders for reminder-enabled teams. No-op on the web.
+    useEffect(() => { syncReminders(club.slug, memberships); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [club.slug]);
 
     // Phase-1 FA auto-sync: on load, opportunistically poke the fa-proxy worker. Parents sit on
     // many different Israeli connections, so across them at least one lands on an FA-trusted
