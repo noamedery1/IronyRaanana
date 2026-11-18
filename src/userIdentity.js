@@ -38,6 +38,19 @@ export function setNickname(team, name) {
     try { localStorage.setItem('memberNicknames', JSON.stringify(m)); } catch { /* ignore */ }
 }
 
+// Per-team "remind me before training" preference (device-local). The NATIVE app reads these to
+// schedule a local notification before each session; the web/PWA just stores the choice (no reliable
+// background reminders there). { team: true }.
+export function getReminderPrefs() {
+    try { return JSON.parse(localStorage.getItem('reminderPrefs') || '{}') || {}; } catch { return {}; }
+}
+export function getReminder(team) { return !!getReminderPrefs()[team]; }
+export function setReminder(team, on) {
+    const m = getReminderPrefs();
+    if (on) m[team] = true; else delete m[team];
+    try { localStorage.setItem('reminderPrefs', JSON.stringify(m)); } catch { /* ignore */ }
+}
+
 export function setActiveTeam(team) {
     const m = getMemberships().find((x) => x.team === team);
     if (!m) return false;

@@ -16,7 +16,7 @@ import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './se
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify, removeFaGame, keepFaGame } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, planImport, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
-import { setRsvp, getTeamRsvp, setCoachNotify, getMemberRsvp } from './server/attendance.js';
+import { setRsvp, getTeamRsvp, setCoachNotify, getMemberRsvp, getAttendanceReport } from './server/attendance.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
@@ -375,6 +375,10 @@ app.get('/api/:club/rsvp/mine', async (req, res) => {
 app.get('/api/:club/rsvp/coach', async (req, res) => {
     const token = req.get('x-trainer-token') || req.query.token;
     try { ok(res, await getTeamRsvp(req.params.club, token, { team: req.query.team, from: req.query.from })); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/:club/rsvp/report', async (req, res) => {
+    const token = req.get('x-trainer-token') || req.query.token;
+    try { ok(res, await getAttendanceReport(req.params.club, token, { team: req.query.team, from: req.query.from, to: req.query.to })); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 app.post('/api/:club/rsvp/coach/notify', async (req, res) => {
     const b = req.body || {};

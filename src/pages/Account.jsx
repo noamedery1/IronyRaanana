@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership, removeOperator, getNicknames, setNickname } from '../userIdentity.js';
+import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership, removeOperator, getNicknames, setNickname, getReminderPrefs, setReminder } from '../userIdentity.js';
 import { getActiveClub } from '../clubConfig.js';
 
 // "My account" screen — lets a registered user see what they're signed up for and DELETE their
@@ -13,6 +13,7 @@ export default function Account() {
     const id = getIdentity();
     const memberships = getMemberships();
     const [nicks, setNicks] = useState(getNicknames()); // per-team child nickname (device-local)
+    const [rems, setRems] = useState(getReminderPrefs()); // per-team "remind before training" (device-local, native)
     const [confirm, setConfirm] = useState(false);
     const [busy, setBusy] = useState(false);
 
@@ -105,6 +106,10 @@ export default function Account() {
                                         style={{ width: '100%', background: 'var(--ink2,#0a1120)', border: '1px solid var(--bd2,rgba(255,255,255,0.14))', borderRadius: 8, padding: '0.45rem 0.6rem', color: 'var(--text,#e8edf7)', fontSize: '0.9rem', fontFamily: 'inherit' }}
                                     />
                                     <div style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.72rem', marginTop: 2 }}>{m.team}</div>
+                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.8rem', color: 'var(--text-dim,#94a3b8)', cursor: 'pointer' }}>
+                                        <input type="checkbox" checked={!!rems[m.team]} onChange={(e) => { const on = e.target.checked; setRems((r) => ({ ...r, [m.team]: on })); setReminder(m.team, on); }} />
+                                        🔔 תזכורת לפני אימון
+                                    </label>
                                 </div>
                                 <button
                                     onClick={() => removeTeam(m)}
@@ -112,7 +117,7 @@ export default function Account() {
                                 >הסר</button>
                             </div>
                         ))}
-                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם הילד נשמר רק במכשיר הזה ומופיע בתצוגת "כל הילדים". הסרת קבוצה בודדת לא מוחקת את השאר.</div>
+                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם הילד והתזכורת נשמרים רק במכשיר הזה. התזכורת לפני אימון פועלת באפליקציה. הסרת קבוצה בודדת לא מוחקת את השאר.</div>
                     </div>
                 )}
 

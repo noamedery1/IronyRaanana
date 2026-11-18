@@ -109,6 +109,31 @@ export async function getTeamRsvp(slug, trainerToken, { team, from }) {
     return { team, roster: roster.rows.map((r) => r.name), responses: resp.rows };
 }
 
+// Coach report: per-player attendance over a period for a team the coach coaches. "Occurrences" =
+// distinct (date,start_time) that anyone responded to in the range (we don't keep full session
+// history), so percentages are over sessions the team actually used the feature for.
+export async function getAttendanceReport(slug, trainerToken, { team, from, to }) {
+    const tok = (trainerToken || '').trim();
+    if (!tok || !team) throw new Error('חסרים פרטים');
+    const cid = await clubId(slug);
+    const tr = await pool.query('SELECT teams FROM trainers WHERE club_id=$1 AND token=$2 LIMIT 1', [cid, tok]);
+    if (!tr.rows.length) throw new Error('מאמן לא נמצא');
+    const nrm0 = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+    if (!(tr.rows[0].teams || '').split(/[,;\n]/).map(nrm0).includes(nrm0(team))) throw new Error('הקבוצה לא משויכת למאמן');
+    const lo = /^\d{4}-\d{2}-\d{2}$/.test(from || '') ? from : '0000-00-00';
+    const hi = /^\d{4}-\d{2}-\d{2}$/.test(to || '') ? to : '9999-12-31';
+    const rows = (await pool.query(
+        `SELECT member_name AS name, date, start_time, status FROM attendance WHERE club_id=$1 AND team=$2 AND date BETWEEN $3 AND $4`,
+        [cid, team, lo, hi])).rows;
+    const occ = new Set(rows.map((r) => `${r.date}|${r.start_time || ''}`)).size;
+    const roster = (await pool.query(`SELECT DISTINCT name FROM app_users WHERE club_id=$1 AND role='member' AND team=$2 AND name <> ''`, [cid, team])).rows.map((r) => r.name);
+    const agg = {};
+    roster.forEach((n) => { agg[n] = { name: n, in: 0, out: 0 }; });
+    rows.forEach((r) => { const a = agg[r.name] || (agg[r.name] = { name: r.name, in: 0, out: 0 }); if (r.status === 'in') a.in++; else if (r.status === 'out') a.out++; });
+    const players = Object.values(agg).sort((a, b) => b.in - a.in || a.name.localeCompare(b.name, 'he'));
+    return { team, from: lo, to: hi, occurrences: occ, players };
+}
+
 // Coach toggles their own drop-out push preference. Identity via token.
 export async function setCoachNotify(slug, trainerToken, on) {
     const cid = await clubId(slug);
