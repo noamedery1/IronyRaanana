@@ -119,6 +119,26 @@ export async function ensureStore() {
         await pool.query('ALTER TABLE fa_game_sync ADD COLUMN IF NOT EXISTS last_seen_at timestamptz');
         await pool.query('UPDATE fa_game_sync SET last_seen_at = now() WHERE last_seen_at IS NULL');
     } catch (e) { console.error('[fa-games] table init failed (non-fatal):', e.message); }
+    // Attendance (RSVP): a parent marks their player in/out for one training/match occurrence; the
+    // coach sees who's coming. One row per (member, occurrence). Additive, opt-in per coach.
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS attendance (
+              id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+              club_id       uuid NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+              member_token  text NOT NULL,
+              member_name   text NOT NULL,
+              team          text NOT NULL,
+              date          text NOT NULL,
+              start_time    text NOT NULL DEFAULT '',
+              status        text NOT NULL,
+              updated_at    timestamptz NOT NULL DEFAULT now(),
+              UNIQUE (club_id, member_token, team, date, start_time)
+            )`);
+        await pool.query('CREATE INDEX IF NOT EXISTS attendance_team_idx ON attendance (club_id, team, date)');
+        // Per-coach opt-in to a push when a player drops out close to kickoff.
+        await pool.query('ALTER TABLE trainers ADD COLUMN IF NOT EXISTS notify_rsvp boolean NOT NULL DEFAULT false');
+    } catch (e) { console.error('[attendance] table init failed (non-fatal):', e.message); }
     // Enable FA-games sync for the live Hapoel Raanana football club. Prod-only row (seeded via the
     // super-user screen, not here) so this is a no-op on a dev DB. Fills these keys only when absent
     // (`defaults || config` lets config win), so a later manual edit of the map/emails persists.

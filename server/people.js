@@ -116,7 +116,7 @@ export async function authTrainer(slug, { token, name, code }) {
         tok = tok || newToken();
         await pool.query('UPDATE trainers SET color=$1, token=$2 WHERE id=$3', [color, tok, row.id]);
     }
-    return { valid: true, trainerName: row.name, teams: splitTeams(row.teams), color, token: tok };
+    return { valid: true, trainerName: row.name, teams: splitTeams(row.teams), color, token: tok, notifyRsvp: !!row.notify_rsvp };
 }
 
 // ===== Members / operators =====

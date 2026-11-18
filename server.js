@@ -16,6 +16,7 @@ import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './se
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify, removeFaGame, keepFaGame } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, planImport, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
+import { setRsvp, getTeamRsvp, setCoachNotify } from './server/attendance.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
@@ -361,6 +362,19 @@ app.delete('/api/:club/trainers/:name', requireManager, async (req, res) => {
 });
 app.post('/api/:club/trainers/auth', rateLimit({ max: 20, key: 'trainer-auth' }), async (req, res) => {
     try { ok(res, await authTrainer(req.params.club, req.body || {})); } catch (e) { fail(res, e); }
+});
+// Attendance / RSVP. Parent marks (member token in body); coach reads a team they coach (trainer
+// token in header) + toggles their drop-out push preference.
+app.post('/api/:club/rsvp', async (req, res) => {
+    try { ok(res, await setRsvp(req.params.club, (req.body || {}).token, req.body || {})); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.get('/api/:club/rsvp/coach', async (req, res) => {
+    const token = req.get('x-trainer-token') || req.query.token;
+    try { ok(res, await getTeamRsvp(req.params.club, token, { team: req.query.team, from: req.query.from })); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/:club/rsvp/coach/notify', async (req, res) => {
+    const b = req.body || {};
+    try { ok(res, await setCoachNotify(req.params.club, b.token, !!b.on)); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // Members / operators
