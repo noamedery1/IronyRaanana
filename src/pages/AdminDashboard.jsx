@@ -20,7 +20,7 @@ import ApprovalsPanel from '../components/ApprovalsPanel';
 import FaGamesPanel from '../components/FaGamesPanel';
 import SpecialSchedule from '../components/SpecialSchedule';
 import { getActiveClub } from '../clubConfig.js';
-import { venues } from '../sportLabels.js';
+import { venues, sportEmoji } from '../sportLabels.js';
 import { subscribeToPush } from '../push.js';
 import { authHeaders, mgrToken } from '../adminApi.js';
 import { sessionsToSheet, sheetToSessions } from '../draftBridge.js';
@@ -1061,7 +1061,7 @@ const AdminDashboard = () => {
                             ⬆ טעינת לו"ז מקובץ
                         </button>
                         <button style={menuButtonStyle(activeTab === 'games')} onClick={() => selectTab('games')}>
-                            🏀 פרסום משחקים
+                            {sportEmoji()} פרסום משחקים
                         </button>
                         <button style={menuButtonStyle(activeTab === 'goalkeeper')} onClick={() => selectTab('goalkeeper')}>
                             🧤 לו"ז שוערים

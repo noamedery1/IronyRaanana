@@ -4,6 +4,7 @@ import { gkTextToEntries, gkWhatsApp } from '../utils/gkParse.js';
 import { matchTeam } from '../utils/scheduleMerge.js';
 import { authHeaders } from '../adminApi.js';
 import { getActiveClub } from '../clubConfig.js';
+import { sportEmoji } from '../sportLabels.js';
 
 const DOW_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const pad = (n) => String(n).padStart(2, '0');
@@ -91,7 +92,7 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         const [start, end] = (r.time || '').split('-');
         const note = isGk
             ? ['🧤 אימון שוערים', r.time].filter(Boolean).join(' ')
-            : ['🏀 משחק', r.time, r.details].filter((x) => x && x.trim()).join(' ');
+            : [`${sportEmoji()} משחק`, r.time, r.details].filter((x) => x && x.trim()).join(' ');
         const t = teamsList.find((x) => x.name === r.team) || {};
         return {
             team: r.team, coach: t.coach || '', gender: t.gender || 'M', day_of_week: r.dow,
@@ -136,7 +137,7 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
         if (!applied?.liveTeams?.length) return;
         setBusy(true); setPushMsg('');
         try {
-            const body = isGk ? 'לו"ז אימון השוערים עודכן 🧤' : 'לו"ז המשחקים עודכן 🏀';
+            const body = isGk ? 'לו"ז אימון השוערים עודכן 🧤' : `לו"ז המשחקים עודכן ${sportEmoji()}`;
             const segments = applied.liveTeams.map((t) => 'team:' + t);
             const r = await fetch(`/api/${slug}/messages`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders(slug) },
@@ -160,7 +161,7 @@ export default function SpecialSchedule({ mode, onApplied, goPreview }) {
 
     return (
         <div className="report-panel" style={{ marginTop: 0, color: '#0f1b33' }}>
-            <h3 style={{ marginTop: 0 }}>{isGk ? '🧤 לו"ז שוערים' : '🏀 פרסום משחקים'}</h3>
+            <h3 style={{ marginTop: 0 }}>{isGk ? '🧤 לו"ז שוערים' : `${sportEmoji()} פרסום משחקים`}</h3>
 
             {step === 'input' && (
                 <>

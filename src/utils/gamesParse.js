@@ -4,6 +4,7 @@
 // layout, so this parser keeps FINE text rows (one line = one game) and buckets each item
 // into a column by the header labels' x-centres. Best-effort: the manager reviews the
 // merged result in the existing Preview before publishing.
+import { sportEmoji } from '../sportLabels.js';
 
 const DAY_IDX = { 'ראשון': 0, 'שני': 1, 'שלישי': 2, 'רביעי': 3, 'חמישי': 4, 'שישי': 5, 'שבת': 6 };
 const DAY_RE = /ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת/;
@@ -190,7 +191,7 @@ export function gameLine(e) {
     if (e.opponent) bits.push(`נגד ${e.opponent}`);
     if (e.homeAway) bits.push(`(${e.homeAway})`);
     if (e.field) bits.push(`· ${e.field}`);
-    return `🏀 משחק ${e.time}${bits.length ? ' ' + bits.join(' ') : ''}`.trim();
+    return `${sportEmoji()} משחק ${e.time}${bits.length ? ' ' + bits.join(' ') : ''}`.trim();
 }
 
 // Browser entry point: PDF file → { entries, warnings }. Uses pdfjs like fileToCsv.

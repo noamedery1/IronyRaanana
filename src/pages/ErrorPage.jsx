@@ -1,8 +1,18 @@
 // One styled page for both "404 — not found" and "something went wrong" (runtime
 // crash via the ErrorBoundary). The buttons use window.location (not the router)
 // so they work even if the router/app state is broken.
+import { getActiveClub } from '../clubConfig.js';
+import { sportEmoji } from '../sportLabels.js';
+
 export default function ErrorPage({ mode = 'notFound' }) {
     const isError = mode === 'error';
+    // Match the club's sport (a football club shouldn't show a basketball): drives the title emoji
+    // and the ball's colours. Unknown club (true 404 off-domain) → generic 🏆 + neutral ball.
+    const sport = String(getActiveClub()?.sport ?? '').toLowerCase().trim();
+    const isHoops = sport === 'basketball';
+    const ball = isHoops
+        ? { a: '#ff9d4d', b: '#f97316', seam: '#7c2d12' }   // basketball
+        : { a: '#f8fafc', b: '#dbe3ec', seam: '#0f172a' };  // football/other — light ball, dark seams
     return (
         <div dir="rtl" style={{
             minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -24,7 +34,7 @@ export default function ErrorPage({ mode = 'notFound' }) {
                             <stop offset="0" stopColor="#16233f" /><stop offset="1" stopColor="#0a1124" />
                         </linearGradient>
                         <linearGradient id="ep-ball" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0" stopColor="#ff9d4d" /><stop offset="1" stopColor="#f97316" />
+                            <stop offset="0" stopColor={ball.a} /><stop offset="1" stopColor={ball.b} />
                         </linearGradient>
                     </defs>
                     {/* stand posts */}
@@ -42,12 +52,12 @@ export default function ErrorPage({ mode = 'notFound' }) {
                     {/* bouncing ball with seams */}
                     <g transform="translate(232,128)">
                         <circle r="17" fill="url(#ep-ball)" />
-                        <path d="M-17 0 H17 M0 -17 V17 M-12 -12 Q0 0 -12 12 M12 -12 Q0 0 12 12" fill="none" stroke="#7c2d12" strokeWidth="1.6" strokeOpacity="0.7" />
+                        <path d="M-17 0 H17 M0 -17 V17 M-12 -12 Q0 0 -12 12 M12 -12 Q0 0 12 12" fill="none" stroke={ball.seam} strokeWidth="1.6" strokeOpacity="0.7" />
                     </g>
                 </svg>
 
                 <h1 style={{ color: '#fff', fontSize: '1.55rem', fontWeight: 800, margin: '0 0 0.5rem' }}>
-                    {isError ? 'אוי, משהו השתבש 🛠️' : 'אופס! הכדור יצא מהמגרש 🏀'}
+                    {isError ? 'אוי, משהו השתבש 🛠️' : `אופס! הכדור יצא מהמגרש ${sportEmoji(sport)}`}
                 </h1>
                 <p style={{ color: '#94a3b8', fontSize: '1.02rem', lineHeight: 1.7, margin: '0 0 1.6rem' }}>
                     {isError
