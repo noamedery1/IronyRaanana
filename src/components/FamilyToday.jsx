@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import NavButton from './NavButton.jsx';
+import { getNickname } from '../userIdentity.js';
 
 // Unified family view: one agenda across ALL a parent's children/teams, merged and sorted by time,
 // each event tagged with its team. Opt-in (classic per-team board stays the default). Occurrences
@@ -70,7 +71,8 @@ export default function FamilyToday({ clubSlug, memberships }) {
                             <div key={key(o)} style={{ background: '#0f1b31', border: '1px solid #27304a', borderInlineStart: `4px solid ${isMatch ? '#f5a524' : '#38bdf8'}`, borderRadius: 14, padding: '0.8rem 0.9rem', marginBottom: '0.6rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                                     <div>
-                                        <span style={{ background: '#13223c', color: '#7fb3f0', fontSize: '0.74rem', fontWeight: 700, padding: '2px 8px', borderRadius: 7 }}>{o.team}</span>
+                                        <span style={{ background: '#13223c', color: '#7fb3f0', fontSize: '0.74rem', fontWeight: 700, padding: '2px 8px', borderRadius: 7 }}>{getNickname(o.team) || o.team}</span>
+                                        {getNickname(o.team) && <span style={{ color: '#5f6f8c', fontSize: '0.72rem', marginInlineStart: 5 }}>{o.team}</span>}
                                         <span style={{ color: '#f1f6fc', fontWeight: 800, fontSize: '1.05rem', marginInlineStart: 8 }}>{o.start_time || '—'}</span>
                                         <span style={{ color: '#7d8aa3', fontSize: '0.8rem', marginInlineStart: 6 }}>{isMatch ? '⚽ משחק' : 'אימון'}</span>
                                     </div>

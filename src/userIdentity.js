@@ -25,6 +25,19 @@ export function getMemberships() {
     return team ? [{ team, token: token || '' }] : [];
 }
 
+// Optional per-team child nickname, saved only on this device (like PLAYDAY). Lets a parent see
+// "דניאל" instead of the team name, especially in the unified family view. { team: nickname }.
+export function getNicknames() {
+    try { return JSON.parse(localStorage.getItem('memberNicknames') || '{}') || {}; } catch { return {}; }
+}
+export function getNickname(team) { return getNicknames()[team] || ''; }
+export function setNickname(team, name) {
+    const m = getNicknames();
+    const v = (name || '').trim();
+    if (v) m[team] = v; else delete m[team];
+    try { localStorage.setItem('memberNicknames', JSON.stringify(m)); } catch { /* ignore */ }
+}
+
 export function setActiveTeam(team) {
     const m = getMemberships().find((x) => x.team === team);
     if (!m) return false;

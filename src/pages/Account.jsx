@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership, removeOperator } from '../userIdentity.js';
+import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership, removeOperator, getNicknames, setNickname } from '../userIdentity.js';
 import { getActiveClub } from '../clubConfig.js';
 
 // "My account" screen — lets a registered user see what they're signed up for and DELETE their
@@ -12,6 +12,7 @@ export default function Account() {
     const slug = club || getActiveClub().slug;
     const id = getIdentity();
     const memberships = getMemberships();
+    const [nicks, setNicks] = useState(getNicknames()); // per-team child nickname (device-local)
     const [confirm, setConfirm] = useState(false);
     const [busy, setBusy] = useState(false);
 
@@ -95,15 +96,23 @@ export default function Account() {
                     <div style={{ border: '1px solid var(--bd2, rgba(255,255,255,0.12))', borderRadius: 14, padding: '0.9rem', marginBottom: '1rem' }}>
                         <div style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>הקבוצות שלי</div>
                         {memberships.map((m) => (
-                            <div key={m.team} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', padding: '0.4rem 0', borderTop: '1px solid var(--bd2, rgba(255,255,255,0.08))' }}>
-                                <span style={{ fontSize: '0.9rem' }}>{m.team}</span>
+                            <div key={m.team} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', padding: '0.5rem 0', borderTop: '1px solid var(--bd2, rgba(255,255,255,0.08))' }}>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                    <input
+                                        value={nicks[m.team] || ''}
+                                        onChange={(e) => { const v = e.target.value; setNicks((n) => ({ ...n, [m.team]: v })); setNickname(m.team, v); }}
+                                        placeholder={`שם הילד (${m.team})`}
+                                        style={{ width: '100%', background: 'var(--ink2,#0a1120)', border: '1px solid var(--bd2,rgba(255,255,255,0.14))', borderRadius: 8, padding: '0.45rem 0.6rem', color: 'var(--text,#e8edf7)', fontSize: '0.9rem', fontFamily: 'inherit' }}
+                                    />
+                                    <div style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.72rem', marginTop: 2 }}>{m.team}</div>
+                                </div>
                                 <button
                                     onClick={() => removeTeam(m)}
-                                    style={{ background: 'none', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'inherit' }}
-                                >הסר קבוצה</button>
+                                    style={{ background: 'none', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                                >הסר</button>
                             </div>
                         ))}
-                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>הסרת קבוצה בודדת לא מוחקת את שאר הקבוצות או את החשבון.</div>
+                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם הילד נשמר רק במכשיר הזה ומופיע בתצוגת "כל הילדים". הסרת קבוצה בודדת לא מוחקת את השאר.</div>
                     </div>
                 )}
 
