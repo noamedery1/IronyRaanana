@@ -138,6 +138,10 @@ export async function ensureStore() {
         await pool.query('CREATE INDEX IF NOT EXISTS attendance_team_idx ON attendance (club_id, team, date)');
         // Per-coach opt-in to a push when a player drops out close to kickoff.
         await pool.query('ALTER TABLE trainers ADD COLUMN IF NOT EXISTS notify_rsvp boolean NOT NULL DEFAULT false');
+        // Optional player name per membership: a parent registers under their own name but the coach
+        // should see the CHILD's name in attendance. When set, it overrides the registered name in the
+        // coach views (responders + roster), so no-reply reconciliation still lines up.
+        await pool.query('ALTER TABLE app_users ADD COLUMN IF NOT EXISTS display_name text');
     } catch (e) { console.error('[attendance] table init failed (non-fatal):', e.message); }
     // Enable FA-games sync for the live Hapoel Raanana football club. Prod-only row (seeded via the
     // super-user screen, not here) so this is a no-op on a dev DB. Fills these keys only when absent

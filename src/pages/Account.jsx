@@ -103,7 +103,8 @@ export default function Account() {
                                     <input
                                         value={nicks[m.team] || ''}
                                         onChange={(e) => { const v = e.target.value; setNicks((n) => ({ ...n, [m.team]: v })); setNickname(m.team, v); }}
-                                        placeholder={`שם הילד (${m.team})`}
+                                        onBlur={(e) => { if (m.token) fetch(`/api/${slug}/rsvp/name`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: m.token, team: m.team, name: e.target.value }) }).catch(() => {}); }}
+                                        placeholder={`שם המתאמן (${m.team})`}
                                         style={{ width: '100%', background: 'var(--ink2,#0a1120)', border: '1px solid var(--bd2,rgba(255,255,255,0.14))', borderRadius: 8, padding: '0.45rem 0.6rem', color: 'var(--text,#e8edf7)', fontSize: '0.9rem', fontFamily: 'inherit' }}
                                     />
                                     <div style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.72rem', marginTop: 2 }}>{m.team}</div>
@@ -118,7 +119,7 @@ export default function Account() {
                                 >הסר</button>
                             </div>
                         ))}
-                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם הילד והתזכורת נשמרים רק במכשיר הזה. התזכורת לפני אימון פועלת באפליקציה. הסרת קבוצה בודדת לא מוחקת את השאר.</div>
+                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם המתאמן הוא השם שהמאמן רואה ברשימת הנוכחות (במקום שם ההורה). התזכורת לפני אימון נשמרת במכשיר ופועלת באפליקציה. הסרת קבוצה בודדת לא מוחקת את השאר.</div>
                     </div>
                 )}
 

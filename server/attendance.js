@@ -7,6 +7,11 @@ import { broadcast } from './notify.js';
 
 const VALID = new Set(['in', 'out']);
 
+// The name the coach sees for a membership: the player name if the parent set one, else the
+// registered (parent) name. The roster SQL must mirror this exactly — COALESCE(NULLIF(display_name,''),
+// name) — or a child shows as both "coming" and "no-reply". Keep the two in sync.
+export const playerName = (row) => ((row.display_name || '').trim() || row.name);
+
 // Israel wall-clock now (DST-safe) as {date:'YYYY-MM-DD', time:'HH:MM'} — the kickoff cutoff is local.
 function ilNow() {
     const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -37,12 +42,15 @@ export async function setRsvp(slug, token, { team: reqTeam, date, start_time = '
     // One parent can hold several child registrations. Identify the child by the token AND the team
     // being marked (a shared device token across kids, or distinct tokens — either way (token,team)
     // picks the right child), so marking one team never marks the others.
-    const rows = (await pool.query(`SELECT name, team FROM app_users WHERE club_id=$1 AND token=$2 AND role='member'`, [cid, tok])).rows;
+    const rows = (await pool.query(`SELECT name, display_name, team FROM app_users WHERE club_id=$1 AND token=$2 AND role='member'`, [cid, tok])).rows;
     if (!rows.length) throw new Error('משתמש לא נמצא');
     const nrm0 = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
     const match = reqTeam ? rows.find((r) => nrm0(r.team) === nrm0(reqTeam)) : (rows.length === 1 ? rows[0] : null);
     if (!match) throw new Error('הקבוצה לא משויכת למשתמש');
-    const { name, team } = match;
+    const { team } = match;
+    // The coach should see the child's name. Stored on the row so the coach views (which don't see the
+    // device) match. Mirrors the roster COALESCE (see playerName).
+    const name = playerName(match);
     if (!team) throw new Error('למשתמש אין קבוצה');
     await pool.query(
         `INSERT INTO attendance (club_id, member_token, member_name, team, date, start_time, status, updated_at)
@@ -104,7 +112,7 @@ export async function getTeamRsvp(slug, trainerToken, { team, from }) {
          WHERE club_id=$1 AND team=$2 AND date >= $3 ORDER BY date, start_time`,
         [cid, team, since]);
     const roster = await pool.query(
-        `SELECT DISTINCT name FROM app_users WHERE club_id=$1 AND role='member' AND team=$2 AND name <> '' ORDER BY name`,
+        `SELECT DISTINCT COALESCE(NULLIF(display_name,''), name) AS name FROM app_users WHERE club_id=$1 AND role='member' AND team=$2 AND name <> '' ORDER BY name`,
         [cid, team]);
     return { team, roster: roster.rows.map((r) => r.name), responses: resp.rows };
 }
@@ -126,12 +134,35 @@ export async function getAttendanceReport(slug, trainerToken, { team, from, to }
         `SELECT member_name AS name, date, start_time, status FROM attendance WHERE club_id=$1 AND team=$2 AND date BETWEEN $3 AND $4`,
         [cid, team, lo, hi])).rows;
     const occ = new Set(rows.map((r) => `${r.date}|${r.start_time || ''}`)).size;
-    const roster = (await pool.query(`SELECT DISTINCT name FROM app_users WHERE club_id=$1 AND role='member' AND team=$2 AND name <> ''`, [cid, team])).rows.map((r) => r.name);
+    const roster = (await pool.query(`SELECT DISTINCT COALESCE(NULLIF(display_name,''), name) AS name FROM app_users WHERE club_id=$1 AND role='member' AND team=$2 AND name <> ''`, [cid, team])).rows.map((r) => r.name);
     const agg = {};
     roster.forEach((n) => { agg[n] = { name: n, in: 0, out: 0 }; });
     rows.forEach((r) => { const a = agg[r.name] || (agg[r.name] = { name: r.name, in: 0, out: 0 }); if (r.status === 'in') a.in++; else if (r.status === 'out') a.out++; });
     const players = Object.values(agg).sort((a, b) => b.in - a.in || a.name.localeCompare(b.name, 'he'));
     return { team, from: lo, to: hi, occurrences: occ, players };
+}
+
+// Parent sets (or clears) the player name the coach sees for one membership, identified by
+// (token, team). Also rewrites the name on this child's future attendance rows so sessions already
+// marked line up with the new name. Empty name clears it → coach falls back to the registered name.
+export async function setMemberName(slug, token, { team: reqTeam, name }) {
+    const tok = (token || '').trim();
+    if (!tok) throw new Error('חסר מזהה משתמש');
+    const cid = await clubId(slug);
+    const rows = (await pool.query(`SELECT name, team FROM app_users WHERE club_id=$1 AND token=$2 AND role='member'`, [cid, tok])).rows;
+    if (!rows.length) throw new Error('משתמש לא נמצא');
+    const nrm0 = (s) => (s || '').toString().replace(/['"׳״]/g, '').replace(/\s+/g, ' ').trim();
+    const match = reqTeam ? rows.find((r) => nrm0(r.team) === nrm0(reqTeam)) : (rows.length === 1 ? rows[0] : null);
+    if (!match) throw new Error('הקבוצה לא משויכת למשתמש');
+    const team = match.team;
+    const disp = (name || '').toString().trim().slice(0, 40);
+    await pool.query(`UPDATE app_users SET display_name=$3 WHERE club_id=$1 AND token=$2 AND team=$4 AND role='member'`,
+        [cid, tok, disp || null, team]);
+    const effective = disp || match.name;
+    const today = ilNow().date;
+    await pool.query(`UPDATE attendance SET member_name=$3, updated_at=now() WHERE club_id=$1 AND member_token=$2 AND team=$4 AND date >= $5`,
+        [cid, tok, effective, team, today]);
+    return { ok: true, team, name: effective };
 }
 
 // Coach toggles their own drop-out push preference. Identity via token.

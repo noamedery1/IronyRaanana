@@ -16,7 +16,7 @@ import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './se
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify, removeFaGame, keepFaGame } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, planImport, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
-import { setRsvp, getTeamRsvp, setCoachNotify, getMemberRsvp, getAttendanceReport } from './server/attendance.js';
+import { setRsvp, getTeamRsvp, setCoachNotify, getMemberRsvp, getAttendanceReport, setMemberName } from './server/attendance.js';
 import { getSetting, setSetting, listHalls, saveHalls, getBanners } from './server/settings.js';
 import { requireManager, signToken, verifyToken } from './server/auth.js';
 import { pool } from './server/db.js';
@@ -371,6 +371,11 @@ app.post('/api/:club/rsvp', async (req, res) => {
 app.get('/api/:club/rsvp/mine', async (req, res) => {
     const token = req.get('x-member-token') || req.query.token;
     try { ok(res, await getMemberRsvp(req.params.club, token, { from: req.query.from })); } catch (e) { res.status(400).json({ error: e.message }); }
+});
+// Parent sets the player name the coach sees for one of their memberships.
+app.post('/api/:club/rsvp/name', async (req, res) => {
+    const b = req.body || {};
+    try { ok(res, await setMemberName(req.params.club, b.token, b)); } catch (e) { res.status(400).json({ error: e.message }); }
 });
 app.get('/api/:club/rsvp/coach', async (req, res) => {
     const token = req.get('x-trainer-token') || req.query.token;
