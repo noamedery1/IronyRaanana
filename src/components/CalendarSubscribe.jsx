@@ -27,10 +27,11 @@ export default function CalendarSubscribe({ teamLabel }) {
     // Google settings page open in the real calendar/browser instead of being blocked by the WebView.
     const apple = () => { openExternal(webcalUrl); setOpen(false); };
     const android = () => { openExternal(httpsUrl); setOpen(false); };
-    // Google has no reliable one-click subscribe for external feeds → copy the link and open the add-by-URL settings page
-    const google = async () => {
-        try { await navigator.clipboard.writeText(httpsUrl); } catch { /* ignore */ }
-        openExternal('https://calendar.google.com/calendar/r/settings/addbyurl', { webTarget: '_blank' });
+    // One-click subscribe: Google opens an "Add calendar?" dialog pre-filled with the feed — no
+    // copy/paste. webcal:// in cid = subscribe to the live feed (auto-updates), not a one-time import.
+    // On Android this lands in the phone's Google Calendar app (= the device calendar) and updates live.
+    const google = () => {
+        openExternal(`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`, { webTarget: '_blank' });
         setOpen(false);
     };
     const copy = async () => {
