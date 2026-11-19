@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
   # Build on feat/native-app whenever this workflow file changes (bump the counter to trigger),
   # since workflow_dispatch only works from the default branch and no workflows live on main.
-  # rebuild: 19 (launcher shows ONLY the club name — no role/team mirror; all roles/teams/removal on the club site)
+  # rebuild: 20 (launcher bridges the APNs token to the live web via #sqnt= → per-user pre-training reminder opt-in)
   push:
     branches: [feat/native-app]
     paths:

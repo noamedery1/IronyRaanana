@@ -37,7 +37,7 @@ on:
   # Build a signed AAB on feat/native-app whenever this workflow file changes (bump the rebuild
   # counter below to trigger a fresh build) — workflow_dispatch only works from the default branch,
   # and no workflows live on main by design. versionCode = github.run_number, so each run increments.
-  # rebuild: 18 (launcher shows ONLY the club name — no role/team mirror; all roles/teams/removal on the club site)
+  # rebuild: 19 (launcher bridges the FCM token to the live web via #sqnt= → per-user pre-training reminder opt-in)
   push:
     branches: [feat/native-app]
     paths:
