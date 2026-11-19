@@ -117,7 +117,14 @@ export default function Account() {
                                             // canonical segment (team:<T> for every team + remind:<T> for the reminder opt-ins).
                                             const tms = [...new Set(memberships.map((x) => x.team).filter(Boolean))];
                                             const seg = tms.flatMap((t) => next[t] ? ['team:' + t, 'remind:' + t] : ['team:' + t]).join('\n');
+                                            // Web/PWA: re-register the service-worker push subscription.
                                             import('../push.js').then(({ registerPushWithSegment }) => registerPushWithSegment(seg)).catch(() => {});
+                                            // Native store app: re-register this device's FCM/APNs token (bridged from the launcher)
+                                            // with the same segment. No token (old build / web) → skipped.
+                                            import('../native.js').then(({ getNativePushToken }) => {
+                                                const { token, platform } = getNativePushToken();
+                                                if (token) fetch(`/api/${slug}/native-push/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, platform, segment: seg }) }).catch(() => {});
+                                            }).catch(() => {});
                                         }} />
                                         🔔 תזכורת לפני אימון
                                     </label>

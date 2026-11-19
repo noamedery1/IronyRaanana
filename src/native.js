@@ -33,6 +33,31 @@ export function isAndroidWebView() {
     try { return /; wv\)/.test(navigator.userAgent || ''); } catch { return false; }
 }
 
+// In the native app the launcher appends this device's FCM/APNs push token to its first in-app
+// navigation as "#sqnt=<token>&sqnp=<platform>" — the live origin has no Capacitor bridge, so this is
+// the only way the web layer learns the token (to add/remove the reminder channel on this device).
+// Capture it once per session and strip it from the URL so it isn't left in the address/history.
+export function captureNativePushToken() {
+    try {
+        const h = window.location.hash || '';
+        if (h.indexOf('sqnt=') === -1) return;
+        const p = new URLSearchParams(h.replace(/^#/, ''));
+        const tok = p.get('sqnt');
+        if (tok) {
+            sessionStorage.setItem('nativePushToken', tok);
+            sessionStorage.setItem('nativePushPlatform', p.get('sqnp') || 'native');
+        }
+        p.delete('sqnt'); p.delete('sqnp');
+        const rest = p.toString();
+        window.history.replaceState(null, '', window.location.pathname + window.location.search + (rest ? '#' + rest : ''));
+    } catch { /* ignore */ }
+}
+
+export function getNativePushToken() {
+    try { return { token: sessionStorage.getItem('nativePushToken') || '', platform: sessionStorage.getItem('nativePushPlatform') || 'native' }; }
+    catch { return { token: '', platform: 'native' }; }
+}
+
 // When running inside the native app, a tapped Squadio https link (App Link / Universal Link) that
 // arrives while the app is already open should navigate the WebView to that exact URL, so the invite's
 // Join / personal-sign-in handling runs. Cold-start launch URLs are handled by the native launcher.
