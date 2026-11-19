@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n.jsx';
 import { getActiveClub } from '../clubConfig.js';
-import { openExternal } from '../native.js';
+import { openExternal, isNativeApp } from '../native.js';
+import { isIOS } from '../inAppBrowser.js';
 
 // "Auto calendar" subscribe button + a centered chooser modal (not clipped by the hero card),
 // with cross-platform options: Apple (webcal), Android device (.ics), Google Calendar, copy link.
@@ -13,6 +14,8 @@ export default function CalendarSubscribe({ teamLabel }) {
 
     if (!teamLabel) return null;
 
+    const native = isNativeApp();
+    const ios = isIOS();
     const host = window.location.host;
     const slug = getActiveClub().slug;
     const q = encodeURIComponent(teamLabel);
@@ -48,8 +51,12 @@ export default function CalendarSubscribe({ teamLabel }) {
                             <button onClick={() => setOpen(false)} style={{ background: 'var(--glass-2)', border: '1px solid var(--glass-border)', color: 'var(--text)', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            <button onClick={apple} style={item('#e5e7eb')}>🍎 {t('cal_apple')}</button>
-                            <button onClick={android} style={item('#3ddc84')}>🤖 {t('cal_android')}</button>
+                            {/* In the native app the WebView keeps same-origin URLs internal, so the direct
+                                .ics (device/Android) can't hand off — hide it there and rely on webcal
+                                (iOS) and the Google add-by-URL (any Android) + copy, which open via the OS.
+                                Apple webcal is only useful where a webcal handler exists (iOS / the web). */}
+                            {(!native || ios) && <button onClick={apple} style={item('#e5e7eb')}>🍎 {t('cal_apple')}</button>}
+                            {!native && <button onClick={android} style={item('#3ddc84')}>🤖 {t('cal_android')}</button>}
                             <button onClick={google} style={item('#4285f4')}>📅 {t('cal_google')}</button>
                             <button onClick={copy} style={item('#38bdf8')}>{copied ? t('cal_copied') : `🔗 ${t('cal_copy')}`}</button>
                         </div>
