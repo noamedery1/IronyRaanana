@@ -75,11 +75,16 @@ export default function Join() {
         }
         setLoading(true);
         setError('');
+        // Guard the request with a timeout: without it a hung/slow response leaves the button stuck on
+        // "נרשם..." forever with no feedback (this is what blocked Google's reviewer → store rejection).
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 15000);
         try {
             const res = await fetch(`/api/${slug}/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ role, team, name, email }),
+                signal: ctrl.signal,
             });
             const data = await res.json();
             if (!data.valid) { setError(data.error || 'הרשמה נכשלה'); return; }
@@ -91,8 +96,9 @@ export default function Join() {
             window.location.href = `/${slug}?${q}`;
         } catch (err) {
             console.error(err);
-            setError('שגיאת תקשורת, נסו שוב');
+            setError(err.name === 'AbortError' ? 'השרת לא הגיב, נסו שוב' : 'שגיאת תקשורת, נסו שוב');
         } finally {
+            clearTimeout(timer);
             setLoading(false);
         }
     };
