@@ -13,6 +13,7 @@ import {
 } from './server/people.js';
 import { registerPush, unregisterPush, broadcast, addEmailSubscriber, removeEmailSubscriber, saveFeedback, pushDiag, sendMessage, listMessages, pushStats, listSubscriptions, deleteSubscription, purgeLegacySubscriptions } from './server/notify.js';
 import { registerNativeToken, unregisterNativeToken, nativePushDiag } from './server/nativePush.js';
+import { startReminderSweeps, sweepReminders } from './server/reminders.js';
 import { createRequest, listRequests, approveRequest, rejectRequest, verifyId } from './server/requests.js';
 import { ingestGames, resetClub, approveFaGame, rejectFaGame, manualApply, listFaGames, faDiag, faVerify, removeFaGame, keepFaGame } from './server/faGames.js';
 import { getDraft, getDraftView, replaceDraftSessions, importCsvToDraft, planImport, publishDraft, resetDraftFromLive, appendSessions } from './server/draft.js';
@@ -488,6 +489,11 @@ app.post('/api/:club/messages', requireManager, async (req, res) => {
 });
 app.get('/api/:club/messages', requireManager, async (req, res) => {
     try { ok(res, await listMessages(req.params.club)); } catch (e) { fail(res, e); }
+});
+// Manager: run the pre-training reminder sweep on demand (for testing). Only reaches devices that
+// opted into remind:<team>; honours dedup so it won't double-send a session already notified.
+app.post('/api/:club/reminders/sweep', requireManager, async (req, res) => {
+    try { ok(res, await sweepReminders()); } catch (e) { fail(res, e); }
 });
 // Subscriber counts per segment (so the manager sees how many devices each target reaches).
 app.get('/api/:club/push-stats', requireManager, async (req, res) => {
@@ -981,6 +987,10 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+// Pre-training reminder sweep: every ~15 min, push "training soon" to the opt-in channel
+// remind:<team> for sessions starting within ~2h. No-op until members opt in (see server/reminders.js).
+startReminderSweeps();
 
 // FA-games fetching runs in a Cloudflare Worker (on a cron), which POSTs fixtures to /fa/ingest —
 // see server/faGames.js. Nothing to schedule in-process; Railway never reaches football.org.il.

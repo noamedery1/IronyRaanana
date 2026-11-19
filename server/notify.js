@@ -91,6 +91,17 @@ export async function broadcast(slug, { segment = '', title, body, url, icon, ta
              )`,
             [cid, wholeLine, name, escLike(name) + ' - %'],
         );
+    } else if (wantWeb && seg.startsWith('remind:')) {
+        // Pre-training reminder opt-in: a separate per-team channel. A device adds "remind:<team>" as
+        // its own line ALONGSIDE "team:<team>" only when the member turned reminders on — so general
+        // team pushes and the reminder are independent. Whole-line match only (no legacy formats).
+        const escLike = (x) => x.replace(/[%_\\]/g, '\\$&');
+        const wholeLine = '%\n' + escLike(seg) + '\n%';
+        r = await pool.query(
+            `SELECT id, endpoint, subscription FROM push_subscriptions
+             WHERE club_id=$1 AND (chr(10) || segment || chr(10)) LIKE $2`,
+            [cid, wholeLine],
+        );
     } else if (wantWeb) {
         // Literal prefix match (avoid LIKE: '_' in '__TRAINER' is a wildcard).
         r = await pool.query(

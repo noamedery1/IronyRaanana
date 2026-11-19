@@ -219,6 +219,17 @@ async function matchingTokens(cid, seg) {
         );
         return r.rows;
     }
+    if (seg.startsWith('remind:')) {
+        // Pre-training reminder opt-in channel — whole-line match on "remind:<team>" (see notify.js).
+        const escLike = (x) => x.replace(/[%_\\]/g, '\\$&');
+        const wholeLine = '%\n' + escLike(seg) + '\n%';
+        const r = await pool.query(
+            `SELECT id, token, platform FROM native_push_tokens
+             WHERE club_id=$1 AND (chr(10) || segment || chr(10)) LIKE $2`,
+            [cid, wholeLine],
+        );
+        return r.rows;
+    }
     const r = await pool.query(
         `SELECT id, token, platform FROM native_push_tokens
          WHERE club_id=$1 AND left(segment, length($2)) = $2`,
