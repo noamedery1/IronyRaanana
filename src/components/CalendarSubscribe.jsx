@@ -60,7 +60,9 @@ export default function CalendarSubscribe({ teamLabel }) {
                             <button onClick={google} style={item('#4285f4')}>📅 {t('cal_google')}</button>
                             <button onClick={copy} style={item('#38bdf8')}>{copied ? t('cal_copied') : `🔗 ${t('cal_copy')}`}</button>
                         </div>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.6, marginTop: '0.8rem' }}>{t('cal_hint')}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.6, marginTop: '0.8rem' }}>
+                            {[(!native || ios) && t('cal_hint_apple'), !native && t('cal_hint_android'), t('cal_hint_google')].filter(Boolean).join(' · ')}
+                        </p>
                     </div>
                 </div>
             ), document.body)}
