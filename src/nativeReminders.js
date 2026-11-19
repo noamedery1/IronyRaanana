@@ -29,15 +29,28 @@ export async function syncReminders(clubSlug, memberships = []) {
     if (teams.length) {
         const myTeams = teams.map(nrm);
         const now = Date.now();
-        const { sessions = [] } = await fetch(`/api/${clubSlug}/schedule`).then((r) => r.json()).catch(() => ({ sessions: [] }));
+        const data = await fetch(`/api/${clubSlug}/schedule`).then((r) => r.json()).catch(() => ({ sessions: [] }));
+        const sessions = data.sessions || [];
+        // The live publication can be a PAST week (recurring schedules aren't re-published weekly, so
+        // getLiveSchedule falls back to the most recent past week). The board + ICS roll those dates
+        // forward to the current week for display — mirror that here, or every reminder computes a past
+        // kickoff and gets skipped (at <= now), so NONE ever fire.
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const curSunday = new Date(); curSunday.setHours(0, 0, 0, 0); curSunday.setDate(curSunday.getDate() - curSunday.getDay());
+        const curSundayStr = `${curSunday.getFullYear()}-${pad2(curSunday.getMonth() + 1)}-${pad2(curSunday.getDate())}`;
+        const rollToCurrent = data.publication?.week_start && data.publication.week_start < curSundayStr;
+        const dateForDow = (dow) => { const d = new Date(curSunday); d.setDate(d.getDate() + Number(dow)); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
         const seen = new Set();
         sessions.forEach((s) => {
-            if (!s.team || !myTeams.includes(nrm(s.team)) || !s.date || !s.start_time) return;
+            if (!s.team || !myTeams.includes(nrm(s.team)) || !s.start_time) return;
             if ((s.status || 'active') === 'cancelled') return;
-            const when = new Date(`${s.date}T${s.start_time}:00`).getTime(); // device-local time
+            const dow = Number.isInteger(s.day_of_week) ? s.day_of_week : (s.date ? new Date(`${s.date}T00:00:00`).getDay() : null);
+            const sdate = rollToCurrent ? (dow === null ? s.date : dateForDow(dow)) : s.date;
+            if (!sdate) return;
+            const when = new Date(`${sdate}T${s.start_time}:00`).getTime(); // device-local time
             const at = when - LEAD_MS;
             if (!when || at <= now) return; // past, or less than the lead away
-            const id = hashId(`${nrm(s.team)}|${s.date}|${s.start_time}`);
+            const id = hashId(`${nrm(s.team)}|${sdate}|${s.start_time}`);
             if (seen.has(id)) return; seen.add(id);
             const label = getNickname(s.team) || s.team;
             notifs.push({
