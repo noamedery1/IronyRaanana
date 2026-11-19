@@ -196,6 +196,9 @@ export async function deleteAccount(slug, { tokens, token, email, keepEmail } = 
         const dr = await pool.query(`DELETE FROM app_users WHERE club_id=$1 AND token = ANY($2)`, [cid, toks]);
         removedUsers = dr.rowCount;
         try { await pool.query(`DELETE FROM native_push_tokens WHERE club_id=$1 AND user_token = ANY($2)`, [cid, toks]); } catch { /* table may lack column on old DB */ }
+        // Drop the account's attendance marks too — otherwise an orphan row keeps showing the player as
+        // "coming" in the coach's list after the account is gone.
+        try { await pool.query(`DELETE FROM attendance WHERE club_id=$1 AND member_token = ANY($2)`, [cid, toks]); } catch { /* attendance table may not exist on old DB */ }
     }
     if (email && !keepEmail) emails.push(email);
     let removedEmails = 0;
