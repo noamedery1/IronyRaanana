@@ -93,10 +93,11 @@ export default function Account() {
                     {id.role === 'operator' ? 'מפעיל' : teams.length ? ('קבוצות: ' + teams.join(', ')) : 'לא מחוברים לקבוצה'}
                 </p>
 
-                {/* Per-team removal: drop a single team without deleting the whole account. */}
-                {memberships.length > 1 && (
+                {/* Player name (what the coach sees) + reminder, per membership. Shown for one child too.
+                    Per-team removal only when there's more than one. */}
+                {memberships.length > 0 && (
                     <div style={{ border: '1px solid var(--bd2, rgba(255,255,255,0.12))', borderRadius: 14, padding: '0.9rem', marginBottom: '1rem' }}>
-                        <div style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>הקבוצות שלי</div>
+                        <div style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>{memberships.length > 1 ? 'הקבוצות שלי' : 'שם המתאמן'}</div>
                         {memberships.map((m) => (
                             <div key={m.team} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.6rem', padding: '0.5rem 0', borderTop: '1px solid var(--bd2, rgba(255,255,255,0.08))' }}>
                                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -113,10 +114,12 @@ export default function Account() {
                                         🔔 תזכורת לפני אימון
                                     </label>
                                 </div>
-                                <button
-                                    onClick={() => removeTeam(m)}
-                                    style={{ background: 'none', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
-                                >הסר</button>
+                                {memberships.length > 1 && (
+                                    <button
+                                        onClick={() => removeTeam(m)}
+                                        style={{ background: 'none', border: '1px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: 8, padding: '0.3rem 0.7rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                                    >הסר</button>
+                                )}
                             </div>
                         ))}
                         <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם המתאמן הוא השם שהמאמן רואה ברשימת הנוכחות (במקום שם ההורה). התזכורת לפני אימון נשמרת במכשיר ופועלת באפליקציה. הסרת קבוצה בודדת לא מוחקת את השאר.</div>

@@ -14,8 +14,9 @@ import { useI18n, LanguageSwitcher } from '../i18n.jsx';
 import ThemeToggle from '../components/ThemeToggle';
 import { getActiveClub } from '../clubConfig.js';
 import { sportEmoji, sportName, venues } from '../sportLabels.js';
-import { getIdentity, getMemberships, setActiveTeam, membershipSegment, getOperatorToken, switchToOperator, switchToMember, removeMembership, removeOperator } from '../userIdentity.js';
+import { getIdentity, getMemberships, setActiveTeam, membershipSegment, getOperatorToken, switchToOperator, switchToMember, removeMembership, removeOperator, getNickname } from '../userIdentity.js';
 import FamilyToday from '../components/FamilyToday.jsx';
+import PlayerNamePrompt from '../components/PlayerNamePrompt.jsx';
 import { syncReminders } from '../nativeReminders.js';
 import { encodePathSeg } from '../encodeSeg.js';
 import { isNativeApp } from '../native.js';
@@ -102,6 +103,7 @@ function PublicSchedule() {
     const [rsvpMap, setRsvpMap] = useState({}); // occurrence key -> 'in'|'out' (per team+date+time, so marking one child's team never shows on another)
     const [unified, setUnified] = useState(localStorage.getItem('squadioUnified') === '1'); // F1: merge all my kids into one agenda (opt-in)
     const [rsvpBusy, setRsvpBusy] = useState(false);
+    const [namePrompt, setNamePrompt] = useState(null); // pending RSVP status waiting for the player name
     const [viewMode, setViewMode] = useState('team'); // 'team' or 'halls'
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
@@ -475,7 +477,7 @@ function PublicSchedule() {
     // A parent marks their player in/out for the NEXT session. Occurrence = its date + start time.
     const ymd = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
     const rsvpKey = (team, d, startTime) => `${team}|${ymd(d)}|${startTime}`;
-    const markRsvp = async (status) => {
+    const doMark = async (status) => {
         const token = activeMemberToken();
         if (!token || !next?.date || !memberTeam) return;
         const start_time = (String(next.time || '').match(/\d{1,2}:\d{2}/) || [''])[0];
@@ -487,6 +489,12 @@ function PublicSchedule() {
             });
             if (r.ok) setRsvpMap((m) => ({ ...m, [rsvpKey(memberTeam, next.date, start_time)]: status }));
         } catch { /* offline — ignore */ } finally { setRsvpBusy(false); }
+    };
+    // Require the player name (what the coach sees) before the first mark. Once set it's remembered,
+    // so this only interrupts the very first tap per team.
+    const markRsvp = (status) => {
+        if (memberTeam && !getNickname(memberTeam)) { setNamePrompt(status); return; }
+        doMark(status);
     };
     // My current mark for the active team's next session (keyed per occurrence).
     const nextStart = (String(next?.time || '').match(/\d{1,2}:\d{2}/) || [''])[0];
@@ -897,6 +905,16 @@ function PublicSchedule() {
                 pushSegment={membershipSegment(teams.map((t) => t.name)) || (getTeamObj()?.name ? `team:${getTeamObj().name}` : '')}
                 sheetUrl={LIVE_SHEET_API}
             />
+
+            {namePrompt && (
+                <PlayerNamePrompt
+                    team={memberTeam}
+                    slug={club.slug}
+                    token={activeMemberToken()}
+                    onSaved={() => { const s = namePrompt; setNamePrompt(null); doMark(s); }}
+                    onClose={() => setNamePrompt(null)}
+                />
+            )}
         </div>
     );
 }

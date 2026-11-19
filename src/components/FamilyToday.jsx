@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import NavButton from './NavButton.jsx';
 import { getNickname } from '../userIdentity.js';
+import PlayerNamePrompt from './PlayerNamePrompt.jsx';
 
 // Unified family view: one agenda across ALL a parent's children/teams, merged and sorted by time,
 // each event tagged with its team. Opt-in (classic per-team board stays the default). Occurrences
@@ -15,6 +16,7 @@ export default function FamilyToday({ clubSlug, memberships }) {
     const [loading, setLoading] = useState(true);
     const [rsvpMap, setRsvpMap] = useState({});
     const [busy, setBusy] = useState('');
+    const [namePrompt, setNamePrompt] = useState(null); // { o, status } waiting for the player name
 
     const tokenFor = (team) => (memberships.find((m) => nrm(m.team) === nrm(team)) || {}).token || '';
     const myTeams = memberships.map((m) => nrm(m.team));
@@ -42,7 +44,7 @@ export default function FamilyToday({ clubSlug, memberships }) {
     useEffect(() => { load(); }, [load]);
 
     const key = (o) => `${o.team}|${o.date}|${o.start_time}`;
-    const mark = async (o, status) => {
+    const doMark = async (o, status) => {
         const token = tokenFor(o.team);
         if (!token) return;
         setBusy(key(o));
@@ -53,6 +55,11 @@ export default function FamilyToday({ clubSlug, memberships }) {
             });
             if (r.ok) setRsvpMap((m) => ({ ...m, [key(o)]: status }));
         } catch { /* offline */ } finally { setBusy(''); }
+    };
+    // Require the player name (what the coach sees) before the first mark for a child.
+    const mark = (o, status) => {
+        if (!getNickname(o.team)) { setNamePrompt({ o, status }); return; }
+        doMark(o, status);
     };
 
     // group by date for day headers
@@ -95,6 +102,15 @@ export default function FamilyToday({ clubSlug, memberships }) {
                     })}
                 </div>
             ))}
+            {namePrompt && (
+                <PlayerNamePrompt
+                    team={namePrompt.o.team}
+                    slug={clubSlug}
+                    token={tokenFor(namePrompt.o.team)}
+                    onSaved={() => { const { o, status } = namePrompt; setNamePrompt(null); doMark(o, status); }}
+                    onClose={() => setNamePrompt(null)}
+                />
+            )}
         </div>
     );
 }
