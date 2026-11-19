@@ -69,7 +69,7 @@ export default function FamilyToday({ clubSlug, memberships }) {
     const todayYmd = new Date().toISOString().slice(0, 10);
 
     if (loading) return <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>טוען…</div>;
-    if (!occs.length) return <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>אין אירועים קרובים לילדים שלך. ⚽</div>;
+    if (!occs.length) return <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>אין אירועים קרובים. ⚽</div>;
 
     return (
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '0.5rem 1rem 1rem' }}>

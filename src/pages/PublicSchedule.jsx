@@ -711,7 +711,7 @@ function PublicSchedule() {
 
                     {memberships.length >= 2 && (
                         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, margin: '0 auto 1rem', maxWidth: 360 }}>
-                            {[['classic', 'לפי קבוצה'], ['unified', 'כל הילדים']].map(([mode, label]) => {
+                            {[['classic', 'לפי קבוצה'], ['unified', 'הכל']].map(([mode, label]) => {
                                 const on = (mode === 'unified') === unified;
                                 return (
                                     <button key={mode} onClick={() => { const u = mode === 'unified'; setUnified(u); localStorage.setItem('squadioUnified', u ? '1' : '0'); }}
