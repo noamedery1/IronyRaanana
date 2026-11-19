@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getIdentity, getMemberships, getOperatorToken, clearIdentity, removeMembership, removeOperator, getNicknames, setNickname, getReminderPrefs, setReminder } from '../userIdentity.js';
-import { syncReminders } from '../nativeReminders.js';
 import { getActiveClub } from '../clubConfig.js';
 
 // "My account" screen — lets a registered user see what they're signed up for and DELETE their
@@ -110,7 +109,16 @@ export default function Account() {
                                     />
                                     <div style={{ color: 'var(--text-dim,#94a3b8)', fontSize: '0.72rem', marginTop: 2 }}>{m.team}</div>
                                     <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.8rem', color: 'var(--text-dim,#94a3b8)', cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={!!rems[m.team]} onChange={(e) => { const on = e.target.checked; setRems((r) => ({ ...r, [m.team]: on })); setReminder(m.team, on); syncReminders(slug, memberships); }} />
+                                        <input type="checkbox" checked={!!rems[m.team]} onChange={(e) => {
+                                            const on = e.target.checked;
+                                            const next = { ...rems, [m.team]: on };
+                                            setRems(next); setReminder(m.team, on);
+                                            // Join/leave the server reminder channel: re-register this device's push with the
+                                            // canonical segment (team:<T> for every team + remind:<T> for the reminder opt-ins).
+                                            const tms = [...new Set(memberships.map((x) => x.team).filter(Boolean))];
+                                            const seg = tms.flatMap((t) => next[t] ? ['team:' + t, 'remind:' + t] : ['team:' + t]).join('\n');
+                                            import('../push.js').then(({ registerPushWithSegment }) => registerPushWithSegment(seg)).catch(() => {});
+                                        }} />
                                         🔔 תזכורת לפני אימון
                                     </label>
                                 </div>
@@ -122,7 +130,7 @@ export default function Account() {
                                 )}
                             </div>
                         ))}
-                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם המתאמן הוא השם שהמאמן רואה ברשימת הנוכחות (במקום שם ההורה). התזכורת לפני אימון נשמרת במכשיר ופועלת באפליקציה. הסרת קבוצה בודדת לא מוחקת את השאר.</div>
+                        <div style={{ marginTop: '0.5rem', color: 'var(--text-dim,#94a3b8)', fontSize: '0.76rem' }}>שם המתאמן הוא השם שהמאמן רואה ברשימת הנוכחות (במקום שם ההורה). התזכורת לפני אימון נשלחת כהתראה כשעתיים לפני (צריך שהתראות יהיו מופעלות). הסרת קבוצה בודדת לא מוחקת את השאר.</div>
                     </div>
                 )}
 

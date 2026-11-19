@@ -92,6 +92,29 @@ export async function subscribeToPush(team, sheetUrl) {
     return { ok: true };
 }
 
+// Re-register this device's web push with an EXACT segment string (canonical, newline-separated:
+// "team:<T>" for each team + "remind:<T>" for each reminder opt-in). Used by the reminder toggle so
+// a device joins/leaves the pre-training channel without disturbing its general team pushes. Web only
+// — in the native store app push is FCM via the launcher (handled on app update), so this no-ops there.
+export async function registerPushWithSegment(segment) {
+    if (!pushSupported()) return { ok: false, reason: 'unsupported' };
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return { ok: false, reason: 'denied' };
+    const reg = await navigator.serviceWorker.ready;
+    const wantKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+    let sub = await reg.pushManager.getSubscription();
+    if (sub && !subKeyMatches(sub, wantKey)) { await sub.unsubscribe().catch(() => {}); sub = null; }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: wantKey });
+    const label = (localStorage.getItem('userName') || '').trim();
+    const res = await fetch(`/api/${getActiveClub().slug}/push`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segment, subscription: sub.toJSON(), label }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.error) return { ok: false, reason: data.error };
+    return { ok: true };
+}
+
 // Unsubscribes this device from push and removes it from the server store.
 export async function unsubscribeFromPush(sheetUrl) {
     if (!pushSupported()) return { ok: false, reason: 'unsupported' };
