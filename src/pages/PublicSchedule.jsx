@@ -760,10 +760,12 @@ function PublicSchedule() {
                                         <button onClick={shareWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                             <span>{t('share_whatsapp')}</span><span>💬</span>
                                         </button>
-                                        {/* Calendar export (live subscribe + static save) is a web/PWA feature:
-                                            inside the native app the schedule is already live and push is
-                                            automatic, so these two buttons only add clutter. Hidden in-app only. */}
-                                        {!isNativeApp() && <CalendarSubscribe teamLabel={getSelectedTeamName()} />}
+                                        {/* Live calendar subscribe shows everywhere, including the native app —
+                                            it adds the team's schedule to the phone's own calendar and keeps it
+                                            auto-updated (webcal feed). In-app the links open via the OS (_system).
+                                            The static one-time .ics save stays web-only (an app user already has
+                                            the live schedule; a frozen export only confuses). */}
+                                        <CalendarSubscribe teamLabel={getSelectedTeamName()} />
                                         {!isNativeApp() && (
                                             <button onClick={saveToCalendar} className="action-btn ghost" title={t('cal_save_title')}>
                                                 <span>{t('cal_save')}</span><span>📅</span>

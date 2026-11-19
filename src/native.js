@@ -13,6 +13,19 @@ export function isNativeApp() {
     } catch { return false; }
 }
 
+// Open a URL OUTSIDE the in-app WebView. In the native app the WebView only navigates squadio
+// domains (allowNavigation), so webcal:// calendar-subscribe links and Google Calendar would be
+// swallowed/blocked — hand them to the OS via Capacitor's `_system` target instead. On the web it's
+// a normal navigation (webTarget '_blank' for a new tab, default same-tab for custom schemes).
+export function openExternal(url, { webTarget = '_self' } = {}) {
+    if (!url) return;
+    try {
+        if (isNativeApp()) { window.open(url, '_system'); return; }
+        if (webTarget === '_blank') { window.open(url, '_blank', 'noopener'); return; }
+        window.location.href = url;
+    } catch { try { window.location.href = url; } catch { /* ignore */ } }
+}
+
 // Any Android WebView (UA token "; wv)") — e.g. an OLD Squadio build without the UA tag, or a
 // social app's in-app browser. A PWA can never be installed from a WebView, so install UI is
 // pointless there, and the "install from the store" detour only confuses an app user.

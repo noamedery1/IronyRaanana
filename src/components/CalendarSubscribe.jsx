@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n.jsx';
 import { getActiveClub } from '../clubConfig.js';
+import { openExternal } from '../native.js';
 
 // "Auto calendar" subscribe button + a centered chooser modal (not clipped by the hero card),
 // with cross-platform options: Apple (webcal), Android device (.ics), Google Calendar, copy link.
@@ -19,12 +20,14 @@ export default function CalendarSubscribe({ teamLabel }) {
     const httpsUrl = `${window.location.protocol}//${host}${path}`;
     const webcalUrl = `webcal://${host}${path}`;
 
-    const apple = () => { window.location.href = webcalUrl; setOpen(false); };
-    const android = () => { window.location.href = httpsUrl; setOpen(false); };
+    // openExternal routes through the OS (`_system`) inside the native app, so webcal:// and the
+    // Google settings page open in the real calendar/browser instead of being blocked by the WebView.
+    const apple = () => { openExternal(webcalUrl); setOpen(false); };
+    const android = () => { openExternal(httpsUrl); setOpen(false); };
     // Google has no reliable one-click subscribe for external feeds → copy the link and open the add-by-URL settings page
     const google = async () => {
         try { await navigator.clipboard.writeText(httpsUrl); } catch { /* ignore */ }
-        window.open('https://calendar.google.com/calendar/r/settings/addbyurl', '_blank', 'noreferrer');
+        openExternal('https://calendar.google.com/calendar/r/settings/addbyurl', { webTarget: '_blank' });
         setOpen(false);
     };
     const copy = async () => {

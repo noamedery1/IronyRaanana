@@ -336,8 +336,9 @@ function PublicScheduleWomen() {
                                         <button onClick={shareViaWhatsApp} className="whatsapp-btn action-btn" style={{ background: '#25D366' }}>
                                             <span>{t('share_whatsapp')}</span><span>💬</span>
                                         </button>
-                                        {/* Calendar export hidden inside the native app (clutter) — web/PWA keeps it. */}
-                                        {!isNativeApp() && <CalendarSubscribe teamLabel={getSelectedTeamName()} />}
+                                        {/* Live calendar subscribe shows everywhere (native too) — links open via
+                                            the OS (_system) in-app. Static one-time .ics save stays web-only. */}
+                                        <CalendarSubscribe teamLabel={getSelectedTeamName()} />
                                         {!isNativeApp() && (
                                             <button onClick={saveToCalendar} className="action-btn ghost" title={t('cal_save_title')}>
                                                 <span>{t('cal_save')}</span><span>📅</span>
