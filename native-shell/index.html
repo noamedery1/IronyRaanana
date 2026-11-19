@@ -96,6 +96,10 @@
           setTimeout(function () { fin(null); }, 6000);
         });
         if (!token) return;
+        // Cache the token so the live web layer (which has NO Capacitor bridge) can read it off the
+        // first in-app navigation (go → #sqnt=) and let the reminder toggle add/remove this device's
+        // remind:<team> channel. The token is the device's push address, not a secret.
+        try { localStorage.setItem('sqFcmToken', token); localStorage.setItem('sqFcmPlatform', (Capacitor.getPlatform && Capacitor.getPlatform()) || 'native'); } catch (e) {}
         var seg = team ? ('team:' + team) : ''; // team member → team segment; otherwise whole-club ('' reaches all)
         await fetch(BASE + '/api/' + encodeURIComponent(club) + '/native-push/register', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -246,6 +250,18 @@
       return Promise.resolve();
     }
 
+    // Append this device's cached push token to an in-app (squadio) URL as a fragment, so the live web
+    // layer can capture it (see src/native.js captureNativePushToken) and manage the reminder channel.
+    // Fragment, not query → it isn't sent to the server or logged. Only for squadio URLs.
+    function tokenFrag(url) {
+      try {
+        var t = localStorage.getItem('sqFcmToken');
+        if (!t || !/squadio\.techbynoam\.com/i.test(url)) return url;
+        var p = localStorage.getItem('sqFcmPlatform') || 'native';
+        return url + (url.indexOf('#') >= 0 ? '&' : '#') + 'sqnt=' + encodeURIComponent(t) + '&sqnp=' + encodeURIComponent(p);
+      } catch (e) { return url; }
+    }
+
     async function go(url, slug) {
       if (slug) saveRecent(slug);
       // Register for native push on EVERY club entry (recent tap, auto-enter, link, code), using the
@@ -253,7 +269,7 @@
       if (slug) {
         try { var m = getMembers().find(function (x) { return x.club === slug; }); await registerPushForMember(slug, (m && m.team) ? 'member' : '', m ? m.team : ''); } catch (e) {}
       }
-      var nav = function () { window.location.href = url; };
+      var nav = function () { window.location.href = tokenFrag(url); };
       try { await nativeSync(); } catch (e) {}
       nav();
     }
